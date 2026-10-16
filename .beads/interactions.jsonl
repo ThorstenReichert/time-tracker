@@ -1,0 +1,1 @@
+{"id":"int-a5957b84c1d050860e7cfcbcbfd95250","kind":"field_change","created_at":"2026-10-16T22:03:40.0797146Z","actor":"Thorsten Reichert","issue_id":"ThorSoft_TimeTracker-ddn","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"spec.md written; awaiting owner review and commit approval"}}
