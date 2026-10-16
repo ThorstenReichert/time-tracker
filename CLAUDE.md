@@ -58,6 +58,15 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 <!-- END BEADS INTEGRATION -->
 
 
+## Development process: AI-native SDLC
+
+Changes follow the six-stage AI-native SDLC (Plan → Design → Build → Test → Deploy → Maintain),
+encoded as repo-local skills in `.claude/skills/`. Start with `ai-sdlc` (overview, artifact chain,
+how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-intent` (intent.md),
+`ai-sdlc-2-spec` (spec.md), `ai-sdlc-3-build` (plan.md + implementation), `ai-sdlc-4-test`,
+`ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
+follow it.
+
 ## Build & Test
 
 ## Architecture Overview
