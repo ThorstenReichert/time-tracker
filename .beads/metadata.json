@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "ThorSoft_TimeTracker",
+  "project_id": "750fb1bd-c346-4315-ba86-b744e7ba5074"
+}
