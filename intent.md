@@ -1,5 +1,5 @@
 # Intent: Personal project time tracker
-Author: Thorsten Reichert (software engineer, consulting). Status: draft.
+Author: Thorsten Reichert (software engineer, consulting). Status: approved.
 
 ## Problem
 I work as a software engineer at a software consulting firm and must bill my working
