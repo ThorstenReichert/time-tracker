@@ -5,7 +5,8 @@ Revised 2026-10-17: §2 architecture changed to a deterministic functional core 
 the tt-app write path and a headless tt-cli driver, for testability. Second pass the same
 day: R4 and §2 corrected after an external review; the decisions it raised are recorded as
 OQ-3 to OQ-8 in §4. Third pass the same day: the storage seam was reviewed (whole State in
-memory vs. ports and adapters vs. prefetch); recorded as OQ-9.
+memory vs. ports and adapters vs. prefetch); recorded as OQ-9. The write path now evolves a
+candidate State before the commit and reloads from the database on a store error.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -230,10 +231,16 @@ ThorSoft.TimeTracker/
   it falls in a read (R14).
   Ranges are inclusive local dates; days are assigned by start (R18 step 1).
 - **Write path (tt-app):** `execute(Ctx, Command)`. The driver builds `Ctx` from the system clock
-  and time zone; tt-app never reads them. Under one lock: `decide` → one database transaction
-  that applies the events in order → commit → `evolve` the in-memory State → publish the events.
-  If the commit fails, State is unchanged. Reads take the same lock, so they never see a
-  half-applied command. No business rules live in tt-app, the drivers or the UI.
+  and time zone; tt-app never reads them. Under one lock: `decide` → `evolve` a copy of the
+  State into a candidate (`check_invariants` on it in debug builds and tests) → one database
+  transaction that applies the events in order → commit → replace the State with the
+  candidate → publish the events. A bug that panics in `evolve` therefore fails before
+  anything is written, and the swap itself can't fail. The database is the authority: on any
+  store error during the transaction or commit, tt-app discards the candidate and reloads
+  State from the database instead of assuming it is unchanged (a failed commit can leave its
+  outcome unclear). If that reload fails, the app shows an error and accepts no writes, as for
+  an invalid State. Reads take the same lock, so they never see a half-applied command. No
+  business rules live in tt-app, the drivers or the UI.
 - **Restore (R23)** is the one exception to "every change is an Event". Under the same lock it
   backs up the current database, replaces the file from the chosen backup, reloads State and
   checks its invariants.

@@ -143,9 +143,12 @@ No port traits: tests use a temporary SQLite database, not fakes.
 ### tt-app: the imperative shell
 
 - `execute(Ctx, Command) -> Result<Vec<Event>, AppError>`. The driver builds `Ctx`; tt-app never
-  reads the clock or time zone. Under one lock: `decide` → one transaction that applies the events
-  in order → commit → `evolve` the in-memory State → publish the events. If the commit fails,
-  State is unchanged. Reads take the same lock.
+  reads the clock or time zone. Under one lock: `decide` → `evolve` a copy into a candidate
+  State → one transaction that applies the events in order → commit → swap in the candidate →
+  publish the events. A panic in `evolve` happens before anything is written. The database is
+  the authority: on any store error, discard the candidate and reload State from the database
+  (a failed commit's outcome can be unclear); if the reload fails, accept no writes. Reads take
+  the same lock.
 - Switch order: stop the running entry first, then insert the new one (uniqueness is checked per
   statement).
 - **Restore (R23)** is the one exception to "every change is an Event". Under the same lock it
