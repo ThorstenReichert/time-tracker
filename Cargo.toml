@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = ["crates/tt-core", "crates/tt-store", "crates/tt-app", "crates/tt-cli", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+authors = ["Thorsten Reichert"]
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+tt-core = { path = "crates/tt-core" }
+tt-store = { path = "crates/tt-store" }
+tt-app = { path = "crates/tt-app" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+jiff = { version = "0.2", features = ["serde"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Crash-only (plan.md "Panics"): a bug ends the process; nothing was written, the restart
+# reloads State from the database. Cargo ignores this for test and bench builds.
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

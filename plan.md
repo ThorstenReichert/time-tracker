@@ -450,4 +450,19 @@ Dependencies: 1←0, 2←1, 3←2, 4←3, 5←3, 6←4+5, 7←6, 8←6, 9←8, 1
 <Filled in after step 0.>
 
 ## Deviations
-<Empty at approval.>
+- **Step 0, BigInt export (2026-10-17).** tauri-specta rc.25 has no
+  `Typescript::bigint(BigIntExportBehavior::Number)`. It's
+  `tauri_specta::Builder::dangerously_cast_bigints_to_number()`, used in
+  `src-tauri/src/bindings.rs`. The effect is the same (`u64` → `number`); it's checked by
+  `Pong.buildId = 2^53 − 1`.
+- **Step 0, Windows manifest (2026-10-17).** The predicted `STATUS_ENTRYPOINT_NOT_FOUND`
+  happened. tauri-build only gives the binary the Common Controls v6 manifest, which Tauri
+  needs. `src-tauri/build.rs` now uses `WindowsAttributes::new_without_app_manifest()` and
+  links `src-tauri/windows-app-manifest.xml` (Tauri's default) into every linked target
+  (`cargo:rustc-link-arg=/MANIFEST:EMBED` + `/MANIFESTINPUT`). The mobile-only crate types
+  `staticlib`/`cdylib` were dropped from `[lib]`.
+- **Step 0, tray icons (2026-10-17).** The 32 px PNGs come from `src-tauri/icons/tray-idle.svg`
+  and `tray-running.svg` via `cargo tauri icon <svg> -o <tmp> -p 32`. The SVGs are committed
+  with the PNGs.
+- **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
+  the first test file. Drop the flag then.

@@ -84,6 +84,38 @@ follow it.
 
 ## Build & Test
 
+Prerequisites (Windows): Rust from `rust-toolchain.toml` (1.96.1, MSVC), VS Build Tools with
+the C++ workload, Node 24 + npm, WebView2, and the Tauri CLI
+(`cargo install tauri-cli --version "^2.12" --locked`). Run everything from the repo root; run
+`npm --prefix ui ci` once after cloning.
+
+**One command, before every commit:** `pwsh scripts/check.ps1`. It runs `cargo fmt --all
+--check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`npm --prefix ui run typecheck` and `npm --prefix ui test`. It stops at the first failure.
+Healthy output ends with:
+
+```
+==> ui test
+...
+ALL CHECKS PASSED
+```
+
+| Task | Command | Healthy result |
+|---|---|---|
+| Rust tests, one crate | `cargo test -p tt-core` (or `tt-store`, `tt-app`, `tt-cli`, `timetracker-app`) | `test result: ok. N passed; 0 failed` for every test binary |
+| Regenerate TS bindings | `UPDATE_BINDINGS=1 cargo test -p timetracker-app bindings` | rewrites `ui/src/bindings.ts`; commit it. A stale file fails `bindings_up_to_date` |
+| Run the app (dev) | `cargo tauri dev --config src-tauri/tauri.dev.conf.json` | the window "ThorSoft TimeTracker (dev)"; hotkey `Ctrl+Alt+Shift+Space`; runs next to the installed app |
+| Installer | `cargo tauri build` | `Finished 1 bundle at: ...\target\release\bundle\nsis\ThorSoft TimeTracker_0.1.0_x64-setup.exe` |
+
+Gotchas:
+- Always pass `--config src-tauri/tauri.dev.conf.json` to `cargo tauri dev`. Without it the
+  dev build has the installed app's identity: single-instance forwards to the installed app,
+  and the dev build exits.
+- `src-tauri/build.rs` links `windows-app-manifest.xml` into every target. Without it,
+  `cargo test -p timetracker-app` fails with `STATUS_ENTRYPOINT_NOT_FOUND`.
+- Release and dev profiles use `panic = "abort"` (crash-only, plan.md). Tests still unwind.
+- `tt-cli` needs `--db <scratch path>` and must never be pointed at the live database.
+
 ## Architecture Overview
 
 Single-user Windows tray app: Rust (Tauri 2) + Vue 3/TS + SQLite. Full design in `spec.md` §2;

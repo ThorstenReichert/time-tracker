@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Commands and plugins the two app windows may use (spec §2 Security)",
+  "windows": ["main", "quick-switch"],
+  "permissions": ["core:default", "clipboard-manager:allow-write-text"]
+}

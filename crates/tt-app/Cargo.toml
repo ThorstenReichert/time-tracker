@@ -1,0 +1,16 @@
+[package]
+name = "tt-app"
+description = "The single write path: State + Store behind one lock"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tt-core.workspace = true
+tt-store.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "tt-store"
+description = "SQLite persistence: migrations, load State, apply Events, backup"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tt-core.workspace = true
+
+[lints]
+workspace = true
