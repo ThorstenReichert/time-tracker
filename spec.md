@@ -1,5 +1,5 @@
 # Spec: Personal project time tracker
-Source: [intent.md](intent.md). Author: Thorsten Reichert. Status: ready for owner review.
+Source: [intent.md](intent.md). Author: Thorsten Reichert. Status: approved (Thorsten Reichert, owner, 2026-10-17).
 Date: 2026-10-16. Skills applied: none (personal project, no organisation skills).
 Revised 2026-10-17: §2 architecture changed to a deterministic functional core (Decider),
 the tt-app write path and a headless tt-cli driver, for testability. Second pass the same
@@ -82,9 +82,9 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
   or undo). The main window lists the entries for a selected day.
 - **R11 Forgotten stop.** The running entry's start can be edited, and it can be stopped at
   a chosen past time instead of "now".
-- **R12 Validation.** End must be after start. Entries can't start in the future. No two
-  entries may overlap, and a running entry counts as lasting until now. An invalid save is rejected with a message naming the conflicting
-  entry. No silent auto-adjustment.
+- **R12 Validation.** End must be after start. Entries can't start or end in the future. No
+  two entries may overlap, and a running entry counts as lasting until now. An invalid save is
+  rejected with a message naming the conflicting entry. No silent auto-adjustment.
 - **R13 Notes.** Each entry has an optional free-text note. Notes appear in entry lists and
   exports, not in the billing overview.
 
