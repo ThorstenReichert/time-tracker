@@ -1,0 +1,18 @@
+# Purity guard for the functional core (CLAUDE.md "tt-core: deterministic functional core").
+# Clock, OS time zone, tzdb lookups, env vars, files and hash-ordered collections are not
+# allowed here. The only exception is `src/testing.rs` (feature `test-support`).
+disallowed-methods = [
+    { path = "jiff::Timestamp::now", reason = "the clock comes in through Ctx.now" },
+    { path = "jiff::Zoned::now", reason = "the clock comes in through Ctx.now" },
+    { path = "jiff::tz::TimeZone::system", reason = "the time zone comes in through Ctx.tz" },
+    { path = "jiff::tz::TimeZone::get", reason = "tzdb lookups may do IO; take a TimeZone as input" },
+    { path = "jiff::tz::db", reason = "tzdb lookups may do IO; take a TimeZone as input" },
+    { path = "std::time::SystemTime::now", reason = "the clock comes in through Ctx.now" },
+    { path = "std::time::Instant::now", reason = "the clock comes in through Ctx.now" },
+    { path = "std::env::var", reason = "no environment access in the core" },
+]
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "iteration order isn't stable; use BTreeMap" },
+    { path = "std::collections::HashSet", reason = "iteration order isn't stable; use BTreeSet" },
+    { path = "std::fs::File", reason = "no file IO in the core" },
+]
