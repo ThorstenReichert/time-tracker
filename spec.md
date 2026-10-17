@@ -4,7 +4,8 @@ Date: 2026-10-16. Skills applied: none (personal project, no organisation skills
 Revised 2026-10-17: §2 architecture changed to a deterministic functional core (Decider),
 the tt-app write path and a headless tt-cli driver, for testability. Second pass the same
 day: R4 and §2 corrected after an external review; the decisions it raised are recorded as
-OQ-3 to OQ-8 in §4.
+OQ-3 to OQ-8 in §4. Third pass the same day: the storage seam was reviewed (whole State in
+memory vs. ports and adapters vs. prefetch); recorded as OQ-9.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -216,9 +217,17 @@ ThorSoft.TimeTracker/
   are a backstop where one exists. `State::check_invariants()` runs after every `evolve` in
   debug builds and tests, and on every load in all builds. If the loaded State is invalid, the
   app shows an error and accepts no writes.
+- **Keep a prefetch migration open (OQ-9):** `State` is split into `Catalog` (clients,
+  projects, tasks, favorites, settings, counters; small and always fully loaded) and `Entries`
+  (the only part that grows). `decide` reaches entries only through named queries that SQL
+  could answer with an index (e.g. running entry, entries overlapping a range, recent combos),
+  never by iterating the map directly. Read models take the entries they need as an input
+  rather than the whole `State`. Events are self-contained: tt-store applies them without
+  looking anything up in `State`. No business rule may need all entries at once.
 - **Reads:** the daily overview, statistics, billing error (R14–R21) and quick-switch matching
-  (R6) are pure functions over `State` plus `now`, `tz` and the date, range or query. They don't
-  go through `decide`. A running entry counts up to `now` wherever it falls in a read (R14).
+  (R6) are pure functions over the `Catalog`, the entries they need, `now`, `tz` and the date,
+  range or query. They don't go through `decide`. A running entry counts up to `now` wherever
+  it falls in a read (R14).
   Ranges are inclusive local dates; days are assigned by start (R18 step 1).
 - **Write path (tt-app):** `execute(Ctx, Command)`. The driver builds `Ctx` from the system clock
   and time zone; tt-app never reads them. Under one lock: `decide` → one database transaction
@@ -334,6 +343,9 @@ schema_migrations
   Command sequences as above: after a reload from disk, the serialised State must equal the
   in-memory State.
 - `tt-cli`: scenario scripts against a temporary database.
+- Load benchmark (OQ-9 trigger): a generated database with about 100k entries (roughly 10×
+  the expected volume). Startup load plus invariant check stays under 500 ms, and process
+  memory with the State loaded stays under 50 MB.
 - `ui/`: Vitest for formatting only. End-to-end UI tests are deferred.
 
 ---
@@ -385,6 +397,24 @@ Architecture decisions from the stage 2 review (2026-10-17):
   creating a clashing name offers to unarchive the existing item (R2).
 - **OQ-8 Live database location.** Decided: `%LOCALAPPDATA%`, which isn't roamed or synced.
   The backup default follows (R22).
+- **OQ-9 Storage seam.** Decided: whole `State` in memory with a pure Decider (as above).
+  Options considered:
+  - *Prefetch Decider* (TigerBeetle-style: the shell loads a command's read set, `decide`
+    runs over that slice). Kept as the migration path, not built in v1. Only entries grow, so
+    a migration would keep the `Catalog` in memory and load `Entries` by range. The rules in
+    "Keep a prefetch migration open" (§2) keep that change inside tt-core's `Entries` type
+    and tt-app. Remaining cost if it happens: a read-set step in tt-app, invariant checks
+    only over the loaded window plus the SQL constraints, and R12 relying on the Decider
+    tests alone (it has no database backstop).
+  - *Ports and adapters* (the core calls a store interface). Rejected: IO errors inside
+    domain decisions, Events would no longer be the output (tests, UI notifications, undo),
+    and core tests would need a database or a fake. The Event→SQL mapping would move into
+    the core, not go away.
+  - *Event log as the source of truth.* Rejected for the reasons in OQ-3.
+
+  Accepted risk: State in memory and the database are two copies that could drift; the
+  reload-equality test guards it. Trigger for migrating: the load benchmark in Testing
+  approach fails (load over 500 ms or memory over 50 MB at 100k entries).
 
 ## 5. Areas of concern
 Owner of all items: Thorsten Reichert (single-user project).

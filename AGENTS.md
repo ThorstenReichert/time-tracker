@@ -132,7 +132,7 @@ Single-user Windows tray app: Rust (Tauri 2) + Vue 3/TS + SQLite. Full design in
 `R<n>` refers to its requirements. Style: functional core / imperative shell (Bernhardt), the core
 shaped as a Decider (Chassaing), determinism in the spirit of TigerBeetle. Goal: the app can be
 driven equally by the UI, the hotkey and automated tests. The decisions behind this design are
-recorded as OQ-3 to OQ-8 in `spec.md` §4; check them before changing the code they affect.
+recorded as OQ-3 to OQ-9 in `spec.md` §4; check them before changing the code they affect.
 
 ### Layout and dependency direction
 
@@ -168,11 +168,16 @@ No port traits: tests use a temporary SQLite database, not fakes.
   startup. The core enforces the invariants (R1, R2, R4, R12); the SQLite constraints are a
   backstop. `check_invariants()` runs after every `evolve` in debug builds and tests, and on every
   load in all builds.
+- **Keep a prefetch migration open (OQ-9).** `State` = `Catalog` (small, always fully loaded) +
+  `Entries` (the only part that grows). `decide` reaches entries only through named queries SQL
+  could answer with an index (running, overlapping a range, recent combos), never by iterating
+  the map. Read models take the entries they need as input, not the whole `State`. Events are
+  self-contained: tt-store applies them without reading `State`. No rule may need all entries.
 - **Plain values at the boundary.** `Command`, `Event` and `State` are plain `serde` data. UI DTOs
   live in src-tauri, never in tt-core.
-- **Reads are pure functions** over `State` plus `now`, `tz` and the date, range or query: daily
-  overview, statistics, billing error, quick-switch matching. A running entry counts up to `now`.
-  They don't go through `decide` and are never stored.
+- **Reads are pure functions** over the `Catalog` and the entries they need, plus `now`, `tz` and
+  the date, range or query: daily overview, statistics, billing error, quick-switch matching. A
+  running entry counts up to `now`. They don't go through `decide` and are never stored.
 - **Faux-O style.** Newtypes with validating constructors (parse, don't validate). Make illegal
   states unrepresentable (e.g. a rounding unit can only be a divisor of 60). Methods return new
   values. Mutation never leaks out of a function.
