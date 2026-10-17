@@ -111,6 +111,21 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
 
+### Beads ↔ SDLC
+
+`plan.md` is the approved design of the work; beads is its live status. They don't overlap:
+
+- **`plan.md` holds no status.** No checkboxes, no "done" marks. Progress lives only in beads,
+  so `plan.md` is not a "markdown TODO list" in the sense of the beads rules.
+- **Beads come after approval.** Plan mode is read-only, so create no beads while planning. Once
+  `plan.md` is approved (stage 3, step 8), create one bead per plan step or slice, with `bd dep`
+  dependencies matching the plan's order. Each bead names its plan step and the `R<n>` it covers.
+  Then implement through `bd ready` / `bd update --claim` / `bd close`.
+- **Deviations update both.** If the work changes scope, order or approach, update `plan.md`
+  (with a "Deviations" note) and create, change or close the matching beads together. Changes
+  below plan-step level only touch beads.
+- Follow-up work found while building goes into beads, not into `plan.md` or code comments.
+
 ## Architecture Overview
 
 Single-user Windows tray app: Rust (Tauri 2) + Vue 3/TS + SQLite. Full design in `spec.md` §2;
