@@ -447,7 +447,16 @@ Dependencies: 1←0, 2←1, 3←2, 4←3, 5←3, 6←4+5, 7←6, 8←6, 9←8, 1
 14←11+12+13. Follow-ups go into beads, not into this file.
 
 ## AC-2 result
-<Filled in after step 0.>
+2026-10-17, work machine, installer `ThorSoft TimeTracker_0.1.0_x64-setup.exe` (step 0 build).
+The owner reports that all step 0 manual checks passed as expected:
+- installed per user, with no blocking by SmartScreen or AppLocker
+- the tray icon appears and the window shows the ping result
+- the hotkey brings the popup to the front with focus from another app
+- a second launch focuses the running instance
+- the app is listed in Startup apps and starts hidden after sign-in
+- the dev build runs next to the installed app
+
+No IT involvement needed; AC-2 is closed for slice 1.
 
 ## Deviations
 - **Step 0, BigInt export (2026-10-17).** tauri-specta rc.25 has no
