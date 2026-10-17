@@ -2,7 +2,9 @@
 Source: [intent.md](intent.md). Author: Thorsten Reichert. Status: ready for owner review.
 Date: 2026-10-16. Skills applied: none (personal project, no organisation skills).
 Revised 2026-10-17: §2 architecture changed to a deterministic functional core (Decider),
-the tt-app write path and a headless tt-cli driver, for testability.
+the tt-app write path and a headless tt-cli driver, for testability. Second pass the same
+day: R4 and §2 corrected after an external review; the decisions it raised are recorded as
+OQ-3 to OQ-8 in §4.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -35,7 +37,8 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
   (and the children of an archived parent) don't appear in quick-switch, favorites, recents or
   pickers for new entries. They stay visible in existing entries, in the daily overview,
   statistics and billing error. Items with entries can't be deleted, only archived. Unused
-  items can be deleted.
+  items can be deleted. Archived names still count: a new item whose name matches an archived
+  sibling isn't created; the UI offers to unarchive the existing item instead.
 - **R3 Quick task creation.** Wherever a task is chosen, a free-text input matches the
   project's active tasks as you type (case-insensitive substring/fuzzy). If no existing task
   matches exactly, it offers **Create "<text>"**, which creates the task and selects it in one
@@ -43,7 +46,8 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 
 ### Tracking
 - **R4 Single running timer.** At most one entry is running (no end time) at any time. The
-  storage layer enforces this.
+  core rejects a second running entry; a partial unique index in the database is the
+  backstop (§2).
 - **R5 Start / stop / switch.** *Start* creates a running entry for a client/project/task
   combo at "now". *Stop* sets the running entry's end to "now". *Switch* stops the running
   entry and starts the new one at the same instant, so there is no gap and no overlap.
@@ -101,7 +105,8 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 
 ### Rounding rules
 - **R17 Per-client rule.** Each client has:
-  - *unit*: minutes, a divisor of 60 (1, 5, 6, 10, 12, 15, 20, 30, 60). Default 15.
+  - *unit*: minutes, one of 6, 12, 15, 30, 60. Default 15. The other divisors of 60 give
+    values that aren't exact at 2 decimals (AC-3), so they are not offered.
   - *direction*: `up`, `nearest` or `down`. Default `nearest`.
   - *level*: `project` or `client`. Default `project`.
 - **R18 Algorithm.** For a given day:
@@ -143,7 +148,7 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 ### Data
 - **R22 Automatic backup.** On startup and then once a day while running, the app writes a
   consistent copy of the database to a configurable backup folder (default:
-  `%APPDATA%\ThorSoft.TimeTracker\backups`; may point to OneDrive). It keeps the last N
+  `%LOCALAPPDATA%\ThorSoft.TimeTracker\backups`; may point to OneDrive). It keeps the last N
   copies (default 14).
 - **R23 Export / restore.** Manual export of everything as JSON and of the entries as CSV
   (date, start, end, duration in decimal hours, client, project, task, note). You can
@@ -164,59 +169,77 @@ or cloud sync feature.
 
 ### Architecture
 A single Tauri 2 desktop app. The Rust side is a Cargo workspace built as a **functional core
-with an imperative shell**: all domain decisions live in a pure, deterministic core, and the
-app can be driven equally by the UI, the global hotkey, a headless CLI and automated tests
-(ports & adapters). The core follows the **Decider** pattern, and its determinism follows
-TigerBeetle's approach: everything non-deterministic (clock, time zone, IDs, IO) is outside
-the core and passed in. The goal is testability: given/when/then and model-based property
-tests without mocks (see Testing approach).
+with an imperative shell**: all domain decisions live in a pure, deterministic core. The app
+is driven through one write path by the UI, the global hotkey and automated tests (headless
+CLI for scenario tests on scratch databases). The core follows the **Decider** pattern, and its determinism follows TigerBeetle's
+approach: everything non-deterministic (clock, time zone, IDs, IO) is passed in, never read by
+the core. The goal is testability: given/when/then and model-based property tests without
+mocks (see Testing approach).
 
 ```
 ThorSoft.TimeTracker/
 ├─ crates/
 │  ├─ tt-core/     domain types, Decider (decide/evolve), invariants (R1, R2, R4, R12),
 │  │               rounding (R17–R19), read models: daily overview, statistics,
-│  │               billing error. Pure and deterministic, no IO.
+│  │               billing error, quick-switch matching (R6). Pure and deterministic, no IO.
 │  ├─ tt-store/    SQLite persistence (rusqlite, bundled), embedded SQL migrations,
 │  │               load State, apply Events in one transaction, backup/restore
 │  │               (SQLite online backup API), export.
-│  ├─ tt-app/      the single write path: owns State + Store, executes Commands,
-│  │               publishes Events. Shared by every driver.
-│  └─ tt-cli/      headless driver: scripts, scenario tests, verification.
-├─ src-tauri/      GUI driver: Tauri commands (thin: map UI calls → tt-app),
-│                  tray, global shortcut, autostart, single-instance, clipboard.
+│  ├─ tt-app/      the single write path: owns State + Store behind one lock, executes
+│  │               Commands, publishes Events. Shared by every driver.
+│  └─ tt-cli/      headless driver for scenario tests, on scratch databases only.
+├─ src-tauri/      GUI driver: Tauri commands (thin: map UI calls → tt-app), tray, global
+│                  shortcut, autostart, single-instance, clipboard, UI DTO types (specta).
 └─ ui/             Vue 3 + TypeScript + Vite frontend.
 ```
 
 - **Dependency direction:** `src-tauri, tt-cli → tt-app → tt-store → tt-core`. `tt-core`
   depends on no IO crate (no Tauri, no rusqlite, no `std::fs`/`std::net`). The UI never
   touches the database; it only calls Tauri commands.
+- **No port traits.** tt-app uses the concrete tt-store, and tests use a temporary SQLite
+  database rather than a fake store. Determinism comes from passing `Ctx` in, not from
+  injected clocks.
 - **Core shape (Decider):** `decide(&State, &Ctx, &Command) -> Result<Vec<Event>, DomainError>`
   and `evolve(State, &Event) -> State`. `Command`, `Event` and `State` are plain `serde`
-  values. Every state change is an Event; Events are the contract between core and store.
+  values. Every change to State is an Event produced by `decide` and applied by `evolve`.
+  Events are in-memory descriptions of change; the database stores the resulting State
+  (OQ-3). Undo (R10) is an inverse command through the same write path.
 - **Everything is an input:** `Ctx { now, tz }` carries the current instant (UTC seconds) and
-  the time zone. IDs are assigned by the core from counters in `State`. tt-core never reads
-  the system clock or OS time zone, and uses no randomness, env vars, IO, threads or global
-  mutable state. Same inputs give identical outputs.
-- **Whole world in memory:** `State` holds all clients, projects, tasks, entries, favorites
-  and settings, loaded from SQLite once at startup (single user; tens of thousands of
-  entries are a few MB). The core enforces the invariants itself; the SQLite constraints
-  below are a backstop. `State::check_invariants()` runs after every `evolve` in debug
-  builds and tests.
-- **Reads:** the daily overview, statistics and billing error (R14–R21) are pure functions
-  over `State` plus date/range and time zone. They don't go through `decide`.
-- **Write path (tt-app):** `execute(Command)` stamps `Ctx` (the only place the real clock and
-  time zone are read) → `decide` → `store.apply(events)` in one transaction → only after the
-  commit, `evolve` the in-memory State → publish the events. If persisting fails, State stays
-  unchanged. No business rules live in tt-app, the drivers or the UI.
+  the time zone; the driver builds it. `decide` uses `tz` only to convert typed local times
+  (R10, R11) to UTC; an ambiguous or nonexistent local time is rejected (OQ-6). IDs are assigned by
+  the core from counters in `State`. tt-core never reads the system clock or OS time zone, and
+  uses no randomness, env vars, IO, threads or global mutable state. Same inputs give identical
+  outputs. `State` uses ordered maps (`BTreeMap`), so serialisation is stable.
+- **Whole world in memory:** `State` holds all clients, projects, tasks, entries, favorites,
+  settings and counters, loaded from SQLite once at startup (single user; tens of thousands of
+  entries are a few MB). The core enforces the invariants itself; the SQLite constraints below
+  are a backstop where one exists. `State::check_invariants()` runs after every `evolve` in
+  debug builds and tests, and on every load in all builds. If the loaded State is invalid, the
+  app shows an error and accepts no writes.
+- **Reads:** the daily overview, statistics, billing error (R14–R21) and quick-switch matching
+  (R6) are pure functions over `State` plus `now`, `tz` and the date, range or query. They don't
+  go through `decide`. A running entry counts up to `now` wherever it falls in a read (R14).
+  Ranges are inclusive local dates; days are assigned by start (R18 step 1).
+- **Write path (tt-app):** `execute(Ctx, Command)`. The driver builds `Ctx` from the system clock
+  and time zone; tt-app never reads them. Under one lock: `decide` → one database transaction
+  that applies the events in order → commit → `evolve` the in-memory State → publish the events.
+  If the commit fails, State is unchanged. Reads take the same lock, so they never see a
+  half-applied command. No business rules live in tt-app, the drivers or the UI.
+- **Restore (R23)** is the one exception to "every change is an Event". Under the same lock it
+  backs up the current database, replaces the file from the chosen backup, reloads State and
+  checks its invariants.
+- **Startup order:** take the exclusive lock → if a database exists, take the R22 backup →
+  run migrations → load State and check invariants → start the drivers. The backup must come
+  before migrations, or a bad migration has no protection.
 - **Single writer:** one process per database file, enforced by an exclusive lock. `tt-cli`
-  refuses to run against the live database while the app is running; `--db <path>` points
-  it at another (e.g. a scratch) database.
+  requires `--db <path>` and never opens the live database.
 - **Code style (Faux-O):** newtypes with validating constructors, illegal states made
   unrepresentable (e.g. a rounding unit can only be a divisor of 60), methods that return new
   values instead of mutating shared state.
 - **Tauri plugins:** `global-shortcut` (R6), `autostart` (R9), `single-instance` (R9),
-  `clipboard-manager` (R15). The tray uses the built-in Tauri 2 tray API (R8).
+  `clipboard-manager` (R15). The tray uses the built-in Tauri 2 tray API (R8). Autostart
+  state is read from the plugin (the registry entry), which is the only source of truth; the
+  setting table has no autostart key, so Windows' Startup apps screen can't drift from the app.
 - **Windows:**
   - `main`: normal window with Today/Entries, Daily overview, Statistics, Billing error,
     Clients & projects and Settings views. Closing it hides it to the tray.
@@ -225,10 +248,13 @@ ThorSoft.TimeTracker/
 - **State sync:** `src-tauri` turns the Events published by tt-app into `data-changed`
   (and `timer-changed`) events. Both windows and the tray refresh from them. The backend
   holds the single source of truth.
+- **Tray elapsed time (R8):** the tray has no UI to compute elapsed time, so `src-tauri`
+  refreshes the tooltip once a minute while a timer runs, and on every `timer-changed` event.
 - **Frontend:** Vue 3 (`<script setup>`, Composition API), vue-router, Pinia for UI state,
   PrimeVue components (AutoComplete, DatePicker, DataTable, Dialog), ECharts via
-  `vue-echarts` for charts. Command and DTO types are generated from Rust with
-  `specta`/`tauri-specta`, so the Rust↔TS boundary is type-checked.
+  `vue-echarts` for charts. Command and DTO types are generated with `specta`/`tauri-specta`
+  from DTO structs in src-tauri that map from tt-core types, so the Rust↔TS boundary is
+  type-checked and tt-core carries no UI derives.
 - **Elapsed time display:** the running entry's elapsed time is computed in the UI from its
   start time. The UI doesn't poll the backend for it.
 
@@ -236,39 +262,53 @@ ThorSoft.TimeTracker/
 ```
 client     (id, name, round_unit_min, round_direction, round_level, archived_at?, created_at)
 project    (id, client_id → client, name, archived_at?, created_at)
-task       (id, project_id → project, name, archived_at?, created_at)
-time_entry (id, project_id → project, task_id? → task, start_utc, end_utc?, note?,
-            created_at, updated_at)
-favorite   (id, project_id, task_id?, sort)
+task       (id, project_id → project, name, archived_at?, created_at, UNIQUE (id, project_id))
+time_entry (id, project_id → project, task_id?, start_utc, end_utc?, note?,
+            created_at, updated_at,
+            FOREIGN KEY (task_id, project_id) → task (id, project_id))
+favorite   (id, project_id → project, task_id?, sort,
+            FOREIGN KEY (task_id, project_id) → task (id, project_id))
 setting    (key, value)            -- hotkey, decimal separator, backup folder/N, recents N
+counter    (name, next_id)         -- ID counters, written in the same transaction as the rows
 schema_migrations
 ```
 - **One running timer (R4):** `CREATE UNIQUE INDEX one_running ON time_entry((end_utc IS NULL)) WHERE end_utc IS NULL`
-  (a partial index on a non-NULL expression, so the uniqueness check actually applies).
-- `task.project_id` must equal `time_entry.project_id`, checked by `decide` in tt-core.
-- **Name uniqueness (R1):** checked by `decide`; backstop: unique index on
-  `(parent_id, name COLLATE NOCASE)`.
-- **Overlap check (R12):** checked by `decide` against the in-memory State. This is safe
-  because tt-app is the only writer (exclusive lock) and applies each command's events in
-  one transaction.
-- **IDs:** assigned by tt-core from counters in State and stored as given (no
-  `AUTOINCREMENT`), so a command sequence always produces the same IDs.
+  (a partial index on a non-NULL expression, so the uniqueness check actually applies). The
+  core rejects a second running entry before this index is reached.
+- **Task belongs to its entry's project:** enforced by `decide` and by the composite foreign
+  key above. A NULL `task_id` skips that check (SQLite's default MATCH SIMPLE), which is what
+  project-only entries need.
+- **Name uniqueness (R1):** checked by `decide`. Backstop: case-insensitive unique indexes on
+  `client(name)`, `project(client_id, name)` and `task(project_id, name)`, each
+  `COLLATE NOCASE`. Archived rows count too (OQ-7).
+- **Overlap check (R12):** checked by `decide` against the in-memory State only. There is no
+  database backstop; the Decider tests cover it.
+- **Switch order:** a switch applies its events in this order: stop the running entry, then
+  insert the new one. Uniqueness checks run per statement, so the order is fixed in the
+  transaction, not left to chance.
+- **Intervals are half-open `[start, end)`:** a switch shares a boundary with the entry it
+  stops, which is not an overlap.
+- **IDs:** assigned by tt-core from counters in State. The `counter` table is written in the
+  same transaction as the rows, so an ID is never reused after a restart, even if the newest
+  entry was deleted.
 - **Recents (R7):** derived from the entries ordered by start (distinct combos, active
   only), not stored.
 - `round_direction` and `round_level` are stored as text enums with a `CHECK` constraint.
 
 ### Time handling
 - Instants are stored as UTC, as Unix seconds (`INTEGER`). Durations are integer seconds.
-- The local date (for R18 step 1, R20 and R21) is derived using the OS time zone. tt-app
-  reads it and passes it into the core as `Ctx.tz` (or as a parameter of the read
-  functions); tt-core never looks it up itself. The time library (`jiff` or `chrono`) is
-  chosen in the plan stage.
+- The driver sets `Ctx.tz` from the OS time zone. It is used for local dates (R18 step 1,
+  R20, R21) and for converting typed local times (R10, R11) to UTC. tt-core never looks the
+  zone up itself. A typed time in the repeated hour (DST end) or the skipped hour (DST start)
+  is rejected with a message, as R12 requires for any invalid save; the user retypes it.
+  The time library (`jiff` or `chrono`) is chosen in the plan stage.
 - Decimal hours are formatted only at the edge (UI/export). All calculations stay in
-  seconds.
+  seconds, including the R14 difference and the R21 error. The displayed 2-decimal values
+  can still differ from exact hours (see AC-3).
 
 ### Storage location and backup
-- The live database is `%APPDATA%\ThorSoft.TimeTracker\timetracker.db`, never inside a
-  synced folder (AC-5). It uses WAL mode.
+- The live database is `%LOCALAPPDATA%\ThorSoft.TimeTracker\timetracker.db`, never inside a
+  synced or roamed folder (AC-5, OQ-8). It uses WAL mode.
 - Backups use the SQLite online backup API to write a timestamped file to the backup
   folder, then prune older copies (R22).
 
@@ -283,16 +323,18 @@ schema_migrations
   examples from R18, and property tests (`proptest`): rounding is idempotent, `down ≤ raw ≤ up`,
   `|nearest − raw| ≤ u/2`.
 - `tt-core` Decider: given State / when Command / then Events-or-error tests for every
-  command, including each rejection (R4, R12, R2 archiving rules).
+  command, including each rejection (R4, R12, R2 archiving rules), the switch event order,
+  and ID assignment across a delete and a reload.
 - `tt-core` model-based property tests: random Command sequences with a simulated clock and
   time zone; `check_invariants` after every step. This is deterministic simulation in
   spirit, without fault injection.
+- `tt-core` read models: quick-switch matching and ranking (R3, R6) are tested in Rust.
 - `tt-store` + `tt-app`: integration tests against a temporary database (migrations,
-  backstop constraints, backup/restore round-trip). The same Command sequences as above:
-  the State reloaded from disk must equal the in-memory State.
-- `tt-cli`: end-to-end scenario scripts against a temporary database.
-- `ui/`: Vitest for formatting and the quick-switch matching logic. End-to-end UI tests
-  are deferred.
+  backstop constraints, backup/restore round-trip, backup before migration). The same
+  Command sequences as above: after a reload from disk, the serialised State must equal the
+  in-memory State.
+- `tt-cli`: scenario scripts against a temporary database.
+- `ui/`: Vitest for formatting only. End-to-end UI tests are deferred.
 
 ---
 
@@ -301,7 +343,7 @@ schema_migrations
 |---|---|
 | Single user, runs locally on one machine; no team/sharing | Desktop app, no accounts or server (Design → Architecture); exclusions |
 | Technology left open for design | Decided: Rust + Tauri 2, Vue 3 + TS, SQLite (Summary, Design) |
-| Work data stays under my control; no third-party cloud required | Local SQLite in `%APPDATA%`, no network (Design → Security), backups to a user-chosen folder (R22) |
+| Work data stays under my control; no third-party cloud required | Local SQLite in `%LOCALAPPDATA%`, no network (Design → Security), backups to a user-chosen folder (R22) |
 | Rounding deterministic and transparent | Pure function with documented formula (R17, R18); raw shown next to rounded (R14); unit + property tests |
 | Raw times always kept | Entries stored to the second, never modified by rounding (R5, R16) |
 | Rounding only in the daily overview and the billing error | R16; statistics are raw (R20); billing error derives from R14 (R21) |
@@ -330,6 +372,20 @@ Carried forward:
   and whether a second hotkey for "stop" is needed. Tune during use; defaults are in R6
   and R7.
 
+Architecture decisions from the stage 2 review (2026-10-17):
+- **OQ-3 Event persistence.** Decided: the database stores the State; Events are in-memory
+  descriptions of change. Undo (R10) is an inverse command. No event table in v1.
+- **OQ-4 Rounding units (R17).** Decided: only the units that are exact at 2 decimals (6, 12,
+  15, 30, 60 minutes). See AC-3.
+- **OQ-5 tt-cli.** Decided: kept as a test harness. It requires `--db` and runs only against
+  scratch databases. No IPC to the running app in v1.
+- **OQ-6 Local times at DST changes.** Decided: an ambiguous or nonexistent typed time is
+  rejected with a message (R12). No silent choice of reading.
+- **OQ-7 Archived names.** Decided: archived names still count for uniqueness (R1), and
+  creating a clashing name offers to unarchive the existing item (R2).
+- **OQ-8 Live database location.** Decided: `%LOCALAPPDATA%`, which isn't roamed or synced.
+  The backup default follows (R22).
+
 ## 5. Areas of concern
 Owner of all items: Thorsten Reichert (single-user project).
 
@@ -341,18 +397,18 @@ Owner of all items: Thorsten Reichert (single-user project).
   early in the build stage with a locally built installer (MSI/NSIS) on the actual machine,
   before building features. Check with IT if it is blocked.
 - **AC-3 Decimal format for booking systems.** German booking systems may expect `1,25`
-  rather than `1.25`, and units of 5, 10 or 20 minutes give values that aren't exact at
-  2 decimals (e.g. 0.17 h). *Mitigation:* the separator is a setting (R15). Calculations
-  always stay in seconds, so the display precision never affects the billing error.
-  Confirm the needed format in the first week of use. Recommend units of 6, 12, 15, 30 or
-  60 minutes.
+  rather than `1.25`. Units that aren't exact at 2 decimals (1, 5, 10, 20 minutes) would
+  show 10 minutes as 0.17 h, which books 10.2 minutes. The billing error stays exact, because
+  calculations use seconds, but what gets booked is the displayed value. *Mitigation:* the
+  units are limited to the exact set (R17, OQ-4), and the separator is a setting (R15).
+  Confirm the needed format in the first week of use.
 - **AC-4 Retroactive recompute.** Editing an old entry or changing a client's rule changes
   past daily overviews and billing errors, which may then no longer match what was
   actually booked. *Accepted* for v1 (simplicity). If it causes problems, reopen intent
   questions 2 and 3 (a "booked" snapshot per day).
 - **AC-5 Synced-folder corruption.** A live SQLite file inside OneDrive can be corrupted
-  by the sync client. *Mitigation:* the live database always stays in `%APPDATA%`; only
-  the backup copies go to the (possibly synced) backup folder.
+  by the sync client. *Mitigation:* the live database stays in `%LOCALAPPDATA%`, which is not
+  roamed or synced (OQ-8); only the backup copies go to the (possibly synced) backup folder.
 - **AC-6 Learning curve.** Rust, Tauri and Vue are all new at the same time and could
   stall progress. *Mitigation:* keep `tt-core` small and pure as the main Rust learning
   ground. Build a thin vertical slice first (clients/projects, start/stop/switch with the

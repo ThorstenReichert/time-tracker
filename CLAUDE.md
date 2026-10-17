@@ -73,66 +73,84 @@ follow it.
 
 Single-user Windows tray app: Rust (Tauri 2) + Vue 3/TS + SQLite. Full design in `spec.md` §2;
 `R<n>` refers to its requirements. Style: functional core / imperative shell (Bernhardt), the core
-shaped as a Decider (Chassaing), drivers as ports & adapters (Cockburn), and determinism in the
-spirit of TigerBeetle. Goal: the app can be driven equally by the UI, the hotkey, the CLI and tests.
+shaped as a Decider (Chassaing), determinism in the spirit of TigerBeetle. Goal: the app can be
+driven equally by the UI, the hotkey and automated tests. The decisions behind this design are
+recorded as OQ-3 to OQ-8 in `spec.md` §4; check them before changing the code they affect.
 
 ### Layout and dependency direction
 
 ```
 crates/tt-core   pure domain: types, Decider (decide/evolve), invariants, rounding, read models
+                 (incl. quick-switch matching)
 crates/tt-store  SQLite: migrations, load State, apply Events in one transaction, backup/export
-crates/tt-app    the single write path: owns State + Store, executes Commands, publishes Events
-crates/tt-cli    headless driver for scripts, scenario tests and verification
-src-tauri/       GUI driver: Tauri commands, tray, global hotkey, autostart, clipboard
+crates/tt-app    the single write path: State + Store behind one lock, executes Commands,
+                 publishes Events
+crates/tt-cli    headless driver for scenario tests, on scratch databases only
+src-tauri/       GUI driver: Tauri commands, tray, global hotkey, autostart, clipboard,
+                 UI DTO types (specta)
 ui/              Vue 3 + TS; calls Tauri commands only, never touches the DB
 ```
 
 Dependencies point inward only: `src-tauri, tt-cli → tt-app → tt-store → tt-core`.
 `tt-core` depends on no IO crate (no Tauri, no rusqlite, no `std::fs`/`std::net`).
+No port traits: tests use a temporary SQLite database, not fakes.
 
 ### tt-core: deterministic functional core
 
 - **Decider shape.** `decide(&State, &Ctx, &Command) -> Result<Vec<Event>, DomainError>` and
-  `evolve(State, &Event) -> State`. Every state change is an Event; there is no other path.
-- **Everything is an input.** `Ctx { now, tz }` carries the current instant (UTC seconds) and
-  the time zone. IDs are assigned by the core from counters in `State`. Forbidden in tt-core:
-  reading the system clock or OS time zone, randomness, env vars, file/network IO, threads,
-  global mutable state. Same inputs → identical outputs.
-- **Whole world in memory.** `State` holds all clients, projects, tasks, entries, favorites and
-  settings, loaded once at startup. The core enforces the invariants itself (R1, R2, R4, R12);
-  the SQLite constraints are only a backstop.
-- **Plain values at the boundary.** `Command`, `Event` and `State` are plain `serde` data:
-  printable, comparable and serialisable.
-- **Reads are pure functions** over `State` (+ date/range + tz): daily overview, statistics,
-  billing error (R14–R21). They don't go through `decide`, and they are never stored.
+  `evolve(State, &Event) -> State`. Every change to State is an Event, except restore (see
+  tt-app). Events are in-memory descriptions of change; the database stores the resulting
+  State (OQ-3). Undo (R10) is an inverse command.
+- **Everything is an input.** `Ctx { now, tz }` is built by the driver. `decide` uses `tz` only
+  to convert typed local times (R10, R11) to UTC; an ambiguous or nonexistent time is rejected
+  (OQ-6). IDs come from counters in `State`. Forbidden
+  in tt-core: reading the system clock or OS time zone, randomness, env vars, file/network IO,
+  threads, global mutable state. Use `BTreeMap` in State for stable serialisation. Same inputs →
+  identical outputs.
+- **Whole world in memory.** `State` holds everything, including the counters, and is loaded at
+  startup. The core enforces the invariants (R1, R2, R4, R12); the SQLite constraints are a
+  backstop. `check_invariants()` runs after every `evolve` in debug builds and tests, and on every
+  load in all builds.
+- **Plain values at the boundary.** `Command`, `Event` and `State` are plain `serde` data. UI DTOs
+  live in src-tauri, never in tt-core.
+- **Reads are pure functions** over `State` plus `now`, `tz` and the date, range or query: daily
+  overview, statistics, billing error, quick-switch matching. A running entry counts up to `now`.
+  They don't go through `decide` and are never stored.
 - **Faux-O style.** Newtypes with validating constructors (parse, don't validate). Make illegal
   states unrepresentable (e.g. a rounding unit can only be a divisor of 60). Methods return new
   values. Mutation never leaks out of a function.
-- **Assert invariants.** `State::check_invariants()` (at most one running entry, no overlaps,
-  parent references valid) runs after every `evolve` in debug builds and tests.
 
 ### tt-app: the imperative shell
 
-- `execute(Command) -> Result<Vec<Event>, AppError>`: stamp `Ctx` (the real clock and tz are
-  read **only** here) → `decide` → `store.apply(events)` in one transaction → only after commit,
-  `evolve` the in-memory State → publish the events (`src-tauri` turns them into
-  `data-changed`/`timer-changed`). If persisting fails, State stays unchanged.
-- One process per DB file (exclusive lock). `tt-cli` refuses while the app is running; use
-  `--db <path>` for scratch databases.
+- `execute(Ctx, Command) -> Result<Vec<Event>, AppError>`. The driver builds `Ctx`; tt-app never
+  reads the clock or time zone. Under one lock: `decide` → one transaction that applies the events
+  in order → commit → `evolve` the in-memory State → publish the events. If the commit fails,
+  State is unchanged. Reads take the same lock.
+- Switch order: stop the running entry first, then insert the new one (uniqueness is checked per
+  statement).
+- **Restore (R23)** is the one exception to "every change is an Event". Under the same lock it
+  backs up the current database, replaces the file from the chosen backup, reloads State and
+  checks its invariants.
+- **Startup order:** take the exclusive lock → backup if a database exists → migrations → load
+  State and check invariants → start the drivers. The backup must come before migrations.
+- One process per database file (exclusive lock). `tt-cli` requires `--db <path>` and never opens
+  the live database.
 - **No business rules outside tt-core.** If tt-app, a driver or the UI needs a business-rule
   `if`, move it into tt-core.
 
 ### Drivers
 
 `src-tauri` and `tt-cli` only translate input → `Command` and result → output. Every feature
-must be reachable without the UI (through `tt-app`, and so from tests and `tt-cli`).
+must be reachable without the UI (through `tt-app`, and so from tests and `tt-cli`). Quick-switch
+matching is a tt-core read model, not UI code.
 
 ### Testing seams (details: stage 4)
 
-- tt-core: given State / when Command / then Events-or-error tests. Model-based property
-  tests: random Command sequences with a simulated clock, invariants checked after every step.
-- tt-store + tt-app: the same sequences against a temp SQLite DB; State reloaded from disk must
-  equal the in-memory State.
-- tt-cli: end-to-end scenario scripts against a temp DB.
+- tt-core: given State / when Command / then Events-or-error tests. Model-based property tests:
+  random Command sequences with a simulated clock and time zone, invariants checked after every
+  step.
+- tt-store + tt-app: the same sequences against a temporary SQLite DB. After a reload from disk,
+  the serialised State must equal the in-memory State.
+- tt-cli: end-to-end scenario scripts against a temporary DB.
 
 ## Conventions & Patterns
