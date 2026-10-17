@@ -12,7 +12,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use jiff::civil;
 use tt_core::read::{self, ComboRow, EntryRow, Overview, TaskMatches};
-use tt_core::{Catalog, Command, Ctx, Event, ProjectId, State, decide, evolve_all};
+use tt_core::{Catalog, Command, Ctx, EntryId, Event, ProjectId, State, decide, evolve_all};
 use tt_store::{MIGRATIONS, Migration, Store};
 
 pub use error::AppError;
@@ -154,6 +154,16 @@ impl App {
             state
                 .entries()
                 .running()
+                .and_then(|e| read::entry_row(state.catalog(), e, ctx.now))
+        })
+    }
+
+    /// One entry with its names, e.g. the one an overlap error names.
+    pub fn entry(&self, ctx: &Ctx, id: EntryId) -> Result<Option<EntryRow>, AppError> {
+        self.read(|state| {
+            state
+                .entries()
+                .get(id)
                 .and_then(|e| read::entry_row(state.catalog(), e, ctx.now))
         })
     }

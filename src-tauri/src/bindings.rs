@@ -12,7 +12,29 @@ use crate::commands;
 
 pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
-        .commands(collect_commands![commands::ping])
+        .commands(collect_commands![
+            commands::get_status,
+            commands::get_today,
+            commands::get_catalog,
+            commands::create_client,
+            commands::update_client,
+            commands::create_project,
+            commands::rename_project,
+            commands::create_task,
+            commands::rename_task,
+            commands::start,
+            commands::stop,
+            commands::add_entry,
+            commands::edit_entry,
+            commands::delete_entry,
+            commands::update_settings,
+            commands::get_running,
+            commands::get_day_entries,
+            commands::get_overview,
+            commands::get_recents,
+            commands::quick_switch,
+            commands::task_matches,
+        ])
         // IDs and Unix seconds stay below 2^53, so they fit a JS number exactly.
         .dangerously_cast_bigints_to_number()
 }

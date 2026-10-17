@@ -3,6 +3,7 @@
 use tauri::{AppHandle, Emitter, Manager, Runtime, plugin::TauriPlugin};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
+use crate::backend::Backend;
 use crate::{QUICK_SWITCH_WINDOW, tray};
 
 /// Default hotkey. Debug builds use another one, so they can run next to the installed app.
@@ -23,11 +24,20 @@ pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
         .build()
 }
 
-/// Registers the default hotkey. A failure (AC-1: taken by another app) is shown in the
+/// The hotkey from the settings, or the default.
+pub fn configured(app: &AppHandle) -> String {
+    app.try_state::<Backend>()
+        .and_then(|b| b.app().ok().and_then(|a| a.catalog().ok()))
+        .and_then(|c| c.settings().hotkey.clone())
+        .unwrap_or_else(|| DEFAULT_HOTKEY.to_owned())
+}
+
+/// Registers the configured hotkey. A failure (AC-1: taken by another app) is shown in the
 /// tray tooltip instead of failing silently; step 10 adds the main-window banner.
-pub fn register_default(app: &AppHandle) {
-    if let Err(e) = app.global_shortcut().register(DEFAULT_HOTKEY) {
-        let message = format!("Hotkey {DEFAULT_HOTKEY} unavailable: {e}");
+pub fn register_from_settings(app: &AppHandle) {
+    let hotkey = configured(app);
+    if let Err(e) = app.global_shortcut().register(hotkey.as_str()) {
+        let message = format!("Hotkey {hotkey} unavailable: {e}");
         eprintln!("{message}");
         tray::set_tooltip(app, &message);
     }

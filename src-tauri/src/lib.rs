@@ -1,13 +1,21 @@
 //! GUI driver: translates UI calls, the tray and the global hotkey into tt-app calls.
 //! No business rules live here (CLAUDE.md "Drivers").
 
+mod backend;
 mod bindings;
+mod bridge;
 mod commands;
+mod dto;
+mod errors;
 mod hotkey;
 mod tray;
 
+use std::sync::mpsc;
+
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
+
+use crate::backend::Backend;
 
 /// Label of the main window (tauri.conf.json).
 pub const MAIN_WINDOW: &str = "main";
@@ -34,9 +42,22 @@ pub fn run() {
         .invoke_handler(specta.invoke_handler())
         .setup(move |app| {
             specta.mount_events(app);
+            // Startup order (spec §2): the database first, then the drivers.
+            let backend = Backend::open(&backend::ctx());
+            let (events_tx, events_rx) = mpsc::channel();
+            if let Ok(tt) = backend.app() {
+                tt.subscribe(move |events| {
+                    let _ = events_tx.send(events.to_vec());
+                });
+            }
+            let first_run = backend.created;
+            app.manage(backend);
+            bridge::start(app.handle().clone(), events_rx);
             tray::create(app.handle())?;
-            hotkey::register_default(app.handle());
-            enable_autostart_in_release(app.handle());
+            hotkey::register_from_settings(app.handle());
+            if first_run {
+                enable_autostart_in_release(app.handle());
+            }
             if !std::env::args().any(|a| a == AUTOSTART_ARG) {
                 show_main_window(app.handle());
             }
@@ -66,17 +87,14 @@ pub fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-/// Step 0 spike for AC-2: the installed build registers itself for autostart. Debug builds
-/// never do, so `cargo tauri dev` can't point the Run key at `target\debug`. Step 8 moves
-/// this to "first run only", and step 13 adds the toggle.
+/// R9: autostart is on by default, so the first run of the installed app enables it. Debug
+/// builds never do, so `cargo tauri dev` can't point the Run key at `target\debug`. The OS
+/// entry is the only source of truth; step 13 adds the toggle.
 fn enable_autostart_in_release(app: &tauri::AppHandle) {
     if cfg!(debug_assertions) {
         return;
     }
-    let autolaunch = app.autolaunch();
-    if !autolaunch.is_enabled().unwrap_or(false)
-        && let Err(e) = autolaunch.enable()
-    {
+    if let Err(e) = app.autolaunch().enable() {
         eprintln!("autostart could not be enabled: {e}");
     }
 }

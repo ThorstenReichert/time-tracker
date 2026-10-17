@@ -20,6 +20,8 @@ tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
 tt-app.workspace = true
+tt-core.workspace = true
+jiff.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2.12", features = ["tray-icon", "image-png"] }
@@ -30,6 +32,10 @@ tauri-plugin-clipboard-manager = "2.5"
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
 tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.12"
+
+[dev-dependencies]
+tt-core = { workspace = true, features = ["test-support"] }
+tempfile = "3"
 
 [lints]
 workspace = true

@@ -5,13 +5,194 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 
 /** Commands */
 export const commands = {
-	ping: () => __TAURI_INVOKE<Pong>("ping"),
+	getStatus: () => typedError<StatusDto, UiError>(__TAURI_INVOKE("get_status")),
+	/**  Today's date in the OS time zone (YYYY-MM-DD). */
+	getToday: () => typedError<string, UiError>(__TAURI_INVOKE("get_today")),
+	getCatalog: () => typedError<CatalogDto, UiError>(__TAURI_INVOKE("get_catalog")),
+	createClient: (name: string, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("create_client", { name, rule })),
+	updateClient: (id: number, name: string, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("update_client", { id, name, rule })),
+	createProject: (client: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("create_project", { client, name })),
+	renameProject: (id: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("rename_project", { id, name })),
+	createTask: (project: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("create_task", { project, name })),
+	renameTask: (id: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("rename_task", { id, name })),
+	/**  Starts a timer on the combo, or switches to it (R5). */
+	start: (project: number, task: TaskChoiceDto) => typedError<null, UiError>(__TAURI_INVOKE("start", { project, task })),
+	/**  Stops the running timer now, or at a typed local time (R11). */
+	stop: (at: string | null) => typedError<null, UiError>(__TAURI_INVOKE("stop", { at })),
+	addEntry: (project: number, task: TaskChoiceDto, start: string, end: string, note: string | null) => typedError<null, UiError>(__TAURI_INVOKE("add_entry", { project, task, start, end, note })),
+	editEntry: (id: number, project: number, task: TaskChoiceDto, start: string, end: string | null, note: string | null) => typedError<null, UiError>(__TAURI_INVOKE("edit_entry", { id, project, task, start, end, note })),
+	deleteEntry: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("delete_entry", { id })),
+	updateSettings: (settings: SettingsDto) => typedError<null, UiError>(__TAURI_INVOKE("update_settings", { settings })),
+	getRunning: () => typedError<{
+	id: number,
+	combo: ComboDto,
+	/**  UTC Unix seconds. */
+	start: number,
+	end: number | null,
+	/**  The start and end as local wall-clock times (for editing). */
+	startLocal: string,
+	endLocal: string | null,
+	/**  Seconds; a running entry counts up to now. */
+	duration: number,
+	running: boolean,
+	note: string | null,
+} | null, UiError>(__TAURI_INVOKE("get_running")),
+	getDayEntries: (day: string) => typedError<EntryDto[], UiError>(__TAURI_INVOKE("get_day_entries", { day })),
+	getOverview: (day: string) => typedError<OverviewDto, UiError>(__TAURI_INVOKE("get_overview", { day })),
+	getRecents: () => typedError<ComboDto[], UiError>(__TAURI_INVOKE("get_recents")),
+	quickSwitch: (query: string) => typedError<ComboDto[], UiError>(__TAURI_INVOKE("quick_switch", { query })),
+	taskMatches: (project: number, text: string) => typedError<TaskMatchesDto, UiError>(__TAURI_INVOKE("task_matches", { project, text })),
 };
 
 /* Types */
-/**  Step 0 spike: proves the specta bindings, including a 64-bit integer field. */
-export type Pong = {
-	message: string,
-	buildId: number,
+export type CatalogDto = {
+	clients: ClientDto[],
+	projects: ProjectDto[],
+	tasks: TaskDto[],
+	settings: SettingsDto,
 };
+
+export type ClientBlockDto = {
+	client: number,
+	name: string,
+	rule: RuleDto,
+	total: FigureDto,
+	projects: ProjectRowDto[],
+	running: boolean,
+};
+
+export type ClientDto = {
+	id: number,
+	name: string,
+	rule: RuleDto,
+	archived: boolean,
+};
+
+export type ComboDto = {
+	project: number,
+	task: number | null,
+	client: number,
+	clientName: string,
+	projectName: string,
+	taskName: string | null,
+	/**  "Client / Project / Task" */
+	label: string,
+};
+
+export type Direction = "up" | "nearest" | "down";
+
+export type EntryDto = {
+	id: number,
+	combo: ComboDto,
+	/**  UTC Unix seconds. */
+	start: number,
+	end: number | null,
+	/**  The start and end as local wall-clock times (for editing). */
+	startLocal: string,
+	endLocal: string | null,
+	/**  Seconds; a running entry counts up to now. */
+	duration: number,
+	running: boolean,
+	note: string | null,
+};
+
+export type ErrorKind = 
+/**  Rejected by a business rule; nothing changed. */
+"domain" | 
+/**  Saving failed; the app reloaded its data from the database. */
+"store" | 
+/**  The app accepts no changes (see the status). */
+"broken" | 
+/**  The UI sent something unreadable (a bug in the UI). */
+"input";
+
+export type FigureDto = {
+	/**  Seconds. */
+	raw: number,
+	rounded: number,
+	/**  `rounded − raw`. */
+	diff: number,
+};
+
+export type Level = "project" | "client";
+
+export type OverviewDto = {
+	/**  YYYY-MM-DD */
+	date: string,
+	clients: ClientBlockDto[],
+};
+
+export type ProjectDto = {
+	id: number,
+	client: number,
+	name: string,
+	archived: boolean,
+};
+
+export type ProjectRowDto = {
+	project: number,
+	name: string,
+	raw: number,
+	/**  `None` for client-level clients: their project rows are raw only. */
+	booked: FigureDto | null,
+	running: boolean,
+};
+
+export type RuleDto = {
+	/**  Minutes: 6, 12, 15, 30 or 60. */
+	unit: number,
+	direction: Direction,
+	level: Level,
+};
+
+export type Separator = "auto" | "dot" | "comma";
+
+export type SettingsDto = {
+	/**  `None`: the app's default hotkey. */
+	hotkey: string | null,
+	decimalSeparator: Separator,
+	recentsN: number,
+	/**  `None`: `backups` next to the database. */
+	backupDir: string | null,
+	backupKeep: number,
+};
+
+export type StatusDto = {
+	/**  Why the app accepts no changes; `None` when it works. */
+	broken: string | null,
+	warnings: string[],
+	/**  The database file in use. */
+	dbPath: string,
+};
+
+/**  The task part of a combo, as the UI sends it (R3: `new` creates the task). */
+export type TaskChoiceDto = { kind: "none" } | { kind: "existing"; value: number } | { kind: "new"; value: string };
+
+export type TaskDto = {
+	id: number,
+	project: number,
+	name: string,
+	archived: boolean,
+};
+
+export type TaskMatchesDto = {
+	tasks: TaskDto[],
+	/**  Offer `Create "<name>"` when set. */
+	offerCreate: string | null,
+};
+
+export type UiError = {
+	kind: ErrorKind,
+	message: string,
+};
+
+/* Tauri Specta runtime */
+async function typedError<T, E>(result: Promise<T>): Promise<{ status: "ok"; data: T } | { status: "error"; error: E }> {
+    try {
+        return { status: "ok", data: await result };
+    } catch (e) {
+        if (e instanceof Error) throw e;
+        return { status: "error", error: e as any };
+    }
+}
 

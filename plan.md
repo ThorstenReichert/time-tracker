@@ -507,5 +507,18 @@ No IT involvement needed; AC-2 is closed for slice 1.
   - one `execute(Start)`: 17 ms
 
   The OQ-9 trigger isn't reached.
+- **Step 8, driver details (2026-10-17).**
+  - Write commands return nothing; the UI reloads on `data-changed`.
+  - `ping` is gone; the hello page renders `getStatus` + `getCatalog`.
+  - `UiError { kind: domain|store|broken|input, message }` renders an overlap as "Overlaps
+    Acme / Web 09:00–10:22", via the new `App::entry`.
+  - The tray icon and tooltip already follow the running entry (`tray::refresh` from the
+    bridge). The once-a-minute refresh and the menu entries stay in step 10.
+  - The hotkey comes from the settings, else the default.
+  - Autostart is enabled only on first run (new DB) in release builds.
+
+  Proof: the dev build started next to the installed app. Its default DB appeared under
+  `%LOCALAPPDATA%\ThorSoft.TimeTracker\dev\`, and with `TT_DB` it showed the tt-cli
+  scenario's catalog (screenshots in the session).
 - **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
   the first test file. Drop the flag then.

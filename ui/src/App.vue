@@ -1,25 +1,41 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { commands, type Pong } from "./bindings";
+// Step 8 page: proves the backend wiring by rendering status and catalog. Step 9 replaces it
+// with the real shell.
+import { onMounted, onUnmounted, ref } from "vue";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { commands, type CatalogDto, type StatusDto } from "./bindings";
+import { call, errorMessage } from "./lib/api";
 
-const pong = ref<Pong | null>(null);
+const status = ref<StatusDto | null>(null);
+const catalog = ref<CatalogDto | null>(null);
 const error = ref<string | null>(null);
+let unlisten: UnlistenFn | undefined;
+
+async function load() {
+  try {
+    status.value = await call(commands.getStatus());
+    catalog.value = await call(commands.getCatalog());
+    error.value = null;
+  } catch (e) {
+    error.value = errorMessage(e);
+  }
+}
 
 onMounted(async () => {
-  try {
-    pong.value = await commands.ping();
-  } catch (e) {
-    error.value = String(e);
-  }
+  unlisten = await listen("data-changed", load);
+  await load();
 });
+onUnmounted(() => unlisten?.());
 </script>
 
 <template>
   <main>
     <h1>ThorSoft TimeTracker</h1>
-    <p v-if="pong">Backend says: {{ pong.message }} (build {{ pong.buildId }})</p>
-    <p v-else-if="error" class="error">{{ error }}</p>
-    <p v-else>Connecting…</p>
+    <p v-if="error" class="error">{{ error }}</p>
+    <h2>Status</h2>
+    <pre>{{ JSON.stringify(status, null, 2) }}</pre>
+    <h2>Catalog</h2>
+    <pre>{{ JSON.stringify(catalog, null, 2) }}</pre>
   </main>
 </template>
 
