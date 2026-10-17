@@ -3,7 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Client, ClientId, Name, Project, ProjectId, RoundingRule, Settings, Task, TaskId};
+use crate::{
+    Client, ClientId, Entry, EntryId, Instant, Name, Project, ProjectId, RoundingRule, Settings,
+    Task, TaskId,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -32,5 +35,26 @@ pub enum Event {
     },
     SettingsChanged {
         settings: Settings,
+    },
+    /// A timer started (an insert of a running entry).
+    EntryStarted {
+        entry: Entry,
+    },
+    /// The running entry got its end.
+    EntryStopped {
+        id: EntryId,
+        end: Instant,
+        updated_at: Instant,
+    },
+    /// A finished entry was added after the fact.
+    EntryAdded {
+        entry: Entry,
+    },
+    /// An entry was replaced (combo, times, note).
+    EntryUpdated {
+        entry: Entry,
+    },
+    EntryDeleted {
+        id: EntryId,
     },
 }

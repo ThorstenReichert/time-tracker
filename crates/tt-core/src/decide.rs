@@ -2,6 +2,7 @@
 //! changes `State`; the caller evolves a copy with the events it returns.
 
 mod catalog;
+mod tracking;
 
 pub(crate) use catalog::validate_settings;
 
@@ -22,5 +23,34 @@ pub fn decide(state: &State, ctx: &Ctx, cmd: &Command) -> Result<Vec<Event>, Dom
         Command::CreateTask { project, name } => catalog::create_task(catalog, ctx, *project, name),
         Command::RenameTask { id, name } => catalog::rename_task(catalog, *id, name),
         Command::UpdateSettings { settings } => catalog::update_settings(settings),
+        Command::Start { project, task } => tracking::start(state, ctx, *project, task),
+        Command::Stop { at } => tracking::stop(state, ctx, *at),
+        Command::AddEntry {
+            project,
+            task,
+            start,
+            end,
+            note,
+        } => tracking::add_entry(state, ctx, *project, task, (*start, *end), note.as_deref()),
+        Command::EditEntry {
+            id,
+            project,
+            task,
+            start,
+            end,
+            note,
+        } => tracking::edit_entry(
+            state,
+            ctx,
+            tracking::Edit {
+                id: *id,
+                project: *project,
+                task,
+                start: *start,
+                end: *end,
+                note: note.as_deref(),
+            },
+        ),
+        Command::DeleteEntry { id } => tracking::delete_entry(state, *id),
     }
 }

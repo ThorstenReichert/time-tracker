@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ClientId, Instant, Name, ProjectId, RoundingRule, TaskId};
+use crate::{ClientId, EntryId, Instant, Name, ProjectId, RoundingRule, TaskId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Client {
@@ -127,6 +127,10 @@ impl Counters {
 
     pub(crate) fn task(&self) -> TaskId {
         TaskId::new(self.next_task)
+    }
+
+    pub(crate) fn entry(&self) -> EntryId {
+        EntryId::new(self.next_entry)
     }
 }
 

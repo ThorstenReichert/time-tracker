@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{ClientId, ProjectId, TaskId};
+use crate::{ClientId, EntryId, Instant, ProjectId, TaskId};
 
 /// Why a command was rejected. Every invalid save is rejected with one of these, never
 /// adjusted silently (R12).
@@ -17,8 +17,41 @@ pub enum DomainError {
     UnknownProject(ProjectId),
     #[error("unknown task {0}")]
     UnknownTask(TaskId),
+    #[error("unknown entry {0}")]
+    UnknownEntry(EntryId),
     #[error("invalid setting: {0}")]
     InvalidSetting(SettingProblem),
+    #[error("task {task} doesn't belong to project {project}")]
+    TaskNotInProject { task: TaskId, project: ProjectId },
+    #[error("the note is longer than {max} characters")]
+    NoteTooLong { max: usize },
+    #[error("no timer is running")]
+    NotRunning,
+    #[error("an entry can't start in the future")]
+    StartInFuture,
+    #[error("an entry can't end in the future")]
+    EndInFuture,
+    #[error("the end must be after the start")]
+    EndNotAfterStart,
+    #[error("a finished entry needs an end")]
+    EndRequired,
+    /// The typed time falls in the repeated hour at the end of DST (OQ-6).
+    #[error("this local time exists twice (daylight saving time ends); pick another")]
+    AmbiguousLocalTime,
+    /// The typed time falls in the skipped hour at the start of DST (OQ-6).
+    #[error("this local time doesn't exist (daylight saving time starts); pick another")]
+    NonexistentLocalTime,
+    #[error("times are recorded to the second")]
+    SubsecondTime,
+    #[error("the time is out of the supported range")]
+    TimeOutOfRange,
+    /// The new interval overlaps an existing entry (R12). `end: None` means it's running.
+    #[error("overlaps entry {with}")]
+    Overlap {
+        with: EntryId,
+        start: Instant,
+        end: Option<Instant>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]

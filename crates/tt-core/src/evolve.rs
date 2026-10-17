@@ -21,6 +21,7 @@ pub fn evolve_all<'a>(state: State, events: impl IntoIterator<Item = &'a Event>)
 }
 
 fn apply(state: &mut State, event: &Event) {
+    let entries = &mut state.entries;
     let catalog = &mut state.catalog;
     let counters = &mut catalog.counters;
     match event {
@@ -54,6 +55,19 @@ fn apply(state: &mut State, event: &Event) {
         }
         Event::SettingsChanged { settings } => {
             catalog.settings = settings.clone();
+        }
+        Event::EntryStarted { entry } | Event::EntryAdded { entry } => {
+            counters.next_entry = counters.next_entry.max(entry.id.get() + 1);
+            entries.insert(entry.clone());
+        }
+        Event::EntryStopped {
+            id,
+            end,
+            updated_at,
+        } => entries.stop(*id, *end, *updated_at),
+        Event::EntryUpdated { entry } => entries.replace(entry.clone()),
+        Event::EntryDeleted { id } => {
+            entries.remove(*id);
         }
     }
 }

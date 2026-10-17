@@ -8,7 +8,8 @@ use crate::{InvariantViolation, State};
 
 impl State {
     pub fn check_invariants(&self) -> Result<(), InvariantViolation> {
-        check_catalog(self)
+        check_catalog(self)?;
+        check_entries(self)
     }
 }
 
@@ -87,6 +88,64 @@ fn check_catalog(state: &State) -> Result<(), InvariantViolation> {
 
     if let Err(problem) = validate_settings(&c.settings) {
         return violation(format!("settings: {problem}"));
+    }
+    Ok(())
+}
+
+fn check_entries(state: &State) -> Result<(), InvariantViolation> {
+    let (c, entries) = (&state.catalog, &state.entries);
+    if !entries.indexes_consistent() {
+        return violation("entry indexes disagree with the entries");
+    }
+    // R4: at most one running entry.
+    if entries.running_count() > 1 {
+        return violation(format!("{} running entries", entries.running_count()));
+    }
+    let mut previous: Option<&crate::Entry> = None;
+    for entry in entries.all() {
+        let id = entry.id;
+        if id.get() >= c.counters.next_entry {
+            return violation(format!("entry {id} is not below the entry counter"));
+        }
+        if c.project(entry.project).is_none() {
+            return violation(format!(
+                "entry {id} refers to missing project {}",
+                entry.project
+            ));
+        }
+        if let Some(task) = entry.task {
+            match c.task(task) {
+                None => return violation(format!("entry {id} refers to missing task {task}")),
+                Some(t) if t.project != entry.project => {
+                    return violation(format!(
+                        "entry {id}: task {task} belongs to project {}, not {}",
+                        t.project, entry.project
+                    ));
+                }
+                Some(_) => {}
+            }
+        }
+        // R12: the end is after the start.
+        if entry.end.is_some_and(|end| end <= entry.start) {
+            return violation(format!("entry {id} doesn't end after its start"));
+        }
+        // R12: no overlaps. Ordered by start, each entry must end (a running one never
+        // does) at or before the next one starts.
+        if let Some(prev) = previous {
+            match prev.end {
+                None => {
+                    return violation(format!(
+                        "entry {id} starts after the running entry {}",
+                        prev.id
+                    ));
+                }
+                Some(end) if end > entry.start => {
+                    return violation(format!("entries {} and {id} overlap", prev.id));
+                }
+                Some(_) => {}
+            }
+        }
+        previous = Some(entry);
     }
     Ok(())
 }

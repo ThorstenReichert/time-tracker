@@ -1,9 +1,10 @@
 //! What a driver asks for. Commands are plain data; names arrive as raw text and are parsed
 //! by `decide`, so an invalid name is a `DomainError`, not a deserialisation failure.
 
+use jiff::civil;
 use serde::{Deserialize, Serialize};
 
-use crate::{ClientId, ProjectId, RoundingRule, Settings, TaskId};
+use crate::{ClientId, EntryId, ProjectId, RoundingRule, Settings, TaskId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -37,4 +38,43 @@ pub enum Command {
     UpdateSettings {
         settings: Settings,
     },
+    /// Starts a timer on the combo at `now`. If another combo is running, it is stopped at
+    /// the same instant (a switch, R5); if the same combo is running, nothing happens.
+    Start {
+        project: ProjectId,
+        task: TaskChoice,
+    },
+    /// Stops the running entry at `now`, or at a typed earlier time (forgotten stop, R11).
+    Stop {
+        at: Option<civil::DateTime>,
+    },
+    /// Adds a finished entry after the fact (R10). Times are local wall-clock times.
+    AddEntry {
+        project: ProjectId,
+        task: TaskChoice,
+        start: civil::DateTime,
+        end: civil::DateTime,
+        note: Option<String>,
+    },
+    /// Replaces an entry's combo, times and note (R10, R11). On the running entry,
+    /// `end: None` keeps it running; on a finished entry an end is required.
+    EditEntry {
+        id: EntryId,
+        project: ProjectId,
+        task: TaskChoice,
+        start: civil::DateTime,
+        end: Option<civil::DateTime>,
+        note: Option<String>,
+    },
+    DeleteEntry {
+        id: EntryId,
+    },
+}
+
+/// The task part of a combo. `New` creates the task in the same command (R3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TaskChoice {
+    NoTask,
+    Existing(TaskId),
+    New(String),
 }
