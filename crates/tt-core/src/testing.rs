@@ -5,7 +5,28 @@
 
 use jiff::{civil, tz::TimeZone};
 
-use crate::{Ctx, Instant};
+use crate::{Command, Ctx, DomainError, Event, Instant, State, decide, evolve_all};
+
+/// Given: the state after `events`, starting from an empty state.
+pub fn given(events: &[Event]) -> State {
+    evolve_all(State::default(), events)
+}
+
+/// When: decides `cmd` and, if it's accepted, also evolves the state with its events, so
+/// the invariants are checked on the result (evolve does that in tests).
+pub fn when(state: &State, ctx: &Ctx, cmd: Command) -> Result<(Vec<Event>, State), DomainError> {
+    let events = decide(state, ctx, &cmd)?;
+    let next = evolve_all(state.clone(), &events);
+    Ok((events, next))
+}
+
+/// Runs commands that must all succeed, returning the final state.
+pub fn run(state: State, ctx: &Ctx, cmds: impl IntoIterator<Item = Command>) -> State {
+    cmds.into_iter().fold(state, |s, cmd| {
+        let (_, next) = when(&s, ctx, cmd.clone()).unwrap_or_else(|e| panic!("{cmd:?}: {e}"));
+        next
+    })
+}
 
 /// The zone the model tests run in: it has both DST changes (OQ-6).
 pub fn berlin() -> TimeZone {
