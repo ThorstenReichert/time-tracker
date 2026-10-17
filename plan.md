@@ -482,5 +482,15 @@ No IT involvement needed; AC-2 is closed for slice 1.
     crash the app.
   - `ClientBlock` carries the whole `rule`, not just `level`.
   - `quick_switch` returns at most `QUICK_SWITCH_LIMIT` = 50 rows.
+- **Step 5, schema and backstop tests (2026-10-17).** The schema adds three things the spec
+  didn't spell out:
+  - `STRICT` tables;
+  - a `CHECK (end_utc > start_utc)` backstop for R12;
+  - an index `time_entry_start` for the named queries.
+
+  The backstop tests feed crafted events through `Store::apply` instead of raw SQL. That's
+  the path the app uses, with `foreign_keys=ON` set by `Store::open`. Updates and deletes
+  that hit no row fail with `StoreError::RowMissing`, so drift between memory and the DB
+  shows up as a store error. `Store::open` takes `&'static [Migration]`.
 - **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
   the first test file. Drop the flag then.
