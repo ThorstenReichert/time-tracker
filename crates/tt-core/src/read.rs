@@ -11,7 +11,7 @@ mod task_match;
 
 pub use combo::{ComboRow, combo_row, recents};
 pub use day::{day_bounds, local_date};
-pub use day_entries::{EntryRow, day_entries};
+pub use day_entries::{EntryRow, day_entries, entry_row};
 pub use overview::{ClientBlock, Figure, Overview, ProjectRow, daily_overview};
 pub use quick_switch::{QUICK_SWITCH_LIMIT, quick_switch};
 pub use task_match::{TaskMatches, TaskRow, task_matches};

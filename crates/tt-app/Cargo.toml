@@ -11,6 +11,16 @@ publish.workspace = true
 [dependencies]
 tt-core.workspace = true
 tt-store.workspace = true
+jiff.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tt-core = { workspace = true, features = ["test-support"] }
+proptest = "1.12"
+tempfile = "3"
+serde_json.workspace = true
+rusqlite = { version = "0.40", features = ["bundled"] }
+memory-stats = "1.2"
 
 [lints]
 workspace = true

@@ -492,5 +492,20 @@ No IT involvement needed; AC-2 is closed for slice 1.
   the path the app uses, with `foreign_keys=ON` set by `Store::open`. Updates and deletes
   that hit no row fail with `StoreError::RowMissing`, so drift between memory and the DB
   shows up as a store error. `Store::open` takes `&'static [Migration]`.
+- **Step 6, fault injection (2026-10-17).** The store error is injected with a SQLite
+  trigger, not with a second connection holding `BEGIN EXCLUSIVE`. A second connection
+  creates `BEFORE INSERT ON time_entry … RAISE(ABORT)` and the next save fails at once. That
+  needs no busy timeout and has no timing. A failed reload is forced the same way, plus a
+  renamed `setting` table. An out-of-band `DELETE` shows that the DB is the authority
+  (`RowMissing` → reload). `AppError` has no `Bug` variant (crash-only).
+  `App::running(&Ctx)` returns an `EntryRow` via the new `read::entry_row`, and
+  `App::snapshot()` serves the tests and `tt-cli state`.
+- **Step 6, benchmark result (2026-10-17, this machine, release).** 100k entries, 4 MB file:
+  - load + check: 46 ms (limit 500 ms)
+  - process memory with State loaded: 35 MB (limit 50 MB)
+  - full startup including the backup: 74 ms
+  - one `execute(Start)`: 17 ms
+
+  The OQ-9 trigger isn't reached.
 - **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
   the first test file. Drop the flag then.

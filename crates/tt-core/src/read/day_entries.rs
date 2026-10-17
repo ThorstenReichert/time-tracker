@@ -29,18 +29,22 @@ pub fn day_entries(
     let mut rows: Vec<EntryRow> = entries
         .iter()
         .filter(|e| local_date(e.start, tz) == date)
-        .filter_map(|e| {
-            Some(EntryRow {
-                id: e.id,
-                combo: combo_row(catalog, e.combo())?,
-                start: e.start,
-                end: e.end,
-                duration: e.duration_until(now),
-                running: e.is_running(),
-                note: e.note.clone(),
-            })
-        })
+        .filter_map(|e| entry_row(catalog, e, now))
         .collect();
     rows.sort_by_key(|r| (r.start, r.id));
     rows
+}
+
+/// One entry with its names, e.g. the running entry for the timer display. `None` if its
+/// combo doesn't exist in the catalog.
+pub fn entry_row(catalog: &Catalog, entry: &Entry, now: Instant) -> Option<EntryRow> {
+    Some(EntryRow {
+        id: entry.id,
+        combo: combo_row(catalog, entry.combo())?,
+        start: entry.start,
+        end: entry.end,
+        duration: entry.duration_until(now),
+        running: entry.is_running(),
+        note: entry.note.clone(),
+    })
 }
