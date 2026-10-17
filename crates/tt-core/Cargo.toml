@@ -17,6 +17,7 @@ test-support = ["dep:proptest"]
 serde.workspace = true
 thiserror.workspace = true
 jiff.workspace = true
+nucleo-matcher = "0.3"
 proptest = { version = "1.12", optional = true }
 
 [dev-dependencies]

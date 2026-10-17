@@ -197,6 +197,22 @@ impl Catalog {
         self.tasks.values().filter(move |t| t.project == project)
     }
 
+    /// Active means: the item and all its parents are not archived (R2). Only active items
+    /// are offered for new entries (quick-switch, recents, pickers).
+    pub fn is_client_active(&self, id: ClientId) -> bool {
+        self.client(id).is_some_and(|c| c.archived_at.is_none())
+    }
+
+    pub fn is_project_active(&self, id: ProjectId) -> bool {
+        self.project(id)
+            .is_some_and(|p| p.archived_at.is_none() && self.is_client_active(p.client))
+    }
+
+    pub fn is_task_active(&self, id: TaskId) -> bool {
+        self.task(id)
+            .is_some_and(|t| t.archived_at.is_none() && self.is_project_active(t.project))
+    }
+
     /// The client with this name, ignoring case (archived ones included, OQ-7).
     pub fn client_named(&self, name: &Name) -> Option<&Client> {
         self.clients.values().find(|c| c.name.matches(name))

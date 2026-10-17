@@ -473,5 +473,14 @@ No IT involvement needed; AC-2 is closed for slice 1.
 - **Step 0, tray icons (2026-10-17).** The 32 px PNGs come from `src-tauri/icons/tray-idle.svg`
   and `tray-running.svg` via `cargo tauri icon <svg> -o <tmp> -p 32`. The SVGs are committed
   with the PNGs.
+- **Step 4, read model shapes (2026-10-17).** These are below plan-step level, recorded
+  for the stranger test:
+  - `read.rs` plus `read/{combo,day,day_entries,overview,quick_switch,task_match}.rs`
+    replace `read/mod.rs` and `read/recents.rs`; `recents` lives in `combo.rs`, next to
+    `ComboRow`.
+  - `day_bounds` returns `Result<_, DomainError::TimeOutOfRange>`, so a far-out date can't
+    crash the app.
+  - `ClientBlock` carries the whole `rule`, not just `level`.
+  - `quick_switch` returns at most `QUICK_SWITCH_LIMIT` = 50 rows.
 - **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
   the first test file. Drop the flag then.
