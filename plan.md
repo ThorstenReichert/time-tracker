@@ -594,3 +594,26 @@ No IT involvement needed; AC-2 is closed for slice 1.
     the banner and the tray tooltip showed the failure.
 
   Still open for the owner: the R6 stopwatch timing by hand.
+- **Component tests (owner, 2026-10-18, before step 11).** The UI gets a component-test level,
+  run by `npm --prefix ui test` and so by `scripts/check.ps1`:
+  - New dev dependencies `@vue/test-utils` 2.5 and `happy-dom` 21. Vitest now runs in happy-dom
+    with `ui/src/test/setup.ts`.
+  - The helpers live in `ui/src/test/`:
+    - `backend.ts` fakes the Tauri backend with `mockIPC`: handlers per command, recorded
+      calls, and faked events, so `emit("data-changed")` reaches the page.
+    - `fixtures.ts` holds the demo combos and catalog.
+    - `mount.ts` mounts like main.ts (PrimeVue, toasts, Pinia).
+    - `page.ts` finds dialogs, buttons and AutoComplete suggestions.
+  - Tests sit next to the components (`<Name>.test.ts`). The backfill covers QuickSwitch, App
+    (the `action-failed` toast), StatusBanner, RunningBar, RecentsRow, NameDialog,
+    ClientDialog, TaskInput, ComboPicker, ClientsView and TodayView.
+  - Rejected for now: Playwright against the WebView2 window, and scripted native checks
+    (hotkey, tray, focus). The step 10 checks showed that most of the manual work was inside
+    the page. Revisit if the in-page behaviour needs the real backend, or if native checks
+    keep recurring.
+
+  The steps from 11 on add component tests for their views. Bead `qvt.17`; steps 11–13
+  depend on it. Proof: `npm --prefix ui test` passes 64 tests in 14 files, and
+  `npm --prefix ui run typecheck` is clean. As a mutation check, removing a behaviour made the
+  matching test fail. The behaviours removed were the Enter-waits-for-search line in
+  QuickSwitch, TaskInput's "typing drops the pick" and ComboPicker's task fill.

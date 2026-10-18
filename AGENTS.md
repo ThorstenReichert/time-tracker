@@ -259,3 +259,8 @@ matching is a tt-core read model, not UI code.
 - tt-store + tt-app: the same sequences against a temporary SQLite DB. After a reload from disk,
   the serialised State must equal the in-memory State.
 - tt-cli: end-to-end scenario scripts against a temporary DB.
+- ui: component tests (Vitest, `@vue/test-utils`, happy-dom) next to each component, as
+  `<Name>.test.ts`. The backend is faked with Tauri's `mockIPC` through `ui/src/test/backend.ts`
+  (handlers per command, recorded calls, faked events); `test/mount.ts` mounts with PrimeVue
+  and Pinia; `test/page.ts` finds dialogs and AutoComplete suggestions. Pure UI logic goes in
+  `ui/src/lib/` with plain unit tests. No browser or native-shell tests yet (owner, 2026-10-18).

@@ -17,5 +17,6 @@ export default defineConfig({
       },
     },
   },
-  test: { environment: "node" },
+  // Component tests render into happy-dom; src/test/setup.ts resets the faked backend.
+  test: { environment: "happy-dom", setupFiles: ["src/test/setup.ts"] },
 });
