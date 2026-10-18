@@ -181,6 +181,23 @@ impl From<SettingsDto> for Settings {
     }
 }
 
+/// What an unset setting falls back to, for the settings form.
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsDefaultsDto {
+    pub hotkey: String,
+    pub backup_dir: String,
+}
+
+/// The autostart entry (R9). Windows holds it; the app keeps no copy (spec §2).
+#[derive(Debug, Clone, Copy, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AutostartDto {
+    /// `false` in debug builds, which never touch the entry.
+    pub available: bool,
+    pub enabled: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogDto {

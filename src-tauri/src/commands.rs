@@ -2,17 +2,20 @@
 //! commands are `async`, so they run off the main thread. Write commands return nothing;
 //! the UI refreshes on the `data-changed` event.
 
+use std::path::Path;
+
 use jiff::civil;
-use tauri::State;
+use tauri::{AppHandle, State};
+use tauri_plugin_autostart::ManagerExt as _;
 use tt_core::{ClientId, Command, Ctx, EntryId, ProjectId, TaskId};
 
 use crate::backend::{Backend, ctx};
 use crate::dto::{
-    CatalogDto, ComboDto, EntryDto, OverviewDto, RuleDto, SettingsDto, StatusDto, TaskChoiceDto,
-    TaskMatchesDto,
+    AutostartDto, CatalogDto, ComboDto, EntryDto, OverviewDto, RuleDto, SettingsDefaultsDto,
+    SettingsDto, StatusDto, TaskChoiceDto, TaskMatchesDto,
 };
 use crate::errors::UiError;
-use crate::hotkey::HotkeyStatus;
+use crate::hotkey::{self, HotkeyStatus};
 
 type Res<T> = Result<T, UiError>;
 
@@ -198,11 +201,64 @@ pub async fn delete_entry(backend: State<'_, Backend>, id: u64) -> Res<()> {
     execute(&backend, &ctx(), Command::DeleteEntry { id })
 }
 
+/// Saves the settings. The bridge then registers the new hotkey (R6); a hotkey the plugin
+/// can't read is rejected here, so it's never saved.
 #[tauri::command]
 #[specta::specta]
 pub async fn update_settings(backend: State<'_, Backend>, settings: SettingsDto) -> Res<()> {
+    if let Some(text) = settings.hotkey.as_deref()
+        && !hotkey::is_valid(text)
+    {
+        return Err(UiError::rejected(format!(
+            "\"{text}\" isn't a valid hotkey; write it like {}",
+            hotkey::DEFAULT_HOTKEY
+        )));
+    }
     let settings = settings.into();
     execute(&backend, &ctx(), Command::UpdateSettings { settings })
+}
+
+/// The values unset settings fall back to.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_settings_defaults(backend: State<'_, Backend>) -> Res<SettingsDefaultsDto> {
+    let backup_dir = tt_app::default_backup_dir(Path::new(backend.db_path()));
+    Ok(SettingsDefaultsDto {
+        hotkey: hotkey::DEFAULT_HOTKEY.to_owned(),
+        backup_dir: backup_dir.display().to_string(),
+    })
+}
+
+/// The autostart entry as Windows has it (R9).
+#[tauri::command]
+#[specta::specta]
+pub async fn get_autostart(app: AppHandle) -> Res<AutostartDto> {
+    let enabled = app
+        .autolaunch()
+        .is_enabled()
+        .map_err(|e| UiError::system(format!("Reading the autostart entry failed: {e}")))?;
+    Ok(AutostartDto {
+        available: crate::AUTOSTART_AVAILABLE,
+        enabled,
+    })
+}
+
+/// Turns starting with Windows on or off (R9). The entry is the only record of it.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_autostart(app: AppHandle, enabled: bool) -> Res<()> {
+    if !crate::AUTOSTART_AVAILABLE {
+        return Err(UiError::rejected(
+            "Autostart can only be changed in the installed app",
+        ));
+    }
+    let autolaunch = app.autolaunch();
+    let result = if enabled {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    result.map_err(|e| UiError::system(format!("Windows refused the change: {e}")))
 }
 
 #[tauri::command]

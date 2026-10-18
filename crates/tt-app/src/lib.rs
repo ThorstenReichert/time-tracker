@@ -16,7 +16,7 @@ use tt_core::{Catalog, Command, Ctx, EntryId, Event, ProjectId, State, decide, e
 use tt_store::{MIGRATIONS, Migration, Store};
 
 pub use error::AppError;
-pub use paths::{app_data_dir, live_db_path};
+pub use paths::{app_data_dir, default_backup_dir, live_db_path};
 
 /// How many recent combos rank the quick-switch matches.
 const QUICK_SWITCH_RECENCY: usize = 100;

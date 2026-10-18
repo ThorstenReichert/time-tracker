@@ -255,7 +255,7 @@ fn run(cli: Cli) -> Result<Value, Failure> {
     };
     let ctx = Ctx::new(now, tz);
 
-    let backups = cli.db.parent().unwrap_or(Path::new(".")).join("backups");
+    let backups = tt_app::default_backup_dir(&cli.db);
     let config = AppConfig {
         backup_dir_override: Some(backups),
         ..AppConfig::new(&cli.db)

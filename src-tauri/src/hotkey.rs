@@ -69,6 +69,20 @@ pub fn configured(app: &AppHandle) -> String {
         .unwrap_or_else(|| DEFAULT_HOTKEY.to_owned())
 }
 
+/// Whether the global-shortcut plugin can read `hotkey`, e.g. `Ctrl+Alt+Space`.
+pub fn is_valid(hotkey: &str) -> bool {
+    hotkey.parse::<Shortcut>().is_ok()
+}
+
+/// Registers the hotkey again after the settings changed. The old one is freed first, so it's
+/// free for other apps, and saving the same hotkey retries one that Windows refused before.
+pub fn reregister(app: &AppHandle) {
+    if let Err(e) = app.global_shortcut().unregister_all() {
+        eprintln!("hotkeys not unregistered: {e}");
+    }
+    register_from_settings(app);
+}
+
 /// Registers the configured hotkey. A failure (AC-1: taken by another app) is shown in the
 /// main window's banner and the tray tooltip instead of failing silently.
 pub fn register_from_settings(app: &AppHandle) {

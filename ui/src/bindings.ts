@@ -22,7 +22,17 @@ export const commands = {
 	addEntry: (project: number, task: TaskChoiceDto, start: string, end: string, note: string | null) => typedError<null, UiError>(__TAURI_INVOKE("add_entry", { project, task, start, end, note })),
 	editEntry: (id: number, project: number, task: TaskChoiceDto, start: string, end: string | null, note: string | null) => typedError<null, UiError>(__TAURI_INVOKE("edit_entry", { id, project, task, start, end, note })),
 	deleteEntry: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("delete_entry", { id })),
+	/**
+	 *  Saves the settings. The bridge then registers the new hotkey (R6); a hotkey the plugin
+	 *  can't read is rejected here, so it's never saved.
+	 */
 	updateSettings: (settings: SettingsDto) => typedError<null, UiError>(__TAURI_INVOKE("update_settings", { settings })),
+	/**  The values unset settings fall back to. */
+	getSettingsDefaults: () => typedError<SettingsDefaultsDto, UiError>(__TAURI_INVOKE("get_settings_defaults")),
+	/**  The autostart entry as Windows has it (R9). */
+	getAutostart: () => typedError<AutostartDto, UiError>(__TAURI_INVOKE("get_autostart")),
+	/**  Turns starting with Windows on or off (R9). The entry is the only record of it. */
+	setAutostart: (enabled: boolean) => typedError<null, UiError>(__TAURI_INVOKE("set_autostart", { enabled })),
 	getRunning: () => typedError<{
 	id: number,
 	combo: ComboDto,
@@ -45,6 +55,13 @@ export const commands = {
 };
 
 /* Types */
+/**  The autostart entry (R9). Windows holds it; the app keeps no copy (spec §2). */
+export type AutostartDto = {
+	/**  `false` in debug builds, which never touch the entry. */
+	available: boolean,
+	enabled: boolean,
+};
+
 export type CatalogDto = {
 	clients: ClientDto[],
 	projects: ProjectDto[],
@@ -108,7 +125,9 @@ export type ErrorKind =
 /**  The app accepts no changes (see the status). */
 "broken" | 
 /**  The UI sent something unreadable (a bug in the UI). */
-"input";
+"input" | 
+/**  Windows refused (e.g. the autostart entry); nothing changed. */
+"system";
 
 export type FigureDto = {
 	/**  Seconds. */
@@ -150,6 +169,12 @@ export type RuleDto = {
 };
 
 export type Separator = "auto" | "dot" | "comma";
+
+/**  What an unset setting falls back to, for the settings form. */
+export type SettingsDefaultsDto = {
+	hotkey: string,
+	backupDir: string,
+};
 
 export type SettingsDto = {
 	/**  `None`: the app's default hotkey. */

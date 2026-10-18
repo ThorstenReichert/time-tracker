@@ -23,6 +23,9 @@ pub const MAIN_WINDOW: &str = "main";
 pub const QUICK_SWITCH_WINDOW: &str = "quick-switch";
 /// Argument the autostart entry passes, so the app starts hidden in the tray.
 const AUTOSTART_ARG: &str = "--autostart";
+/// Debug builds never touch the autostart entry, so `cargo tauri dev` can't point it at
+/// `target\debug`.
+pub const AUTOSTART_AVAILABLE: bool = !cfg!(debug_assertions);
 
 pub fn run() {
     let specta = bindings::specta_builder();
@@ -88,11 +91,10 @@ pub fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-/// R9: autostart is on by default, so the first run of the installed app enables it. Debug
-/// builds never do, so `cargo tauri dev` can't point the Run key at `target\debug`. The OS
-/// entry is the only source of truth; step 13 adds the toggle.
+/// R9: autostart is on by default, so the first run of the installed app enables it. The OS
+/// entry is the only source of truth; Settings toggles it.
 fn enable_autostart_in_release(app: &tauri::AppHandle) {
-    if cfg!(debug_assertions) {
+    if !AUTOSTART_AVAILABLE {
         return;
     }
     if let Err(e) = app.autolaunch().enable() {

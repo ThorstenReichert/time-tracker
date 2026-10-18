@@ -17,6 +17,8 @@ pub enum ErrorKind {
     Broken,
     /// The UI sent something unreadable (a bug in the UI).
     Input,
+    /// Windows refused (e.g. the autostart entry); nothing changed.
+    System,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -30,6 +32,21 @@ impl UiError {
     pub fn input(message: impl Into<String>) -> Self {
         Self {
             kind: ErrorKind::Input,
+            message: message.into(),
+        }
+    }
+
+    /// A value the driver can't use, e.g. a hotkey it can't parse; nothing changed.
+    pub fn rejected(message: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::Domain,
+            message: message.into(),
+        }
+    }
+
+    pub fn system(message: impl Into<String>) -> Self {
+        Self {
+            kind: ErrorKind::System,
             message: message.into(),
         }
     }

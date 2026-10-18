@@ -23,6 +23,13 @@ pub fn start(app: AppHandle, events: Receiver<Vec<Event>>) {
                 if batch.iter().any(touches_entries) {
                     let _ = app.emit(TIMER_CHANGED, ());
                 }
+                if batch
+                    .iter()
+                    .any(|e| matches!(e, Event::SettingsChanged { .. }))
+                {
+                    // R6: a new hotkey replaces the old one at once.
+                    crate::hotkey::reregister(&app);
+                }
                 // Any change can touch the tray menu (recents, names, the recents count).
                 crate::tray::nudge(&app);
             }

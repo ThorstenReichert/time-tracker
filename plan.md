@@ -682,3 +682,42 @@ No IT involvement needed; AC-2 is closed for slice 1.
   - The overview for the 17th shows Web at 2,37 raw (with the added hour) and no notes.
 
   Found in the check and filed as a bead: the date pickers start the week on Sunday.
+- **Step 13, settings details (2026-10-18).**
+  - SettingsView saves the hotkey, recents N, separator, backup folder and keep N together, in
+    one `update_settings`. A blank hotkey or folder is saved as `None` (the default), and the
+    defaults are shown as placeholders from the new command `get_settings_defaults`.
+    `tt_app::default_backup_dir` is now public, shared by startup, tt-cli and that command. The
+    form follows the saved settings only when they change, so a reload for anything else keeps
+    what is being typed.
+  - The hotkey is a text field (`Ctrl+Alt+Space`, `Ctrl+Shift+K`), not a key recorder:
+    pressing the current hotkey in a recorder would open the popup. `update_settings` rejects a
+    hotkey the plugin can't parse, so it's never saved. After a save, the bridge sees
+    `SettingsChanged`, unregisters every hotkey and registers the configured one, so the old
+    one is free at once. If Windows refuses the new one, the AC-1 banner and tooltip say so.
+  - Autostart: `get_autostart` / `set_autostart` read and change the plugin's entry; the
+    switch shows what Windows has after every change, also a refused one. `AUTOSTART_AVAILABLE`
+    is false in debug builds: the switch is disabled with a note, and `set_autostart` refuses.
+  - `ErrorKind` gained `system` (Windows refused; nothing changed), and `UiError::rejected`
+    for a value the driver can't use.
+  - Extra file: `SettingsView.test.ts`.
+
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper; 125 Rust tests, 117 UI tests in 21
+  files). As a mutation check, without the re-render of the switch after a refused change the
+  autostart test failed (the switch stayed flipped). Dev build with `TT_DB=<scratch db>`,
+  driven through simulated input, with screenshots in the session:
+  - The hotkey changed to `Ctrl+Alt+Shift+K`: another process could then register
+    `Ctrl+Alt+Shift+Space` but not `Ctrl+Alt+Shift+K`, and `Ctrl+Alt+Shift+K` from Notepad
+    brought up the popup with focus.
+  - `Ctrl+Foo` → "isn't a valid hotkey", not saved.
+  - `Ctrl+Alt+Shift+J`, held by a scratch process → saved, and the AC-1 banner appeared;
+    clearing the field (default) removed it.
+  - Backup folder set to a scratch folder, keep 3, restart → `timetracker-…Z.db` in that
+    folder; the database stayed where it was.
+  - `Q:\TimeTracker\backups` (no such drive), restart → the warning banner, and Stop still
+    worked.
+  - The Startup switch is disabled in the dev build, with its note.
+
+  Not checked here (owner, with the installed build): the autostart toggle in Startup apps,
+  because a release build would have to replace the installed app or open the live database;
+  and the backup folder on a real OneDrive path (a scratch folder was used instead, so no files
+  went into OneDrive). Both move to the step 14 install.

@@ -2,13 +2,13 @@
 //! migrations → load State and check its invariants. The backup must come before the
 //! migrations, or a bad migration has no protection.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use tt_core::{Ctx, Settings};
 use tt_store::{DbLock, Store, StoreError, keys, raw_setting};
 
-use crate::{App, AppConfig, AppError, Inner};
+use crate::{App, AppConfig, AppError, Inner, default_backup_dir};
 
 pub(crate) fn open(config: AppConfig, ctx: &Ctx) -> Result<App, AppError> {
     let lock = DbLock::acquire(&config.db_path).map_err(|e| match e {
@@ -83,8 +83,4 @@ impl BackupPlan {
             keep: keep as usize,
         })
     }
-}
-
-fn default_backup_dir(db: &Path) -> PathBuf {
-    db.parent().unwrap_or(Path::new(".")).join("backups")
 }
