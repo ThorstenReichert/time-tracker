@@ -10,6 +10,9 @@ export default defineConfig({
   server: { port: 5173, strictPort: true },
   build: {
     target: "es2022",
+    // Vite's 500 kB default is meant for downloads. Tauri loads the assets from disk, and the
+    // main chunk is mostly PrimeVue and its theme (~600 kB). The limit still flags a big jump.
+    chunkSizeWarningLimit: 800,
     rolldownOptions: {
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
