@@ -9,6 +9,11 @@ export function formatElapsed(seconds: number): string {
   return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** A duration as "h:mm", whole minutes cut off (the entry list, R10). */
+export function formatDuration(seconds: number): string {
+  return formatElapsed(seconds).slice(0, -3);
+}
+
 /** The character between whole and fractional hours. */
 export type DecimalMark = "." | ",";
 

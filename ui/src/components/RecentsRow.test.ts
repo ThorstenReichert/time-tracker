@@ -4,12 +4,12 @@ import type { ComboDto } from "../bindings";
 import { useTimerStore } from "../stores/timer";
 import { fakeBackend, uiError, type Handler } from "../test/backend";
 import { acmeWeb, acmeWebReview, betaOps, runningEntry } from "../test/fixtures";
-import { mountInApp, withToast } from "../test/mount";
+import { mountInApp, withOverlays } from "../test/mount";
 import RecentsRow from "./RecentsRow.vue";
 
 async function recentsRow(recents: ComboDto[], running: ComboDto | null, start: Handler = () => null) {
   const backend = fakeBackend({ start });
-  const wrapper = mountInApp(withToast(RecentsRow));
+  const wrapper = mountInApp(withOverlays(RecentsRow));
   const timer = useTimerStore();
   timer.recents = recents;
   timer.running = running === null ? null : runningEntry(running, 60);

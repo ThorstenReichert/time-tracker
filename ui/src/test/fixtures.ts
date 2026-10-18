@@ -30,6 +30,20 @@ export function runningEntry(onCombo: ComboDto, seconds: number): EntryDto {
   };
 }
 
+/** A finished entry on `combo`, with its local times as the backend sends them. */
+export function finishedEntry(
+  id: number,
+  onCombo: ComboDto,
+  startLocal: string,
+  endLocal: string,
+  note: string | null = null,
+): EntryDto {
+  // The Unix seconds read the local times as UTC; the views only use their difference.
+  const start = Date.parse(`${startLocal}Z`) / 1000;
+  const end = Date.parse(`${endLocal}Z`) / 1000;
+  return { id, combo: onCombo, start, end, startLocal, endLocal, duration: end - start, running: false, note };
+}
+
 export const catalog: CatalogDto = {
   clients: [
     { id: 1, name: "Acme", rule: { unit: 15, direction: "nearest", level: "project" }, archived: false },

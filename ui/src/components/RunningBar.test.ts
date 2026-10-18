@@ -3,11 +3,12 @@ import { flushPromises } from "@vue/test-utils";
 import { useTimerStore } from "../stores/timer";
 import { fakeBackend, uiError } from "../test/backend";
 import { acmeWebReview, runningEntry } from "../test/fixtures";
-import { mountInApp, withToast } from "../test/mount";
+import { mountInApp, withOverlays } from "../test/mount";
+import { clickButton, dialog } from "../test/page";
 import RunningBar from "./RunningBar.vue";
 
 async function bar(running: boolean) {
-  const wrapper = mountInApp(withToast(RunningBar));
+  const wrapper = mountInApp(withOverlays(RunningBar));
   useTimerStore().running = running ? runningEntry(acmeWebReview, 4920) : null;
   await flushPromises();
   return wrapper;
@@ -35,9 +36,8 @@ describe("RunningBar", () => {
 
   it("stops the timer now", async () => {
     const backend = fakeBackend({ stop: () => null });
-    const wrapper = await bar(true);
-    await wrapper.get("button").trigger("click");
-    await flushPromises();
+    await bar(true);
+    await clickButton("Stop");
     expect(backend.called("stop")).toEqual([{ at: null }]);
   });
 
@@ -47,10 +47,37 @@ describe("RunningBar", () => {
         throw uiError("The app accepts no changes", "broken");
       },
     });
-    const wrapper = await bar(true);
-    await wrapper.get("button").trigger("click");
-    await flushPromises();
+    await bar(true);
+    await clickButton("Stop");
     expect(document.body.textContent).toContain("Nothing changed");
     expect(document.body.textContent).toContain("The app accepts no changes");
+  });
+
+  it("stops a forgotten timer at a typed time (R11)", async () => {
+    const backend = fakeBackend({ stop: () => null });
+    await bar(true);
+    await clickButton("Stop at…");
+    await dialog().get('[aria-label="Stopped at time"]').setValue("17:30");
+    await clickButton("Stop", dialog());
+    expect(backend.called("stop")).toEqual([{ at: "2026-10-18T17:30:00" }]);
+  });
+
+  it("edits the running entry's start and keeps it running (R11)", async () => {
+    const backend = fakeBackend({ edit_entry: () => null });
+    await bar(true);
+    await clickButton("Edit");
+    expect(dialog().text()).toContain("Edit the running entry");
+    await dialog().get('[aria-label="Start time"]').setValue("8:45");
+    await clickButton("Save", dialog());
+    expect(backend.called("edit_entry")).toEqual([
+      {
+        id: 1,
+        project: 1,
+        task: { kind: "existing", value: 1 },
+        start: "2026-10-18T08:45:00",
+        end: null,
+        note: "",
+      },
+    ]);
   });
 });

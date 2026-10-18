@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // The main window's shell: navigation, the running timer, the status banner and the views.
 import { listen } from "@tauri-apps/api/event";
+import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import RunningBar from "./components/RunningBar.vue";
@@ -31,6 +32,7 @@ const nav = [
       <RouterView />
     </main>
     <Toast position="bottom-right" />
+    <ConfirmDialog />
   </div>
 </template>
 

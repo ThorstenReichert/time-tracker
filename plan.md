@@ -645,3 +645,40 @@ No IT involvement needed; AC-2 is closed for slice 1.
   separator on `auto` and a German locale. Copy put `1,25`, then `1,00`, on the clipboard
   (read back with `Get-Clipboard`). Today shows the running Beta / Ops marked; prev/next,
   Today and the DatePicker change the day; an empty day says so.
+- **Step 12, entries details (2026-10-18).**
+  - Typed times stay text, `YYYY-MM-DDTHH:MM:SS`. The new `LocalTimeInput` has a DatePicker for
+    the date and a text field for the time. A JS `Date` would silently move a time in the DST gap,
+    which has to reach the core and be rejected there (OQ-6). `ui/src/lib/localTime.ts` reads
+    `9`, `9:05`, `905`, `09.05` and `09:05:30` (with `localTime.test.ts`), and an edit keeps an
+    entry's seconds. `format.ts` gained `formatDuration` (h:mm).
+  - `EntryDialog` adds and edits. On the running entry, an empty end keeps it running and an end
+    stops it (R11). `StopAtDialog` is the forgotten stop. Both start on the entry's start day.
+    Combo, start and end are read in the UI only to send them; the rules stay in the core.
+  - RunningBar gained Edit and "Stop at…", so a timer that started on an earlier day can be
+    fixed without finding its day in the list. `timer.stop(at)` takes the typed time.
+  - The day navigation moved from OverviewView into `components/DayBar.vue`, which TodayView
+    uses too.
+  - Delete uses PrimeVue's ConfirmDialog. `ConfirmationService` is registered in `main.ts` and
+    `test/mount.ts`, and the `ConfirmDialog` is in `App.vue`. The test helper `withToast` is now
+    `withOverlays` and renders both overlays. The confirmation service is a global event bus, so
+    `test/setup.ts` now unmounts every test's components (`enableAutoUnmount`). Without that, a
+    ConfirmDialog left mounted by an earlier test answered the next test's confirmation.
+  - Extra files: `components/{DayBar,LocalTimeInput,StopAtDialog}.vue`, `lib/localTime.ts`, plus
+    tests for EntryDialog, StopAtDialog, RunningBar and TodayView.
+
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper; 109 UI tests in 20 files). As a mutation
+  check, deleting without the confirmation, or always sending an end for the running entry,
+  made tests fail. Dev build with `TT_DB=<tt-cli worked-day db>` (the 17th, plus a timer
+  running since 09:00 on the 18th), driven through simulated input, with screenshots in the
+  session:
+  - The 17th lists the three entries, with the note "Kickoff with the team" below Acme / Web.
+  - Add entry 10:00–10:30 → "Overlaps Acme / Web 09:00–10:22", and the dialog stays open.
+  - 12:00–13:00 with a note was added and listed.
+  - "Stop at…" 23:59 today → "An entry can't end in the future"; 15:30 stopped the timer
+    (09:00–15:30).
+  - Editing that entry to 2026-03-29 02:30 → "This local time doesn't exist (daylight saving
+    time starts); pick another". The end date followed the start date.
+  - Delete asked "Delete the entry? Acme / Web / Review, 09:00–15:30" first, then deleted.
+  - The overview for the 17th shows Web at 2,37 raw (with the added hour) and no notes.
+
+  Found in the check and filed as a bead: the date pickers start the week on Sunday.

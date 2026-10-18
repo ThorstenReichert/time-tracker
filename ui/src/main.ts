@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
+import ConfirmationService from "primevue/confirmationservice";
 import ToastService from "primevue/toastservice";
 import Aura from "@primeuix/themes/aura";
 import { listen } from "@tauri-apps/api/event";
@@ -14,7 +15,8 @@ const app = createApp(App)
   .use(createPinia())
   .use(router)
   .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: "system" } } })
-  .use(ToastService);
+  .use(ToastService)
+  .use(ConfirmationService);
 
 // The backend is the single source of truth: reload whenever it reports a change.
 const catalog = useCatalogStore();

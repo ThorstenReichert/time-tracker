@@ -14,7 +14,10 @@ export function dialogOpen(): boolean {
 }
 
 /** Clicks the button with this label inside `within` (the page by default). */
-export async function clickButton(label: string, within: DOMWrapper<Element> = new DOMWrapper(document.body)) {
+export async function clickButton(
+  label: string,
+  within: Pick<DOMWrapper<Element>, "findAll"> = new DOMWrapper(document.body),
+) {
   const button = within.findAll("button").find((b) => b.text() === label || b.attributes("aria-label") === label);
   if (button === undefined) throw new Error(`no button "${label}"`);
   await button.trigger("click");

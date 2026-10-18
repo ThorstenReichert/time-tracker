@@ -28,8 +28,9 @@ export const useTimerStore = defineStore("timer", () => {
     await call(commands.start(project, task));
   }
 
-  async function stop() {
-    await call(commands.stop(null));
+  /** Stops now, or at a typed local time ("YYYY-MM-DDTHH:MM:SS", the forgotten stop, R11). */
+  async function stop(at: string | null = null) {
+    await call(commands.stop(at));
   }
 
   return { running, recents, elapsed, refresh, start, stop };

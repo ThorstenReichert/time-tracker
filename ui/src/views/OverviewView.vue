@@ -1,14 +1,12 @@
 <script setup lang="ts">
 // The daily billing overview (R14): per client, the values to book with raw and difference,
 // in decimal hours (R15). The rounding happens in tt-core (R16, R18); this only displays it.
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import { listen } from "@tauri-apps/api/event";
-import Button from "primevue/button";
-import DatePicker from "primevue/datepicker";
 import { commands, type OverviewDto } from "../bindings";
 import CopyValue from "../components/CopyValue.vue";
+import DayBar from "../components/DayBar.vue";
 import { call, errorMessage } from "../lib/api";
-import { addDays, formatDay, fromPickerDate, toPickerDate } from "../lib/day";
 import { decimalMark, formatDiff, formatHours, formatRule } from "../lib/format";
 import { useCatalogStore } from "../stores/catalog";
 
@@ -18,7 +16,6 @@ const hours = (seconds: number) => formatHours(seconds, mark.value);
 const diff = (seconds: number) => formatDiff(seconds, mark.value);
 
 const day = ref<string | null>(null);
-const today = ref<string | null>(null);
 const overview = ref<OverviewDto | null>(null);
 const loadError = ref<string | null>(null);
 
@@ -36,26 +33,6 @@ async function load() {
   }
 }
 
-async function goToday() {
-  try {
-    today.value = await call(commands.getToday());
-    day.value = today.value;
-  } catch (e) {
-    loadError.value = errorMessage(e);
-  }
-}
-
-const step = (days: number) => {
-  if (day.value !== null) day.value = addDays(day.value, days);
-};
-
-const pickerDate = computed({
-  get: () => (day.value === null ? null : toPickerDate(day.value)),
-  set: (date: Date | null) => {
-    if (date !== null) day.value = fromPickerDate(date);
-  },
-});
-
 watch(day, load);
 
 // A running entry counts up to now (R14), so its values are reloaded once a minute.
@@ -65,7 +42,6 @@ const timer = setInterval(() => {
 }, 60_000);
 
 const unlisten = listen("data-changed", () => void load());
-onMounted(goToday);
 onUnmounted(() => {
   clearInterval(timer);
   void unlisten.then((stop) => stop());
@@ -75,19 +51,7 @@ onUnmounted(() => {
 <template>
   <div class="view">
     <h2>Daily overview</h2>
-    <div class="day-bar">
-      <Button label="Previous day" severity="secondary" size="small" :disabled="day === null" @click="step(-1)" />
-      <DatePicker
-        v-model="pickerDate"
-        date-format="yy-mm-dd"
-        :manual-input="false"
-        input-class="day-input"
-        aria-label="Date"
-      />
-      <Button label="Next day" severity="secondary" size="small" :disabled="day === null" @click="step(1)" />
-      <Button label="Today" severity="secondary" size="small" :disabled="day !== null && day === today" @click="goToday" />
-      <span v-if="day !== null" class="day-name">{{ formatDay(day) }}</span>
-    </div>
+    <DayBar v-model="day" />
 
     <p v-if="loadError !== null" class="error">{{ loadError }}</p>
     <p v-if="overview !== null && overview.clients.length === 0" class="muted">No time tracked on this day.</p>
@@ -138,20 +102,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.day-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.day-bar :deep(.day-input) {
-  width: 7.5rem;
-}
-.day-name {
-  margin-left: 0.5rem;
-  font-weight: 600;
-}
 .error {
   color: var(--p-red-500);
 }

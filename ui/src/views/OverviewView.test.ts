@@ -5,7 +5,7 @@ import type { Separator } from "../bindings";
 import { useCatalogStore } from "../stores/catalog";
 import { fakeBackend, uiError } from "../test/backend";
 import { catalog, workedDay } from "../test/fixtures";
-import { mountInApp, withToast } from "../test/mount";
+import { mountInApp, withOverlays } from "../test/mount";
 import { clickButton } from "../test/page";
 import OverviewView from "./OverviewView.vue";
 
@@ -22,7 +22,7 @@ function backend(empty: string[] = [], running = false) {
 }
 
 async function mountOverview(separator: Separator = "dot") {
-  const wrapper = mountInApp(withToast(OverviewView));
+  const wrapper = mountInApp(withOverlays(OverviewView));
   useCatalogStore().catalog = { ...catalog, settings: { ...catalog.settings, decimalSeparator: separator } };
   await flushPromises();
   return wrapper;

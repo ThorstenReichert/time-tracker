@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { fakeBackend } from "../test/backend";
-import { mountInApp, withToast } from "../test/mount";
+import { mountInApp, withOverlays } from "../test/mount";
 import { clickButton } from "../test/page";
 import CopyValue from "./CopyValue.vue";
 
@@ -30,7 +30,7 @@ describe("CopyValue", () => {
         throw "clipboard busy";
       },
     });
-    const wrapper = mountInApp(withToast(defineComponent({ render: () => h(CopyValue, { value: "1.25" }) })));
+    const wrapper = mountInApp(withOverlays(defineComponent({ render: () => h(CopyValue, { value: "1.25" }) })));
 
     await clickButton("Copy 1.25");
     expect(document.body.textContent).toContain("clipboard busy");

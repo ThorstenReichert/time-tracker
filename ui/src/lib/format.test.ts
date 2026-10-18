@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decimalMark, formatDiff, formatElapsed, formatHours, formatRule } from "./format";
+import { decimalMark, formatDiff, formatDuration, formatElapsed, formatHours, formatRule } from "./format";
 
 describe("formatElapsed", () => {
   it("shows hours, minutes and seconds", () => {
@@ -11,6 +11,15 @@ describe("formatElapsed", () => {
 
   it("never shows a negative time", () => {
     expect(formatElapsed(-5)).toBe("0:00:00");
+  });
+});
+
+describe("formatDuration", () => {
+  it("shows hours and whole minutes", () => {
+    expect(formatDuration(0)).toBe("0:00");
+    expect(formatDuration(59)).toBe("0:00");
+    expect(formatDuration(4920)).toBe("1:22");
+    expect(formatDuration(36 * 3600 + 61)).toBe("36:01");
   });
 });
 
