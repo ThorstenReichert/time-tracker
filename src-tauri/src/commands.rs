@@ -12,6 +12,7 @@ use crate::dto::{
     TaskMatchesDto,
 };
 use crate::errors::UiError;
+use crate::hotkey::HotkeyStatus;
 
 type Res<T> = Result<T, UiError>;
 
@@ -31,7 +32,7 @@ fn parse_rule(dto: RuleDto) -> Res<tt_core::RoundingRule> {
 }
 
 /// Executes a command through the single write path.
-fn execute(backend: &Backend, ctx: &Ctx, command: Command) -> Res<()> {
+pub fn execute(backend: &Backend, ctx: &Ctx, command: Command) -> Res<()> {
     let app = backend.app()?;
     app.execute(ctx, command)
         .map(|_| ())
@@ -50,21 +51,22 @@ fn read<T>(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_status(backend: State<'_, Backend>) -> Res<StatusDto> {
-    Ok(match backend.app() {
+pub async fn get_status(
+    backend: State<'_, Backend>,
+    hotkey: State<'_, HotkeyStatus>,
+) -> Res<StatusDto> {
+    let (broken, mut warnings) = match backend.app() {
         Ok(app) => {
             let status = app.status();
-            StatusDto {
-                broken: status.broken,
-                warnings: status.warnings,
-                db_path: backend.db_path().to_owned(),
-            }
+            (status.broken, status.warnings)
         }
-        Err(e) => StatusDto {
-            broken: Some(e.message),
-            warnings: Vec::new(),
-            db_path: backend.db_path().to_owned(),
-        },
+        Err(e) => (Some(e.message), Vec::new()),
+    };
+    warnings.extend(hotkey.warning());
+    Ok(StatusDto {
+        broken,
+        warnings,
+        db_path: backend.db_path().to_owned(),
     })
 }
 

@@ -5,7 +5,7 @@ import { ref, watch } from "vue";
 import AutoComplete from "primevue/autocomplete";
 import { commands } from "../bindings";
 import { call } from "../lib/api";
-import type { TaskPick } from "../lib/combo";
+import { taskPicks, type TaskPick } from "../lib/combo";
 
 const model = defineModel<TaskPick | null>({ required: true });
 const props = defineProps<{ project: number | null; inputId?: string }>();
@@ -34,9 +34,7 @@ async function complete(event: { query: string }) {
   const request = ++latest;
   const matches = await call(commands.taskMatches(props.project, event.query));
   if (request !== latest) return;
-  const picks: TaskPick[] = matches.tasks.map((t) => ({ kind: "existing", id: t.id, name: t.name }));
-  if (matches.offerCreate !== null) picks.push({ kind: "new", name: matches.offerCreate });
-  suggestions.value = picks;
+  suggestions.value = taskPicks(matches);
 }
 
 function select(event: { value: TaskPick }) {

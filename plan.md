@@ -557,3 +557,40 @@ No IT involvement needed; AC-2 is closed for slice 1.
   proof commands in the steps don't change, only who runs them. Reason: long build and test
   logs stay out of the main context. Manual checks and screenshot loops stay in the main
   session. CLAUDE.md and AGENTS.md "Build & Test" say so.
+- **Step 10, popup and tray details (2026-10-18).**
+  - The popup is plain Vue with its own CSS (light and dark), not PrimeVue, so it stays small
+    and opens at once. One input serves both steps: the combo list, then after Tab the task
+    step for the highlighted project ("No task" first while nothing is typed, then the
+    matches and `Create "<text>"`). Shift+Tab, or Backspace in an empty task input, goes back.
+    Enter and Tab wait for the latest search, so typing fast and pressing Enter never picks a
+    stale row. With nothing typed, the running combo is left out of the list (it's shown
+    above), so hotkey + Enter switches back to the previous combo. The state resets when the
+    popup hides or loses focus. The row logic is in `ui/src/lib/quickSwitch.ts`, with
+    `quickSwitch.test.ts`. `lib/combo.ts` gained `taskPicks`, shared with TaskInput.
+  - The popup hides itself through `core:window:allow-hide`, granted to that window only in
+    the new `src-tauri/capabilities/quick-switch.json`.
+  - Tray: one `tray` thread owns the refresh. Every event batch and every hotkey status
+    change nudges it to rebuild the menu and tooltip. Otherwise it wakes at the running
+    entry's next full minute and updates only the tooltip and icon, so an open menu stays
+    put. The menu: "Stop <combo>" (disabled when idle), the recents (the running one greyed
+    out), Open window, Quit. `&` is doubled for Windows menus. A failed tray action shows the
+    main window with a toast (event `action-failed`). The tooltip limit counts UTF-16 units
+    (127), not chars.
+  - AC-1: the managed `HotkeyStatus` feeds `StatusDto.warnings` (the main window's banner)
+    and the first tooltip line. The hotkey is parsed before registering, so the banner can
+    say "isn't a valid hotkey" or "Windows refused it, so another app probably uses it".
+
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper). Dev build with `TT_DB=<demo db>`,
+  driven through simulated input, with screenshots in the session:
+  - From another app (Windows Terminal), hotkey + `rev` + Enter switched to Acme / Web /
+    Review: 5 keystrokes, popup gone after 559 ms (automated input), focus back on the
+    terminal.
+  - `resea` → Tab → `lit` → `Create "lit"` → Enter: the task was created and the timer
+    switched.
+  - Ctrl+S stopped the timer; the tooltip went to idle.
+  - The tray tooltip went 0:00 → 0:01 → 0:02 at 60 s intervals with no other events.
+  - The tray menu switched to a recent and quit the app.
+  - AC-1: with `Ctrl+Alt+Space` held by a scratch process and set as the demo DB's hotkey,
+    the banner and the tray tooltip showed the failure.
+
+  Still open for the owner: the R6 stopwatch timing by hand.

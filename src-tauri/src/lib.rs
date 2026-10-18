@@ -52,8 +52,9 @@ pub fn run() {
             }
             let first_run = backend.created;
             app.manage(backend);
-            bridge::start(app.handle().clone(), events_rx);
+            app.manage(hotkey::HotkeyStatus::default());
             tray::create(app.handle())?;
+            bridge::start(app.handle().clone(), events_rx);
             hotkey::register_from_settings(app.handle());
             if first_run {
                 enable_autostart_in_release(app.handle());

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "quick-switch",
+  "description": "The popup hides itself after Enter, Esc or Ctrl+S (R6)",
+  "windows": ["quick-switch"],
+  "permissions": ["core:window:allow-hide"]
+}

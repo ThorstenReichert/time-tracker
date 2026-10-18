@@ -1,8 +1,16 @@
 <script setup lang="ts">
 // The main window's shell: navigation, the running timer, the status banner and the views.
+import { listen } from "@tauri-apps/api/event";
 import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
 import RunningBar from "./components/RunningBar.vue";
 import StatusBanner from "./components/StatusBanner.vue";
+
+// A tray menu action (start, stop) failed; the backend has shown this window for it.
+const toast = useToast();
+void listen<string>("action-failed", (event) =>
+  toast.add({ severity: "error", summary: "Nothing changed", detail: event.payload, life: 8000 }),
+);
 
 const nav = [
   { to: "/", label: "Today" },

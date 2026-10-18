@@ -11,6 +11,8 @@ use tt_core::Event;
 pub const DATA_CHANGED: &str = "data-changed";
 /// The running timer started, stopped or changed.
 pub const TIMER_CHANGED: &str = "timer-changed";
+/// A tray menu action failed; the payload is the message. Sent to the main window.
+pub const ACTION_FAILED: &str = "action-failed";
 
 pub fn start(app: AppHandle, events: Receiver<Vec<Event>>) {
     std::thread::Builder::new()
@@ -20,8 +22,9 @@ pub fn start(app: AppHandle, events: Receiver<Vec<Event>>) {
                 let _ = app.emit(DATA_CHANGED, ());
                 if batch.iter().any(touches_entries) {
                     let _ = app.emit(TIMER_CHANGED, ());
-                    crate::tray::refresh(&app);
                 }
+                // Any change can touch the tray menu (recents, names, the recents count).
+                crate::tray::nudge(&app);
             }
         })
         .expect("spawn the event bridge");
