@@ -409,7 +409,7 @@ first, before any feature code exists, de-risks it. Of the code steps, the riski
 - Lint: `cargo fmt --all --check` (no output); `cargo clippy --workspace --all-targets --
   -D warnings` (zero warnings); `npm --prefix ui run typecheck` (no errors).
 - One command: `pwsh scripts/check.ps1` runs all of the above and ends with
-  `ALL CHECKS PASSED`.
+  `ALL CHECKS PASSED`. In Claude Code, the `gatekeeper` subagent runs it (see Deviations).
 - Benchmark: `cargo test -p tt-app --release -- --ignored load_bench` stays within its limits.
 - Manual: the checks from steps 0 and 9–13 on the installed build; the R6 timing with a
   stopwatch.
@@ -550,3 +550,10 @@ No IT involvement needed; AC-2 is closed for slice 1.
   `cargo test -p tt-core --test read_models` (`quick_switch_lists_untracked_combos_for_a_blank_query`,
   `quick_switch_caps_a_blank_query`, and the blank cases in the existing tests); the owner
   checked in the dev build that new projects show at once, below the recents.
+- **Process, gatekeeper subagent (owner, 2026-10-18).** From step 10 on, the automated proofs
+  (`pwsh scripts/check.ps1`, a crate's or file's tests, `load_bench`) run through the
+  `gatekeeper` subagent (`.claude/agents/gatekeeper.md`, Haiku). It only runs the checks and
+  returns PASSED or the literal failure excerpt; the main session fixes and commits. The
+  proof commands in the steps don't change, only who runs them. Reason: long build and test
+  logs stay out of the main context. Manual checks and screenshot loops stay in the main
+  session. CLAUDE.md and AGENTS.md "Build & Test" say so.

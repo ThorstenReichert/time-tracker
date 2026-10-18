@@ -144,11 +144,19 @@ Healthy output ends with:
 ALL CHECKS PASSED
 ```
 
+**In Claude Code, the `gatekeeper` subagent runs the checks** (`.claude/agents/gatekeeper.md`,
+on Haiku). Delegate to it after each meaningful step and before every commit, instead of
+running the checks in the main context. Give it a scope for a subset (for example "`cargo
+test -p tt-core --test read_models`"), or none for the whole gate. Paste its report as the
+evidence. It never edits, fixes or commits anything, and it doesn't re-run a failure to get
+green. Fixing stays with the main session. Other agents run `pwsh scripts/check.ps1`
+themselves.
+
 | Task | Command | Healthy result |
 |---|---|---|
 | Rust tests, one crate | `cargo test -p tt-core` (or `tt-store`, `tt-app`, `tt-cli`, `timetracker-app`) | `test result: ok. N passed; 0 failed` for every test binary |
 | Regenerate TS bindings | `UPDATE_BINDINGS=1 cargo test -p timetracker-app bindings` | rewrites `ui/src/bindings.ts`; commit it. A stale file fails `bindings_up_to_date` |
-| Run the app (dev) | `cargo tauri dev --config src-tauri/tauri.dev.conf.json` | the window "ThorSoft TimeTracker (dev)"; hotkey `Ctrl+Alt+Shift+Space`; runs next to the installed app |
+| Run the app (dev) | `cargo tauri dev --config src-tauri/tauri.dev.conf.json` | the window "ThorSoft TimeTracker" of the `target\debug` process (product name "ThorSoft TimeTracker (dev)"); hotkey `Ctrl+Alt+Shift+Space`; runs next to the installed app |
 | Installer | `cargo tauri build` | `Finished 1 bundle at: ...\target\release\bundle\nsis\ThorSoft TimeTracker_0.1.0_x64-setup.exe` |
 
 Gotchas:
