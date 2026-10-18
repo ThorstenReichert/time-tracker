@@ -593,7 +593,10 @@ No IT involvement needed; AC-2 is closed for slice 1.
   - AC-1: with `Ctrl+Alt+Space` held by a scratch process and set as the demo DB's hotkey,
     the banner and the tray tooltip showed the failure.
 
-  Still open for the owner: the R6 stopwatch timing by hand.
+  R6 stopwatch timing by hand (owner, 2026-10-18, dev build on the worked-day scratch DB,
+  from Notepad): hotkey + `web` + Enter, hotkey + Enter (back to the previous combo) and
+  hotkey + `api` + Enter each took 1–2 s after a little practice with the shortcuts, with at
+  most 4 keystrokes after the hotkey. The R6 target (~3 s / ~5 keystrokes) is met.
 - **Component tests (owner, 2026-10-18, before step 11).** The UI gets a component-test level,
   run by `npm --prefix ui test` and so by `scripts/check.ps1`:
   - New dev dependencies `@vue/test-utils` 2.5 and `happy-dom` 21. Vitest now runs in happy-dom
