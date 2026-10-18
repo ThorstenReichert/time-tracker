@@ -1,0 +1,44 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  background: var(--p-content-background);
+  color: var(--p-text-color);
+}
+
+#app {
+  height: 100%;
+}
+
+.muted {
+  color: var(--p-text-muted-color);
+}
+
+.view {
+  padding: 1rem;
+  max-width: 60rem;
+}
+
+.view h2 {
+  margin: 0 0 1rem;
+}
+
+.view h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

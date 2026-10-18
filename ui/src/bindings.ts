@@ -50,6 +50,10 @@ export type CatalogDto = {
 	projects: ProjectDto[],
 	tasks: TaskDto[],
 	settings: SettingsDto,
+	/**  The rule a new client starts with (R17), so the UI keeps no copy of the defaults. */
+	defaultRule: RuleDto,
+	/**  The rounding units the core offers, in minutes (R17). */
+	roundingUnits: number[],
 };
 
 export type ClientBlockDto = {

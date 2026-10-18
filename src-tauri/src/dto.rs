@@ -188,6 +188,10 @@ pub struct CatalogDto {
     pub projects: Vec<ProjectDto>,
     pub tasks: Vec<TaskDto>,
     pub settings: SettingsDto,
+    /// The rule a new client starts with (R17), so the UI keeps no copy of the defaults.
+    pub default_rule: RuleDto,
+    /// The rounding units the core offers, in minutes (R17).
+    pub rounding_units: Vec<u32>,
 }
 
 impl From<&Catalog> for CatalogDto {
@@ -197,6 +201,8 @@ impl From<&Catalog> for CatalogDto {
             projects: c.projects().map(Into::into).collect(),
             tasks: c.tasks().map(Into::into).collect(),
             settings: c.settings().into(),
+            default_rule: RoundingRule::default().into(),
+            rounding_units: RoundingUnit::ALL.iter().map(|u| u.minutes()).collect(),
         }
     }
 }

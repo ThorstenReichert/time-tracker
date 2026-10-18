@@ -520,5 +520,24 @@ No IT involvement needed; AC-2 is closed for slice 1.
   Proof: the dev build started next to the installed app. Its default DB appeared under
   `%LOCALAPPDATA%\ThorSoft.TimeTracker\dev\`, and with `TT_DB` it showed the tt-cli
   scenario's catalog (screenshots in the session).
-- **Step 0, UI test script.** `npm test` runs `vitest run --passWithNoTests` until step 11 adds
-  the first test file. Drop the flag then.
+- **Step 0, UI test script.** `npm test` ran `vitest run --passWithNoTests` until the first test
+  file existed. Step 9 added `lib/format.test.ts` and `lib/combo.test.ts` and dropped the flag.
+- **Step 9, UI shell details (2026-10-18).**
+  - `CatalogDto` also carries `defaultRule` and `roundingUnits`, so the client dialog keeps no
+    copy of the core's R17 defaults.
+  - A duplicate name is rendered with the existing item's name (`The name is already used by
+    client "Acme"`), like the overlap message.
+  - Extra files: `components/{ClientDialog,NameDialog}.vue`, `lib/combo.ts` (picked combos →
+    `TaskChoiceDto`), `lib/attempt.ts` (toast for one-click actions; forms show errors
+    inline), `style.css`. `format.ts` starts with `formatElapsed`; step 11 adds the hours.
+  - OverviewView and SettingsView are placeholders until steps 11 and 13.
+  - ComboPicker picks the project through `quick_switch` (a task combo fills both fields), and
+    TaskInput through `task_matches` with `force-selection`. Typed text that wasn't picked
+    doesn't count, except that leaving the task input with text that exactly matches an
+    offered option (including `Create "<text>"`) picks it.
+
+  Proof: `pwsh scripts/check.ps1` passed. Dev build with `TT_DB=<tt-cli demo db>`, driven
+  through simulated input, with screenshots in the session: the shell and the running bar
+  counting; Clients & projects tree; `acme` as a new client → inline duplicate error;
+  "rev" + Enter → Acme / Web + Review; a new task "Docs" + Start → switched with "Docs"
+  created, recents updated, picker cleared; Stop; a recents click starts.

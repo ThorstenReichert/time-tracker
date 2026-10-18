@@ -1,50 +1,58 @@
 <script setup lang="ts">
-// Step 8 page: proves the backend wiring by rendering status and catalog. Step 9 replaces it
-// with the real shell.
-import { onMounted, onUnmounted, ref } from "vue";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { commands, type CatalogDto, type StatusDto } from "./bindings";
-import { call, errorMessage } from "./lib/api";
+// The main window's shell: navigation, the running timer, the status banner and the views.
+import Toast from "primevue/toast";
+import RunningBar from "./components/RunningBar.vue";
+import StatusBanner from "./components/StatusBanner.vue";
 
-const status = ref<StatusDto | null>(null);
-const catalog = ref<CatalogDto | null>(null);
-const error = ref<string | null>(null);
-let unlisten: UnlistenFn | undefined;
-
-async function load() {
-  try {
-    status.value = await call(commands.getStatus());
-    catalog.value = await call(commands.getCatalog());
-    error.value = null;
-  } catch (e) {
-    error.value = errorMessage(e);
-  }
-}
-
-onMounted(async () => {
-  unlisten = await listen("data-changed", load);
-  await load();
-});
-onUnmounted(() => unlisten?.());
+const nav = [
+  { to: "/", label: "Today" },
+  { to: "/overview", label: "Daily overview" },
+  { to: "/clients", label: "Clients & projects" },
+  { to: "/settings", label: "Settings" },
+];
 </script>
 
 <template>
-  <main>
-    <h1>ThorSoft TimeTracker</h1>
-    <p v-if="error" class="error">{{ error }}</p>
-    <h2>Status</h2>
-    <pre>{{ JSON.stringify(status, null, 2) }}</pre>
-    <h2>Catalog</h2>
-    <pre>{{ JSON.stringify(catalog, null, 2) }}</pre>
-  </main>
+  <div class="shell">
+    <nav class="nav">
+      <RouterLink v-for="item in nav" :key="item.to" :to="item.to" class="nav-link">{{ item.label }}</RouterLink>
+    </nav>
+    <RunningBar />
+    <StatusBanner />
+    <main class="content">
+      <RouterView />
+    </main>
+    <Toast position="bottom-right" />
+  </div>
 </template>
 
-<style>
-body {
-  font-family: "Segoe UI", system-ui, sans-serif;
-  margin: 2rem;
+<style scoped>
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
-.error {
-  color: #b00020;
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+.nav-link {
+  padding: 0.75rem 0.9rem;
+  color: var(--p-text-muted-color);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+.nav-link:hover {
+  color: var(--p-text-color);
+}
+.nav-link.router-link-exact-active {
+  color: var(--p-primary-color);
+  border-bottom-color: var(--p-primary-color);
+}
+.content {
+  flex: 1;
+  overflow: auto;
 }
 </style>

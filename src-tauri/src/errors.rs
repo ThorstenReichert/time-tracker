@@ -4,7 +4,7 @@
 use serde::Serialize;
 use specta::Type;
 use tt_app::{App, AppError};
-use tt_core::{Ctx, DomainError, to_local};
+use tt_core::{Ctx, DomainError, ItemRef, to_local};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "lowercase")]
@@ -73,7 +73,23 @@ fn domain_message(error: &DomainError, app: &App, ctx: &Ctx) -> String {
             .unwrap_or_else(|| format!("entry {with}"));
         return format!("Overlaps {label} {}–{until}", hm(*start));
     }
+    if let DomainError::DuplicateName { existing } = error
+        && let Some(item) = item_name(app, *existing)
+    {
+        return format!("The name is already used by {item}");
+    }
     capitalise(&error.to_string())
+}
+
+/// `client "Acme"`, or `None` if the item is gone.
+fn item_name(app: &App, item: ItemRef) -> Option<String> {
+    let catalog = app.catalog().ok()?;
+    let (kind, name) = match item {
+        ItemRef::Client(id) => ("client", catalog.client(id)?.name.to_string()),
+        ItemRef::Project(id) => ("project", catalog.project(id)?.name.to_string()),
+        ItemRef::Task(id) => ("task", catalog.task(id)?.name.to_string()),
+    };
+    Some(format!("{kind} \"{name}\""))
 }
 
 fn capitalise(text: &str) -> String {
@@ -93,7 +109,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn an_overlap_names_the_entry_with_local_times() {
+    fn errors_name_the_conflicting_item() {
         let dir = tempfile::TempDir::new().unwrap();
         let ctx = ctx_berlin("2026-10-17T18:00");
         let app = App::open(AppConfig::new(dir.path().join("t.db")), &ctx).unwrap();
@@ -123,6 +139,20 @@ mod tests {
         let ui = UiError::from_app(err, &app, &ctx);
         assert_eq!(ui.kind, ErrorKind::Domain);
         assert_eq!(ui.message, "Overlaps Acme / Web 09:00–10:22");
+
+        let err = app
+            .execute(
+                &ctx,
+                Command::CreateClient {
+                    name: "ACME".into(),
+                    rule: RoundingRule::default(),
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            UiError::from_app(err, &app, &ctx).message,
+            "The name is already used by client \"Acme\""
+        );
 
         let err = app.execute(&ctx, Command::Stop { at: None }).unwrap_err();
         assert_eq!(
