@@ -342,8 +342,49 @@ fn quick_switch_matches_fuzzily_over_all_active_combos() {
     assert_eq!(labels("review"), ["Acme / Web / Review"]);
     assert_eq!(labels("beta ops"), ["Beta / Ops"]);
     assert!(labels("zzz").is_empty());
-    // A blank query lists the recents.
-    assert_eq!(labels("  "), ["Beta / Ops", "Beta / API", "Acme / Web"]);
+    // A blank query lists the recents, then the other active combos by label.
+    assert_eq!(
+        labels("  "),
+        [
+            "Beta / Ops",
+            "Beta / API",
+            "Acme / Web",
+            "Acme / Web / Review"
+        ]
+    );
+}
+
+#[test]
+fn quick_switch_lists_untracked_combos_for_a_blank_query() {
+    // A fresh catalog has no recents; its combos are still offered, by label.
+    let s = worked_day();
+    let rows = read::quick_switch(s.catalog(), &[], "");
+    let labels: Vec<_> = rows.iter().map(|r| r.label.as_str()).collect();
+    assert_eq!(
+        labels,
+        [
+            "Acme / Web",
+            "Acme / Web / Review",
+            "Beta / API",
+            "Beta / Ops"
+        ]
+    );
+}
+
+#[test]
+fn quick_switch_caps_a_blank_query() {
+    let s = run(
+        worked_day(),
+        &ctx("2026-10-17T12:00"),
+        (0..60).map(|i| Command::CreateTask {
+            project: WEB,
+            name: format!("Task {i:02}"),
+        }),
+    );
+    let recents = s.entries().recent_combos(8);
+    let rows = read::quick_switch(s.catalog(), &recents, "");
+    assert_eq!(rows.len(), read::QUICK_SWITCH_LIMIT);
+    assert_eq!(rows[0].label, "Beta / Ops");
 }
 
 #[test]
@@ -417,6 +458,11 @@ fn archived_items_are_not_offered() {
         .map(|r| r.label)
         .collect();
     assert_eq!(all, ["Acme / Web"]);
+    let blank: Vec<_> = read::quick_switch(&catalog, &[], "")
+        .into_iter()
+        .map(|r| r.label)
+        .collect();
+    assert_eq!(blank, ["Acme / Web"]);
     let recents = [Combo {
         project: API,
         task: None,

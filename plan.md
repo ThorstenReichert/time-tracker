@@ -87,8 +87,8 @@ The draft was reviewed adversarially before approval, and its findings are folde
   `read::day_entries(&Catalog, &[&Entry], now, &TimeZone, civil::Date) -> Vec<EntryRow>`;
   `read::recents(&Catalog, &[Combo], n) -> Vec<ComboRow>` (active only);
   `read::quick_switch(&Catalog, recents: &[Combo], query: &str) -> Vec<ComboRow>` (empty query
-  → recents, otherwise fuzzy over "Client / Project / Task" and project-only combos of active
-  items); `read::task_matches(&Catalog, ProjectId, text: &str) -> TaskMatches { tasks,
+  → recents, then the other active combos A–Z (step 9 follow-up); otherwise fuzzy over
+  "Client / Project / Task" and project-only combos of active items); `read::task_matches(&Catalog, ProjectId, text: &str) -> TaskMatches { tasks,
   offer_create: Option<Name> }`.
 
 **tt-store**: `Store::open(path, migrations: &[Migration]) -> Result<(Store, OpenInfo {
@@ -541,3 +541,12 @@ No IT involvement needed; AC-2 is closed for slice 1.
   counting; Clients & projects tree; `acme` as a new client → inline duplicate error;
   "rev" + Enter → Acme / Web + Review; a new task "Docs" + Start → switched with "Docs"
   created, recents updated, picker cleared; Stop; a recents click starts.
+- **Step 9 follow-up, blank quick-switch query (owner, 2026-10-18).** Found in manual testing:
+  on a new database the project picker stayed empty until you typed, because a blank query
+  returned only the recents, and recents come from entries. A blank query now returns the
+  recents, then the other active combos sorted by label, capped at `QUICK_SWITCH_LIMIT`.
+  The popup (step 10) gets the same list. spec.md R6 says so. Rejected: a separate read
+  model for the main window only (the popup would stay empty on a new install). Proof:
+  `cargo test -p tt-core --test read_models` (`quick_switch_lists_untracked_combos_for_a_blank_query`,
+  `quick_switch_caps_a_blank_query`, and the blank cases in the existing tests); the owner
+  checked in the dev build that new projects show at once, below the recents.
