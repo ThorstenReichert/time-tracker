@@ -1,4 +1,4 @@
-import type { CatalogDto, ComboDto, EntryDto, StatusDto } from "../bindings";
+import type { CatalogDto, ComboDto, EntryDto, OverviewDto, StatusDto } from "../bindings";
 
 function combo(project: number, task: number | null, client: number, names: [string, string, string?]): ComboDto {
   const [clientName, projectName, taskName = null] = names;
@@ -51,3 +51,34 @@ export const catalog: CatalogDto = {
 };
 
 export const healthy: StatusDto = { broken: null, warnings: [], dbPath: "C:\\demo\\timetracker.db" };
+
+/**
+ * The plan's worked day (step 4) on `date`: Acme (15 nearest, per project) Web 09:00–10:22,
+ * Beta (30 up, per client) API 10:22–11:07 and Ops 11:07–11:20.
+ */
+export function workedDay(date: string, running = false): OverviewDto {
+  return {
+    date,
+    clients: [
+      {
+        client: 1,
+        name: "Acme",
+        rule: { unit: 15, direction: "nearest", level: "project" },
+        total: { raw: 4920, rounded: 4500, diff: -420 },
+        projects: [{ project: 1, name: "Web", raw: 4920, booked: { raw: 4920, rounded: 4500, diff: -420 }, running: false }],
+        running: false,
+      },
+      {
+        client: 2,
+        name: "Beta",
+        rule: { unit: 30, direction: "up", level: "client" },
+        total: { raw: 3480, rounded: 3600, diff: 120 },
+        projects: [
+          { project: 3, name: "API", raw: 2700, booked: null, running: false },
+          { project: 4, name: "Ops", raw: 780, booked: null, running },
+        ],
+        running,
+      },
+    ],
+  };
+}

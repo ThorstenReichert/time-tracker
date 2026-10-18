@@ -8,13 +8,10 @@ import { commands, type RuleDto } from "../bindings";
 import ClientDialog from "../components/ClientDialog.vue";
 import NameDialog from "../components/NameDialog.vue";
 import { call } from "../lib/api";
+import { formatRule } from "../lib/format";
 import { useCatalogStore, type ClientNode, type ProjectNode } from "../stores/catalog";
 
 const { tree } = storeToRefs(useCatalogStore());
-
-function ruleText(rule: RuleDto): string {
-  return `${rule.unit} min · ${rule.direction} · per ${rule.level}`;
-}
 
 // One client dialog and one name dialog, configured by whatever opened them.
 const clientDialog = ref({
@@ -86,7 +83,7 @@ const renameTask = (task: { id: number; name: string }) =>
     <section v-for="client in tree" :key="client.id" class="client">
       <div class="row">
         <strong class="client-name">{{ client.name }}</strong>
-        <span class="muted">{{ ruleText(client.rule) }}</span>
+        <span class="muted">{{ formatRule(client.rule) }}</span>
         <span class="spacer"></span>
         <Button label="Edit" text size="small" @click="editClient(client)" />
         <Button label="New project" text size="small" @click="newProject(client)" />

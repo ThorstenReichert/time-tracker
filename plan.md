@@ -617,3 +617,28 @@ No IT involvement needed; AC-2 is closed for slice 1.
   `npm --prefix ui run typecheck` is clean. As a mutation check, removing a behaviour made the
   matching test fail. The behaviours removed were the Enter-waits-for-search line in
   QuickSwitch, TaskInput's "typing drops the pick" and ComboPicker's task fill.
+- **Step 11, overview details (2026-10-18).**
+  - Copy uses the clipboard plugin's JS API, so `@tauri-apps/plugin-clipboard-manager` **~2.5**
+    is a new UI dependency. It has to match the Rust plugin's minor version (2.5); otherwise
+    the Tauri CLI reports "version mismatched Tauri packages".
+  - The day is picked with prev/next/today plus a PrimeVue DatePicker (R14 "any date"). The
+    date math is in `ui/src/lib/day.ts` (UTC arithmetic on `YYYY-MM-DD`, so DST can't shift a
+    day), with `day.test.ts`. `format.ts` gained `decimalMark`, `formatHours`, `formatDiff`
+    and `formatRule` (shared with ClientsView).
+  - While anything is running, the view reloads once a minute, so the running entry counts
+    up (R14). It also reloads on `data-changed`, and drops an answer for a day that's no
+    longer shown.
+  - At project level, the client subtotal is shown without a copy button: only the project
+    values are booked. At client level, the client total has the button.
+  - The diff is rounded from seconds on its own, so it can differ by 0.01 from the
+    difference of the two displayed values (e.g. 1.50 − 1.38 shown as +0.13 for 450 s), as
+    spec §2 and AC-3 allow.
+
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper), with `OverviewView.test.ts` and
+  `CopyValue.test.ts` (as a mutation check, removing the stale-answer guard or the
+  "only while running" check made a test fail). Dev build with `TT_DB=<tt-cli worked-day
+  db>`, driven through simulated input, with screenshots in the session: 2026-10-17 shows
+  Acme / Web 1,25 (raw 1,37, diff −0,12) and Beta 1,00 (raw 0,97, diff +0,03), with the
+  separator on `auto` and a German locale. Copy put `1,25`, then `1,00`, on the clipboard
+  (read back with `Get-Clipboard`). Today shows the running Beta / Ops marked; prev/next,
+  Today and the DatePicker change the day; an empty day says so.
