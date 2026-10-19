@@ -22,15 +22,15 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+**Architecture in one line:** issues live in a local Dolt DB; `.beads/issues.jsonl` is a passive export. This repository has no remote (see "Local only, on purpose" below), so there is no sync.
 
 ## Agent Context Profiles
 
 The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
 
-- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
 - **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
-- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates and commit as part of session close. A current "do not commit" instruction still wins.
 
 ## Session Completion
 
@@ -39,22 +39,14 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 1. **File issues for remaining work** - Create beads for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Handle git/sync by active profile**:
-   ```bash
-   # Conservative/minimal/default: report status and proposed commands; wait for approval.
-   git status
-
-   # Team-maintainer opt-in only, unless current instructions forbid it:
-   git pull --rebase
-   git push
-   git status
-   ```
-5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+4. **Handle git by active profile**: report `git status` and the proposed commit; wait for
+   approval unless the current request authorizes the commit. Local only: no pull, no push.
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked commit
 
 **Critical rules:**
 - Explicit user or orchestrator instructions override this Beads block.
-- Do not commit or push without clear authority from the active profile or the current user request.
-- If a required sync or push is blocked, stop and report the exact command and error.
+- Do not commit without clear authority from the active profile or the current user request.
+- If a required commit is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
 
 
@@ -66,6 +58,16 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-2-spec` (spec.md), `ai-sdlc-3-build` (plan.md + implementation), `ai-sdlc-4-test`,
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
+
+### Local only, on purpose
+
+This repository is developed locally on purpose (owner, 2026-10-19): no git remote, no push, no
+pull requests, no CI and no branch protection. These are not gaps; don't record or propose them.
+Where the stage skills mention a PR, CI or branch protection, use the local equivalent:
+- Stage 5 review: fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and `plan.md`.
+- The checks: `pwsh scripts/check.ps1` (through the `gatekeeper` subagent).
+- Approval: the owner's explicit "approved to merge", then a local `git merge --no-ff` into
+  `master`. The merge commit message serves as the PR description.
 
 ### Beads ↔ SDLC
 
