@@ -181,6 +181,18 @@ describe("TodayView", () => {
     expect(fake.called("delete_entry")).toEqual([{ id: 2 }]);
   });
 
+  it("moves on to the new today at midnight while the window stays open (R10)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+    let today = TODAY;
+    const fake = backend({ get_today: () => today });
+    await mountToday();
+
+    today = "2026-10-19";
+    await vi.advanceTimersByTimeAsync(60_000);
+    await flushPromises();
+    expect(fake.called("get_day_entries").map((a) => a.day)).toEqual([TODAY, "2026-10-19"]);
+  });
+
   it("shows no entries of the previous day when a day fails to load", async () => {
     backend({
       get_day_entries: ({ day }: { day: string }) => {

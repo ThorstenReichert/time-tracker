@@ -43,7 +43,9 @@ async function complete(event: { query: string }) {
 // AutoComplete searches 300 ms after the last key. Enter before that picks nothing, and the
 // form would go without the task. So Enter on text whose search hasn't answered runs the
 // search now, picks its first offer (what Enter picks once the list is there, as in the
-// popup) and then submits the form.
+// popup) and then submits the form. Only typing on makes it give up: AutoComplete's own
+// search may still fire meanwhile. If the search fails, AutoComplete's own search shows the
+// list, and Enter picks from it.
 async function onKeydown(event: KeyboardEvent) {
   const typed = text.value;
   if (event.key !== "Enter" || props.project === null) return;
@@ -51,9 +53,13 @@ async function onKeydown(event: KeyboardEvent) {
   event.preventDefault();
   event.stopPropagation();
   const form = (event.target as HTMLInputElement).form;
-  const request = ++latest;
-  const picks = taskPicks(await call(commands.taskMatches(props.project, typed)));
-  if (request !== latest || text.value !== typed) return;
+  let picks: TaskPick[];
+  try {
+    picks = taskPicks(await call(commands.taskMatches(props.project, typed)));
+  } catch {
+    return;
+  }
+  if (text.value !== typed) return;
   const first = picks[0];
   if (first === undefined) return;
   model.value = first;

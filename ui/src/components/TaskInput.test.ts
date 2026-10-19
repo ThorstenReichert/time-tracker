@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { flushPromises } from "@vue/test-utils";
 import type { TaskMatchesDto } from "../bindings";
 import type { TaskPick } from "../lib/combo";
 import { fakeBackend } from "../test/backend";
@@ -56,6 +57,20 @@ describe("TaskInput", () => {
     await typeKeys(input, "rev");
     await pressEnter(input);
     expect(backend.called("task_matches").at(-1)).toEqual({ project: 1, text: "rev" });
+    expect(pick()).toEqual({ kind: "existing", id: 1, name: "Review" });
+  });
+
+  it("still picks when AutoComplete's own search fires while Enter waits", async () => {
+    const { backend, input, pick } = taskInput(1);
+    const answers: (() => void)[] = [];
+    backend.handlers.task_matches = (args) => new Promise((done) => answers.push(() => done(taskMatches(args))));
+    await typeKeys(input, "rev");
+    await vi.advanceTimersByTimeAsync(290);
+    await pressEnter(input);
+    await vi.advanceTimersByTimeAsync(20);
+    expect(backend.called("task_matches")).toHaveLength(2);
+    answers.forEach((answer) => answer());
+    await flushPromises();
     expect(pick()).toEqual({ kind: "existing", id: 1, name: "Review" });
   });
 

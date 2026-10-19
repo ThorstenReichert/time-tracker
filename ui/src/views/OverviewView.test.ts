@@ -128,6 +128,18 @@ describe("OverviewView", () => {
     expect(fake.called("get_overview").at(-1)).toEqual({ day: "2026-10-20" });
   });
 
+  it("moves on to the new today when the window becomes visible again", async () => {
+    let today = TODAY;
+    const fake = backend();
+    fake.handlers.get_today = () => today;
+    await mountOverview();
+
+    today = "2026-10-19";
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(fake.called("get_overview").map((a) => a.day)).toEqual([TODAY, "2026-10-19"]);
+  });
+
   it("shows no figures of the previous day when a day fails to load", async () => {
     const fake = backend();
     fake.handlers.get_overview = ({ day }: { day: string }) => {

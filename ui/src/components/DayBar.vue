@@ -35,8 +35,9 @@ const pickerDate = computed({
   },
 });
 
-// Closing the window only hides it, so a view can outlive the day. When the window comes
-// back, today is asked again; a view that showed the old today moves on to the new one.
+// Closing the window only hides it, so a view can outlive the day. Today is asked again when
+// the window comes back, and once a minute for a window that stays open over midnight; a view
+// that showed the old today moves on to the new one.
 async function refreshToday() {
   try {
     const now = await call(commands.getToday());
@@ -50,15 +51,18 @@ async function refreshToday() {
 const onVisible = () => {
   if (document.visibilityState === "visible") void refreshToday();
 };
-const onFocus = () => void refreshToday();
+const refresh = () => void refreshToday();
+let minutely: ReturnType<typeof setInterval> | undefined;
 
 onMounted(() => {
   void goToday();
-  window.addEventListener("focus", onFocus);
+  window.addEventListener("focus", refresh);
   document.addEventListener("visibilitychange", onVisible);
+  minutely = setInterval(refresh, 60_000);
 });
 onUnmounted(() => {
-  window.removeEventListener("focus", onFocus);
+  clearInterval(minutely);
+  window.removeEventListener("focus", refresh);
   document.removeEventListener("visibilitychange", onVisible);
 });
 </script>

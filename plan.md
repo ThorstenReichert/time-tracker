@@ -810,3 +810,18 @@ No IT involvement needed; AC-2 is closed for slice 1.
     (events), Copy put `1,00` on the clipboard, and Esc still hid the popup.
   - Picking "Beta / Ops", typing `Docs` and pressing Enter at once started "Beta / Ops /
     Docs" with the task created.
+
+  Re-review of `441f084` (fresh context, only the fix commit): `important=0 nit=3`.
+  - TaskInput's Enter path shared the `latest` counter with `complete()`. If AutoComplete's own
+    delayed search fired while Enter waited, Enter was lost; a failed search lost it too. Now
+    only typing on makes Enter give up, and a failed search leaves the list to AutoComplete.
+    Test: `still picks when AutoComplete's own search fires while Enter waits`.
+  - DayBar asked for today only on focus and visibility, so a window that stayed open and
+    focused over midnight kept the old day. It now also asks once a minute. Tests: a TodayView
+    midnight test with a minute passing, and a `visibilitychange` test in the overview.
+  - Accepted (owner, 2026-10-19): a database that already holds a relative backup folder
+    opens as Broken and can't be repaired in the app. Only 0.1.0 could have saved one, and it
+    is installed only on the owner's machine, with an absolute OneDrive path and test data.
+    No repair migration.
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper; 129 Rust tests, only `load_bench`
+  ignored; 127 UI tests in 21 files). Both new tests failed before their fix.
