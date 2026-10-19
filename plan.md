@@ -1,5 +1,5 @@
 # Plan: Personal project time tracker — slice 0 + slice 1
-Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude). Status: approved.
+Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude). Status: approved; released as 0.1.0 on 2026-10-19 (tag `v0.1.0`, see [release-notes.md](release-notes.md)).
 Approved by: Thorsten Reichert (owner). Date: 2026-10-17.
 Scope: **slice 0** (skeleton + installer check on the work machine, AC-2) and **slice 1** (thin
 vertical slice from AC-6, then the pieces needed for daily use). In scope: R1, R3, R4, R5, R6,
