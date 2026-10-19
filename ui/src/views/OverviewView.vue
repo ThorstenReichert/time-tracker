@@ -29,11 +29,17 @@ async function load() {
     overview.value = result;
     loadError.value = null;
   } catch (e) {
+    if (asked !== day.value) return;
     loadError.value = errorMessage(e);
   }
 }
 
-watch(day, load);
+// Another day's figures are never shown under this day's date, not even when it fails.
+watch(day, () => {
+  overview.value = null;
+  loadError.value = null;
+  void load();
+});
 
 // A running entry counts up to now (R14), so its values are reloaded once a minute.
 const running = computed(() => overview.value?.clients.some((c) => c.running) ?? false);

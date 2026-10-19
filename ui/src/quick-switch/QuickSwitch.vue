@@ -72,6 +72,7 @@ function reset() {
   query.value = "";
   step.value = null;
   comboQuery = "";
+  highlight.value = 0;
   error.value = null;
 }
 

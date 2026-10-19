@@ -159,6 +159,42 @@ fn a_failed_backup_before_a_migration_refuses_to_migrate() {
 }
 
 #[test]
+fn a_failed_prune_only_warns_even_before_a_migration() {
+    let scratch = Scratch::new();
+    let app = scratch.open("2026-10-17T08:00");
+    app.execute(
+        &ctx("2026-10-17T08:00"),
+        Command::UpdateSettings {
+            settings: Settings {
+                backup_keep: 1,
+                ..Settings::default()
+            },
+        },
+    )
+    .unwrap();
+    drop(app);
+    // An old "backup" that can't be deleted: a folder with a backup file name.
+    std::fs::create_dir_all(scratch.backups().join("timetracker-20200101T000000Z.db")).unwrap();
+    let config = AppConfig {
+        migrations: WITH_TEST_MIGRATION,
+        ..AppConfig::new(scratch.db())
+    };
+    let app = App::open(config, &ctx("2026-10-17T09:00")).unwrap();
+    let status = app.status();
+    assert_eq!(
+        status.broken, None,
+        "the backup was written, so it migrates"
+    );
+    assert_eq!(status.warnings.len(), 1);
+    assert!(
+        status.warnings[0].contains("old backups"),
+        "{:?}",
+        status.warnings
+    );
+    assert!(files_in(&scratch.backups()).contains(&"timetracker-20261017T070000Z.db".to_owned()));
+}
+
+#[test]
 fn invalid_data_on_load_accepts_no_writes() {
     let scratch = Scratch::new();
     let app = scratch.open("2026-10-17T08:00");

@@ -73,6 +73,12 @@ pub fn run() {
                 api.prevent_close();
                 let _ = window.hide();
             }
+            // Alt+F4 on the popup hides it too: a closed popup would leave the hotkey with
+            // nothing to show until a restart (R6).
+            (QUICK_SWITCH_WINDOW, WindowEvent::CloseRequested { api, .. }) => {
+                api.prevent_close();
+                let _ = window.hide();
+            }
             // The popup hides when it loses focus (spec §2 "Windows").
             (QUICK_SWITCH_WINDOW, WindowEvent::Focused(false)) => {
                 let _ = window.hide();

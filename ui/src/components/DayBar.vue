@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Picks the day a view shows: previous/next day, any date, and back to today (R10, R14).
 // It starts on today, as the backend's OS time zone sees it.
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import { commands } from "../bindings";
@@ -35,7 +35,32 @@ const pickerDate = computed({
   },
 });
 
-onMounted(goToday);
+// Closing the window only hides it, so a view can outlive the day. When the window comes
+// back, today is asked again; a view that showed the old today moves on to the new one.
+async function refreshToday() {
+  try {
+    const now = await call(commands.getToday());
+    if (day.value === null || day.value === today.value) day.value = now;
+    today.value = now;
+    error.value = null;
+  } catch (e) {
+    error.value = errorMessage(e);
+  }
+}
+const onVisible = () => {
+  if (document.visibilityState === "visible") void refreshToday();
+};
+const onFocus = () => void refreshToday();
+
+onMounted(() => {
+  void goToday();
+  window.addEventListener("focus", onFocus);
+  document.addEventListener("visibilitychange", onVisible);
+});
+onUnmounted(() => {
+  window.removeEventListener("focus", onFocus);
+  document.removeEventListener("visibilitychange", onVisible);
+});
 </script>
 
 <template>

@@ -32,26 +32,34 @@ fn is_backup_file_name(name: &str) -> bool {
 }
 
 impl Store {
-    /// Writes a consistent copy of the database to `dir` and keeps the newest `keep` backup
-    /// files there. A backup with the same name (same second) is replaced. The copy is
-    /// written to a temporary file first, so a failed backup never leaves a partial file
-    /// under a backup name.
-    pub fn backup_to(&self, dir: &Path, now: Instant, keep: usize) -> Result<PathBuf, StoreError> {
+    /// Writes a consistent copy of the database to `dir`. A backup with the same name (same
+    /// second) is replaced. The copy is written to a temporary file first, so a failed
+    /// backup never leaves a partial file under a backup name, and the temporary file is
+    /// removed when anything fails.
+    pub fn backup_to(&self, dir: &Path, now: Instant) -> Result<PathBuf, StoreError> {
         std::fs::create_dir_all(dir)?;
         let target = dir.join(backup_file_name(now));
         let partial = target.with_extension("db.partial");
         let _ = std::fs::remove_file(&partial);
-        self.conn.backup(MAIN_DB, &partial, None)?;
+        let written = self.write_backup(&partial, &target);
+        if written.is_err() {
+            let _ = std::fs::remove_file(&partial);
+        }
+        written.map(|()| target)
+    }
+
+    fn write_backup(&self, partial: &Path, target: &Path) -> Result<(), StoreError> {
+        self.conn.backup(MAIN_DB, partial, None)?;
         // A single-file copy: no -wal/-shm files next to it in a (possibly synced) folder.
-        Connection::open(&partial)?.pragma_update(None, "journal_mode", "DELETE")?;
-        std::fs::rename(&partial, &target)?;
-        prune(dir, keep)?;
-        Ok(target)
+        Connection::open(partial)?.pragma_update(None, "journal_mode", "DELETE")?;
+        std::fs::rename(partial, target)?;
+        Ok(())
     }
 }
 
-/// Deletes all but the newest `keep` backup files in `dir`.
-fn prune(dir: &Path, keep: usize) -> Result<(), StoreError> {
+/// Deletes all but the newest `keep` backup files in `dir`. It's separate from
+/// [`Store::backup_to`], so a failed prune never counts as a failed backup.
+pub fn prune_backups(dir: &Path, keep: usize) -> Result<(), StoreError> {
     let mut backups: Vec<PathBuf> = std::fs::read_dir(dir)?
         .filter_map(Result::ok)
         .filter(|e| e.file_name().to_str().is_some_and(is_backup_file_name))

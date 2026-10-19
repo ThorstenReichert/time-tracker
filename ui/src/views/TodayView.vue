@@ -47,11 +47,17 @@ async function load() {
     entries.value = result;
     loadError.value = null;
   } catch (e) {
+    if (asked !== day.value) return;
     loadError.value = errorMessage(e);
   }
 }
 
-watch(day, load);
+// Another day's entries are never listed under this day's date, not even when it fails.
+watch(day, () => {
+  entries.value = null;
+  loadError.value = null;
+  void load();
+});
 const unlisten = listen("data-changed", () => void load());
 onUnmounted(() => void unlisten.then((stop) => stop()));
 

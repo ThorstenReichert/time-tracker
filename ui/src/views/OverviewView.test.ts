@@ -104,6 +104,44 @@ describe("OverviewView", () => {
     expect(wrapper.find('[data-client="Acme"]').exists()).toBe(true);
   });
 
+  it("moves on to the new today when the window gets focus after midnight (R14)", async () => {
+    // Closing the window only hides it, so the view survives the night.
+    let today = TODAY;
+    const fake = backend();
+    fake.handlers.get_today = () => today;
+    const wrapper = await mountOverview();
+    const todayButton = () => wrapper.findAll("button").find((b) => b.text() === "Today")!;
+
+    today = "2026-10-19";
+    window.dispatchEvent(new Event("focus"));
+    await flushPromises();
+    expect(fake.called("get_overview").map((a) => a.day)).toEqual([TODAY, "2026-10-19"]);
+    expect(todayButton().attributes("disabled")).toBeDefined();
+
+    // A day picked on purpose stays, but Today leads to the new day.
+    await clickButton("Previous day");
+    today = "2026-10-20";
+    window.dispatchEvent(new Event("focus"));
+    await flushPromises();
+    expect(fake.called("get_overview").map((a) => a.day)).toEqual([TODAY, "2026-10-19", TODAY]);
+    await clickButton("Today");
+    expect(fake.called("get_overview").at(-1)).toEqual({ day: "2026-10-20" });
+  });
+
+  it("shows no figures of the previous day when a day fails to load", async () => {
+    const fake = backend();
+    fake.handlers.get_overview = ({ day }: { day: string }) => {
+      if (day === "2026-10-17") throw uiError("the database is busy", "store");
+      return workedDay(day, false);
+    };
+    const wrapper = await mountOverview();
+    expect(wrapper.find('[data-client="Acme"]').exists()).toBe(true);
+
+    await clickButton("Previous day");
+    expect(wrapper.text()).toContain("the database is busy");
+    expect(wrapper.find("[data-client]").exists()).toBe(false);
+  });
+
   it("reloads when the data changes", async () => {
     const fake = backend();
     await mountOverview();

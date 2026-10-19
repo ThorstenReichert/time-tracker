@@ -6,7 +6,7 @@ import { useTimerStore } from "../stores/timer";
 import { fakeBackend, uiError, type Handler } from "../test/backend";
 import { acmeWeb, acmeWebReview, betaApi, betaOps, finishedEntry, runningEntry } from "../test/fixtures";
 import { mountInApp, withOverlays } from "../test/mount";
-import { clickButton, dialog, dialogOpen, fakeSearchDelay, pickSuggestion, typeAhead } from "../test/page";
+import { clickButton, dialog, dialogOpen, fakeSearchDelay, pickSuggestion, pressEnter, typeAhead, typeKeys } from "../test/page";
 import TodayView from "./TodayView.vue";
 
 const TODAY = "2026-10-18";
@@ -65,6 +65,23 @@ describe("TodayView", () => {
     expect(fake.called("start")).toEqual([{ project: 1, task: { kind: "existing", value: 1 } }]);
     expect((wrapper.get(".start input").element as HTMLInputElement).value).toBe("");
     expect(startButton().attributes("disabled")).toBeDefined();
+  });
+
+  it("starts with a task typed and Entered before its search answered (R3)", async () => {
+    const fake = backend({
+      start: () => null,
+      quick_switch: () => [acmeWeb],
+      task_matches: ({ text }: { text: string }) => ({ tasks: [], offerCreate: text === "" ? null : text }),
+    });
+    const wrapper = await mountToday();
+    await typeAhead(wrapper.get(".start input"), "web");
+    await pickSuggestion("Acme / Web");
+
+    // Enter within AutoComplete's 300 ms search delay.
+    const taskInput = wrapper.findAll(".start input")[1]!;
+    await typeKeys(taskInput, "Docs");
+    await pressEnter(taskInput);
+    expect(fake.called("start")).toEqual([{ project: 1, task: { kind: "new", value: "Docs" } }]);
   });
 
   it("lists a day's entries with their notes (R10, R13)", async () => {
@@ -162,6 +179,21 @@ describe("TodayView", () => {
     await clickButton("Delete", wrapper.get('[data-entry="2"]'));
     await clickButton("Delete", new DOMWrapper(confirmation()!));
     expect(fake.called("delete_entry")).toEqual([{ id: 2 }]);
+  });
+
+  it("shows no entries of the previous day when a day fails to load", async () => {
+    backend({
+      get_day_entries: ({ day }: { day: string }) => {
+        if (day === "2026-10-17") throw uiError("the database is busy", "store");
+        return [running];
+      },
+    });
+    const wrapper = await mountToday();
+    expect(rows(wrapper)).toHaveLength(1);
+
+    await clickButton("Previous day");
+    expect(wrapper.text()).toContain("the database is busy");
+    expect(rows(wrapper)).toEqual([]);
   });
 
   it("reloads when the data changes", async () => {

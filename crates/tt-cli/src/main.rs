@@ -435,14 +435,38 @@ fn refuse_live_db(db: &Path) -> Result<(), Failure> {
     Ok(())
 }
 
-/// Compares absolute paths, ignoring case (Windows file names are case-insensitive).
+/// Whether `a` and `b` name the same file. First the absolute paths, ignoring case (Windows
+/// file names are case-insensitive) and a verbatim `\\?\` prefix. Then, for other spellings
+/// (8.3 short names, links), the canonical paths of the files, or of their folders if the
+/// files don't exist yet. Canonicalising only reads metadata.
 fn same_path(a: &Path, b: &Path) -> bool {
-    let normal = |p: &Path| {
-        std::path::absolute(p)
-            .unwrap_or_else(|_| p.to_path_buf())
-            .to_string_lossy()
-            .replace('/', "\\")
-            .to_lowercase()
+    let (a, b) = (absolute(a), absolute(b));
+    if text(&a) == text(&b) {
+        return true;
+    }
+    let canonical = |p: &Path| std::fs::canonicalize(p).ok().map(|c| text(&c));
+    if let (Some(a), Some(b)) = (canonical(&a), canonical(&b)) {
+        return a == b;
+    }
+    let name = |p: &Path| p.file_name().map(|n| n.to_string_lossy().to_lowercase());
+    let folder = |p: &Path| p.parent().and_then(canonical);
+    name(&a) == name(&b) && folder(&a).is_some() && folder(&a) == folder(&b)
+}
+
+/// `p` as an absolute path without a verbatim prefix (`\\?\C:\…`, `\\?\UNC\server\…`).
+fn absolute(p: &Path) -> PathBuf {
+    let s = p.to_string_lossy().replace('/', "\\");
+    let s = match s.strip_prefix(r"\\?\") {
+        Some(rest) => match rest.strip_prefix(r"UNC\") {
+            Some(unc) => format!(r"\\{unc}"),
+            None => rest.to_string(),
+        },
+        None => s,
     };
-    normal(a) == normal(b)
+    let p = PathBuf::from(s);
+    std::path::absolute(&p).unwrap_or(p)
+}
+
+fn text(p: &Path) -> String {
+    absolute(p).to_string_lossy().to_lowercase()
 }

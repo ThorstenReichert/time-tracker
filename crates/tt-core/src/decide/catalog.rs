@@ -142,6 +142,15 @@ pub(crate) fn validate_settings(settings: &Settings) -> Result<(), SettingProble
     {
         return Err(SettingProblem::EmptyBackupDir);
     }
+    // A relative folder would depend on the process's working directory, which differs
+    // between a Start menu launch and autostart (R22).
+    if settings
+        .backup_dir
+        .as_deref()
+        .is_some_and(|d| !std::path::Path::new(d).is_absolute())
+    {
+        return Err(SettingProblem::RelativeBackupDir);
+    }
     if !(1..=Settings::RECENTS_N_MAX).contains(&settings.recents_n) {
         return Err(SettingProblem::RecentsOutOfRange {
             max: Settings::RECENTS_N_MAX,

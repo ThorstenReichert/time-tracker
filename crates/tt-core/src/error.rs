@@ -70,6 +70,8 @@ pub enum SettingProblem {
     EmptyHotkey,
     #[error("the backup folder is empty")]
     EmptyBackupDir,
+    #[error("the backup folder must be a full path, like C:\\Users\\Me\\OneDrive\\TimeTracker")]
+    RelativeBackupDir,
     #[error("the number of recents must be 1 to {max}")]
     RecentsOutOfRange { max: u32 },
     #[error("the number of backups to keep must be 1 to {max}")]

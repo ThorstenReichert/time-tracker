@@ -20,7 +20,8 @@ use crate::hotkey::HotkeyStatus;
 use crate::{MAIN_WINDOW, bridge, commands};
 
 const TRAY_ID: &str = "main";
-/// Windows keeps at most this many UTF-16 units of a tray tooltip, including the final NUL.
+/// Windows keeps at most this many UTF-16 units of a tray tooltip, plus the final NUL
+/// (`szTip` holds 128).
 const TOOLTIP_MAX_UNITS: usize = 127;
 const IDLE_ICON: &[u8] = include_bytes!("../icons/tray-idle.png");
 const RUNNING_ICON: &[u8] = include_bytes!("../icons/tray-running.png");

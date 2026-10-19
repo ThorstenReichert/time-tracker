@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 use thiserror::Error;
 
-pub use backup::{BACKUP_PREFIX, backup_file_name};
+pub use backup::{BACKUP_PREFIX, backup_file_name, prune_backups};
 pub use lock::DbLock;
 pub use migrate::{MIGRATIONS, Migration};
 pub use raw_setting::raw_setting;

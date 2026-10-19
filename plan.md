@@ -87,14 +87,15 @@ The draft was reviewed adversarially before approval, and its findings are folde
   `read::day_entries(&Catalog, &[&Entry], now, &TimeZone, civil::Date) -> Vec<EntryRow>`;
   `read::recents(&Catalog, &[Combo], n) -> Vec<ComboRow>` (active only);
   `read::quick_switch(&Catalog, recents: &[Combo], query: &str) -> Vec<ComboRow>` (empty query
-  → recents, then the other active combos A–Z (step 9 follow-up); otherwise fuzzy over
+  → the newest `recents_n` recents, then the other active combos A–Z (step 9 follow-up); otherwise fuzzy over
   "Client / Project / Task" and project-only combos of active items); `read::task_matches(&Catalog, ProjectId, text: &str) -> TaskMatches { tasks,
   offer_create: Option<Name> }`.
 
 **tt-store**: `Store::open(path, migrations: &[Migration]) -> Result<(Store, OpenInfo {
 existed, pending_migrations })>`, `migrate()`, `load() -> State`, `apply(&[Event])` (one
-transaction), `backup_to(dir, now: Instant, keep: usize) -> PathBuf` (file
-`timetracker-YYYYMMDDTHHMMSSZ.db`), `raw_setting(path, key)`, `DbLock::acquire(path)`.
+transaction), `backup_to(dir, now: Instant) -> PathBuf` (file
+`timetracker-YYYYMMDDTHHMMSSZ.db`) and `prune_backups(dir, keep: usize)` (stage 5 review),
+`raw_setting(path, key)`, `DbLock::acquire(path)`.
 
 **tt-app**: `AppConfig { db_path, backup_dir_override: Option<PathBuf>, migrations: &'static
 [Migration] }` (default `tt_store::MIGRATIONS`). `App::open(AppConfig, &Ctx) -> Result<App,
@@ -117,8 +118,10 @@ lock is a plain std `Mutex`; with `panic = "abort"` it can't be poisoned, so `lo
 shown in setup unless the process was started with `--autostart`) and `quick-switch` (`url:
 "quick-switch.html"`, `visible: false`, `decorations: false`, `alwaysOnTop: true`,
 `skipTaskbar: true`, `center: true`, `resizable: false`, 600×360).
-`capabilities/default.json`: windows `["main","quick-switch"]`, permissions `core:default`,
-`clipboard-manager:allow-write-text`. Autostart is
+Capabilities (narrowed in the stage 5 review): `capabilities/default.json` gives both windows
+`core:event:allow-listen` and `core:event:allow-unlisten`; `capabilities/main.json` gives
+`main` `clipboard-manager:allow-write-text`; `capabilities/quick-switch.json` gives the popup
+`core:window:allow-hide`. Autostart is
 `tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec!["--autostart"]))`, toggled
 through Rust commands. `App::open` runs inside `.setup()`, after the single-instance plugin is
 registered. The single-instance callback shows and focuses `main`. A bridge thread receives
@@ -152,8 +155,8 @@ chars. Icons: `cargo tauri icon` from `src-tauri/icons/app.svg`; `icons/tray-idl
 | `crates/tt-store/tests/{schema,roundtrip,backup}.rs` | new | backstop constraints, round-trip, backup + prune | R1, R4, R22 |
 | `crates/tt-app/src/{lib,startup,paths,error}.rs`, `tests/{write_path,startup,reload_equality,load_bench}.rs` | new | write path, startup order, Broken mode, events, live path, benchmark | R4, R5, R22 |
 | `crates/tt-cli/src/main.rs`, `tests/scenarios.rs` | new | clap driver, JSON out, scenario tests | R1, R3–R5, R10–R14, R17–R19 |
-| `src-tauri/{Cargo.toml,build.rs,tauri.conf.json,tauri.dev.conf.json,capabilities/default.json,icons/*}` | new | app config and identity, windows, CSP, NSIS currentUser | R6, R8, R9 |
-| `src-tauri/src/{main,lib,commands,dto,bridge,ctx,tray,hotkey,bindings}.rs` | new | thin driver: DTOs, async commands, event bridge, tray, hotkey, single instance, autostart | R5–R9, R14, R15 |
+| `src-tauri/{Cargo.toml,build.rs,tauri.conf.json,tauri.dev.conf.json,capabilities/{default,main,quick-switch}.json,icons/*}` | new | app config and identity, windows, CSP, NSIS currentUser | R6, R8, R9 |
+| `src-tauri/src/{main,lib,commands,dto,bridge,backend,errors,tray,hotkey,bindings}.rs` | new | thin driver: DTOs, async commands, event bridge, tray, hotkey, single instance, autostart | R5–R9, R14, R15 |
 | `ui/{package.json,vite.config.ts,tsconfig.json,index.html,quick-switch.html}` | new | Vite multi-page | — |
 | `ui/src/{main.ts,quick-switch.ts,router.ts,bindings.ts}` | new | entries; `bindings.ts` generated | — |
 | `ui/src/views/{TodayView,OverviewView,ClientsView,SettingsView}.vue` | new | main window views | R1, R3, R7, R10–R15, R17 |
@@ -754,3 +757,56 @@ No IT involvement needed; AC-2 is closed for slice 1.
   The date pickers start the week on Sunday (bead `qvt.18`, found in step 12). The owner
   judged this not an issue and closed the bead. It gets raised again if it becomes a
   problem.
+- **Stage 5 review fixes (2026-10-19).** Four fresh-context reviewers (tt-core; tt-store and
+  tt-app; tt-cli and src-tauri; ui) reviewed `master...slice-1` against `REVIEW.md` and found
+  7 Important findings and 21 nits. The owner chose to fix the Important ones plus seven nits,
+  and to file the other nits as beads (`zw5`, `6lb`, `zpe`, `8q9`, `lej`). Each bug got a
+  failing test first, or a reproduction in the dev build.
+  - **Recents (R7).** A blank quick-switch query listed up to 50 used combos by recency before
+    the A–Z part. It now lists only the newest `recents_n` there; older ones join the A–Z part.
+  - **Backup folder (R22).** A relative folder depended on the working directory (the install
+    folder from the Start menu, `System32` on autostart). `validate_settings` now rejects it
+    with `SettingProblem::RelativeBackupDir`. The invariant check on load uses the same rule,
+    so a database that already holds a relative folder opens as Broken.
+  - **Popup (R6).** Alt+F4 destroyed the `quick-switch` window, and the hotkey showed nothing
+    until a restart. A close request now hides it, like `main`.
+  - **tt-cli (OQ-5).** The live-database refusal compared path text only. It now strips a
+    `\?\` prefix, resolves `.`/`..`, and compares canonical paths (of the files, or of their
+    folders while the file doesn't exist), so a junction or an 8.3 name doesn't get through.
+  - **Capabilities.** `core:default` gave both pages the tray and menu commands, and the popup
+    the clipboard. They are narrowed as pinned above; `capabilities/main.json` is new.
+  - **Today after midnight (R10, R14).** DayBar asked for today only when mounted, and the
+    views outlive the night (closing only hides the window). It now asks again when the
+    window gets focus or becomes visible, and a view that showed the old today moves on.
+  - **Task typed + Enter (R3).** Enter within AutoComplete's 300 ms search delay started the
+    timer (or saved the entry) without the typed task. TaskInput now runs the search for that
+    text, picks its first offer and submits the form, as the popup does. Enter on a list that
+    has answered stays with AutoComplete, so an arrow-key pick wins.
+  - **Nits.** `backup_to` removes its `.partial` file on every failure, and pruning is a
+    separate `prune_backups`: a failed prune is its own warning, never a failed backup (so it
+    can't block a migration). `load_bench` fails when memory can't be measured, instead of
+    reading 0. The popup resets its highlighted row when it hides. A failed day load in Today
+    or the overview no longer shows the previous day's data. The file list above names
+    `backend.rs`/`errors.rs` instead of `ctx.rs`, and the tray comment states the 127-unit
+    limit correctly.
+  - New test helpers in `ui/src/test/page.ts`: `typeKeys` (types without the `change` event
+    that `setValue` fires; a browser fires it only on Enter or blur) and `pressEnter` (the
+    keydown, then the implicit form submission happy-dom lacks).
+
+  Proof: `pwsh scripts/check.ps1` passed (gatekeeper; 129 Rust tests, only `load_bench`
+  ignored; 124 UI tests in 21 files). `load_bench`: 46 ms, 33 MB. Each new test failed before
+  its fix, by running it against the old code or a mutation:
+  - `quick_switch_lists_only_recents_n_recents_for_a_blank_query`
+  - both live-database refusal tests in tt-cli
+  - `a_failed_backup_leaves_no_partial_file`
+  - the midnight and failed-day tests in `OverviewView.test.ts` and `TodayView.test.ts`
+  - the highlight test in `QuickSwitch.test.ts`
+  - the Enter-before-search tests in `TaskInput.test.ts` and `TodayView.test.ts`
+
+  Dev build on a tt-cli worked-day scratch database, driven through simulated input:
+  - Alt+F4 on the popup destroyed it before the fix; after it, the popup was only hidden, and
+    the next hotkey showed it again.
+  - With the narrowed capabilities, a switch from the popup updated the main window live
+    (events), Copy put `1,00` on the clipboard, and Esc still hid the popup.
+  - Picking "Beta / Ops", typing `Docs` and pressing Enter at once started "Beta / Ops /
+    Docs" with the task created.

@@ -176,6 +176,20 @@ describe("QuickSwitch", () => {
     expect(backend.called("stop")).toEqual([]);
   });
 
+  it("highlights the first row again next time, even before the reload answers", async () => {
+    const { press, backend } = await popup();
+    await press("ArrowDown");
+    await press("ArrowDown");
+    await press("Escape");
+
+    const slow = deferred<EntryDto>();
+    backend.handlers.get_running = () => slow.promise;
+    await emit("quick-switch-shown");
+    await press("Enter");
+    expect(backend.called("start")).toEqual([started(betaOps)]);
+    slow.resolve(runningEntry(acmeWebReview, 90));
+  });
+
   it("starts fresh after losing focus", async () => {
     const { type, press, input, wrapper } = await popup();
     await type("web");

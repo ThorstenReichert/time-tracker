@@ -282,32 +282,77 @@ fn the_live_database_is_refused_before_touching_it() {
         .path()
         .join("ThorSoft.TimeTracker")
         .join("timetracker.db");
+    let elsewhere = home.path().join("elsewhere");
+    std::fs::create_dir(&elsewhere).unwrap();
     for spelled in [
         live.clone(),
         PathBuf::from(live.to_string_lossy().to_uppercase()),
+        PathBuf::from(format!(r"\\?\{}", live.display())),
+        PathBuf::from(r"..\ThorSoft.TimeTracker\.\timetracker.db"),
     ] {
-        let out = Command::cargo_bin("tt-cli")
-            .unwrap()
-            .env("LOCALAPPDATA", home.path())
-            .arg("--db")
-            .arg(&spelled)
-            .args([
-                "--now",
-                "2026-10-17T09:00",
-                "--tz",
-                "Europe/Berlin",
-                "state",
-            ])
-            .output()
-            .unwrap();
-        assert_eq!(out.status.code(), Some(1), "{spelled:?}");
-        assert!(
-            stderr_json(&out)["message"]
-                .as_str()
-                .unwrap()
-                .contains("live database")
-        );
+        assert_refused(home.path(), &elsewhere, &spelled);
     }
     assert!(!live.exists(), "nothing was created");
     assert!(!live.parent().unwrap().exists());
+}
+
+#[test]
+fn the_live_database_is_refused_through_a_junction() {
+    // A junction needs no admin rights; the path text no longer matches, the folder does.
+    let home = TempDir::new().unwrap();
+    let folder = home.path().join("ThorSoft.TimeTracker");
+    std::fs::create_dir(&folder).unwrap();
+    let link = home.path().join("link");
+    let made = std::process::Command::new("cmd")
+        .args(["/C", "mklink", "/J"])
+        .arg(&link)
+        .arg(&folder)
+        .output()
+        .unwrap();
+    assert!(made.status.success(), "{made:?}");
+    let spelled = link.join("timetracker.db");
+
+    // The live database doesn't exist yet: the folders are compared.
+    assert_refused(home.path(), home.path(), &spelled);
+    assert!(
+        !folder.join("timetracker.db").exists(),
+        "nothing was created"
+    );
+
+    // It exists: the files are compared, and it stays untouched.
+    let live = folder.join("timetracker.db");
+    std::fs::write(&live, b"").unwrap();
+    assert_refused(home.path(), home.path(), &spelled);
+    assert_eq!(std::fs::metadata(&live).unwrap().len(), 0);
+    assert_eq!(
+        std::fs::read_dir(&folder).unwrap().count(),
+        1,
+        "no -wal, no backups"
+    );
+}
+
+fn assert_refused(local_app_data: &Path, cwd: &Path, db: &Path) {
+    let out = Command::cargo_bin("tt-cli")
+        .unwrap()
+        .env("LOCALAPPDATA", local_app_data)
+        .current_dir(cwd)
+        .arg("--db")
+        .arg(db)
+        .args([
+            "--now",
+            "2026-10-17T09:00",
+            "--tz",
+            "Europe/Berlin",
+            "state",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1), "{db:?}");
+    assert!(
+        stderr_json(&out)["message"]
+            .as_str()
+            .unwrap()
+            .contains("live database"),
+        "{db:?}"
+    );
 }

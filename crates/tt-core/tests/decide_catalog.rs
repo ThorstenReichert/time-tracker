@@ -302,6 +302,27 @@ fn settings_are_validated() {
         }),
         DomainError::InvalidSetting(SettingProblem::BackupKeepOutOfRange { max: 1000 })
     );
+    // R22: a relative folder would depend on the working directory.
+    for relative in ["backups", r"OneDrive\TT", r"\TT", "C:TT", r"%OneDrive%\TT"] {
+        assert_eq!(
+            bad(Settings {
+                backup_dir: Some(relative.into()),
+                ..Settings::default()
+            }),
+            DomainError::InvalidSetting(SettingProblem::RelativeBackupDir),
+            "{relative}"
+        );
+    }
+    for full in [r"C:\Users\Me\OneDrive\TT", r"\\server\share\TT"] {
+        let settings = Settings {
+            backup_dir: Some(full.into()),
+            ..Settings::default()
+        };
+        assert!(
+            when(&state, &ctx(), Command::UpdateSettings { settings }).is_ok(),
+            "{full}"
+        );
+    }
 }
 
 #[test]

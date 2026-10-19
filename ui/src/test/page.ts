@@ -39,6 +39,26 @@ export async function typeAhead(input: Pick<DOMWrapper<Element>, "setValue">, te
   await flushPromises();
 }
 
+/**
+ * Types into an input while it keeps the focus. Unlike `setValue`, there is no change event,
+ * which a browser fires only on Enter or when the input loses focus.
+ */
+export async function typeKeys(input: Pick<DOMWrapper<Element>, "element" | "trigger">, text: string) {
+  (input.element as HTMLInputElement).value = text;
+  await input.trigger("input");
+}
+
+/**
+ * Presses Enter in an input the way a browser does: the keydown, then, unless a handler
+ * prevented it, the implicit submission of the input's form (happy-dom has none).
+ */
+export async function pressEnter(input: Pick<DOMWrapper<Element>, "element">) {
+  const event = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true });
+  input.element.dispatchEvent(event);
+  if (!event.defaultPrevented) (input.element as HTMLInputElement).form?.requestSubmit();
+  await flushPromises();
+}
+
 /** The labels of the AutoComplete suggestions on screen. */
 export function suggestions(): string[] {
   return [...document.querySelectorAll(".p-autocomplete-option")].map((o) => o.textContent?.trim() ?? "");

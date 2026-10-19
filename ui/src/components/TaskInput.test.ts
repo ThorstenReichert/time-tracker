@@ -4,7 +4,7 @@ import type { TaskPick } from "../lib/combo";
 import { fakeBackend } from "../test/backend";
 import { catalog } from "../test/fixtures";
 import { mountInApp } from "../test/mount";
-import { fakeSearchDelay, pickSuggestion, suggestions, typeAhead } from "../test/page";
+import { fakeSearchDelay, pickSuggestion, pressEnter, suggestions, typeAhead, typeKeys } from "../test/page";
 import TaskInput from "./TaskInput.vue";
 
 /** Matches like the core: tasks of the project containing the text; Create unless one is exact. */
@@ -49,6 +49,22 @@ describe("TaskInput", () => {
     expect(suggestions()).toEqual(['Create "Deploy"']);
     await pickSuggestion('Create "Deploy"');
     expect(pick()).toEqual({ kind: "new", name: "Deploy" });
+  });
+
+  it("picks the first offer when Enter comes before the search answered", async () => {
+    const { backend, input, pick } = taskInput(1);
+    await typeKeys(input, "rev");
+    await pressEnter(input);
+    expect(backend.called("task_matches").at(-1)).toEqual({ project: 1, text: "rev" });
+    expect(pick()).toEqual({ kind: "existing", id: 1, name: "Review" });
+  });
+
+  it("leaves Enter on an answered list to the highlighted option", async () => {
+    const { input, pick } = taskInput(1);
+    await typeAhead(input, "rev");
+    await input.trigger("keydown", { key: "ArrowDown", code: "ArrowDown" });
+    await pressEnter(input);
+    expect(pick()).toEqual({ kind: "new", name: "rev" });
   });
 
   it("offers no Create when a task has the exact name, in any case", async () => {

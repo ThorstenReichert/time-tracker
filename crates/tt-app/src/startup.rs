@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use tt_core::{Ctx, Settings};
-use tt_store::{DbLock, Store, StoreError, keys, raw_setting};
+use tt_store::{DbLock, Store, StoreError, keys, prune_backups, raw_setting};
 
 use crate::{App, AppConfig, AppError, Inner, default_backup_dir};
 
@@ -39,15 +39,26 @@ fn ready(
     let (mut store, info) =
         Store::open(db, config.migrations).map_err(|e| format!("opening {}: {e}", db.display()))?;
 
-    if info.existed
-        && let Err(e) = store.backup_to(&backup.dir, ctx.now, backup.keep)
-    {
-        let message = format!("backup to {} failed: {e}", backup.dir.display());
-        if info.pending_migrations > 0 {
-            // Never migrate without a backup.
-            return Err(format!("{message}; not migrating without a backup"));
+    if info.existed {
+        match store.backup_to(&backup.dir, ctx.now) {
+            Ok(_) => {
+                // The backup is written, so a failed prune is only worth a warning.
+                if let Err(e) = prune_backups(&backup.dir, backup.keep) {
+                    warnings.push(format!(
+                        "deleting old backups in {} failed: {e}",
+                        backup.dir.display()
+                    ));
+                }
+            }
+            Err(e) => {
+                let message = format!("backup to {} failed: {e}", backup.dir.display());
+                if info.pending_migrations > 0 {
+                    // Never migrate without a backup.
+                    return Err(format!("{message}; not migrating without a backup"));
+                }
+                warnings.push(message);
+            }
         }
-        warnings.push(message);
     }
     store.migrate().map_err(|e| format!("migrating: {e}"))?;
     let state = store.load().map_err(|e| format!("loading: {e}"))?;

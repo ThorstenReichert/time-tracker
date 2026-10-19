@@ -89,10 +89,12 @@ fn generated_events() -> Vec<Event> {
     events
 }
 
+/// Fails rather than reading 0, which would pass the memory limit unchecked.
 fn physical_mb() -> usize {
     memory_stats::memory_stats()
-        .map(|m| m.physical_mem / (1024 * 1024))
-        .unwrap_or(0)
+        .expect("process memory can be measured")
+        .physical_mem
+        / (1024 * 1024)
 }
 
 #[test]

@@ -17,7 +17,8 @@ pub const QUICK_SWITCH_LIMIT: usize = 50;
 /// The popup's and the pickers' list for `query`. A blank query gives the recents, then the
 /// other active combos by label; otherwise every active combo (each task, plus the project
 /// without a task) whose label matches all words of the query, best first. `recents` is
-/// newest first.
+/// newest first and may be longer than `recents_n`: all of it ranks typed matches, and its
+/// first `recents_n` active combos are the recents of a blank query.
 pub fn quick_switch(catalog: &Catalog, recents: &[Combo], query: &str) -> Vec<ComboRow> {
     if query.trim().is_empty() {
         return blank(catalog, recents);
@@ -53,10 +54,11 @@ pub fn quick_switch(catalog: &Catalog, recents: &[Combo], query: &str) -> Vec<Co
         .collect()
 }
 
-/// The recents first, then the combos never or not recently used, so a new catalog is
-/// listed before anything is tracked.
+/// The recents (the newest `recents_n`, R7) first, then all other active combos by label,
+/// so a new catalog is listed before anything is tracked.
 fn blank(catalog: &Catalog, recents: &[Combo]) -> Vec<ComboRow> {
-    let mut rows = super::recents(catalog, recents, QUICK_SWITCH_LIMIT);
+    let n = (catalog.settings().recents_n as usize).min(QUICK_SWITCH_LIMIT);
+    let mut rows = super::recents(catalog, recents, n);
     let listed: BTreeSet<Combo> = rows.iter().map(|r| r.combo).collect();
     let mut rest: Vec<(String, ComboRow)> = candidates(catalog)
         .filter(|row| !listed.contains(&row.combo))

@@ -372,6 +372,33 @@ fn quick_switch_lists_untracked_combos_for_a_blank_query() {
 }
 
 #[test]
+fn quick_switch_lists_only_recents_n_recents_for_a_blank_query() {
+    // R7: the recents are the last N distinct combos; older ones move into the A–Z part.
+    let s = worked_day();
+    let settings = tt_core::Settings {
+        recents_n: 1,
+        ..s.catalog().settings().clone()
+    };
+    let s = run(
+        s,
+        &ctx("2026-10-17T12:00"),
+        [Command::UpdateSettings { settings }],
+    );
+    let recents = s.entries().recent_combos(100);
+    let rows = read::quick_switch(s.catalog(), &recents, "");
+    let labels: Vec<_> = rows.iter().map(|r| r.label.as_str()).collect();
+    assert_eq!(
+        labels,
+        [
+            "Beta / Ops",
+            "Acme / Web",
+            "Acme / Web / Review",
+            "Beta / API"
+        ]
+    );
+}
+
+#[test]
 fn quick_switch_caps_a_blank_query() {
     let s = run(
         worked_day(),
