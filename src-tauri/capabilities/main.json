@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The main window copies booked values to the clipboard (R15)",
+  "windows": ["main"],
+  "permissions": ["clipboard-manager:allow-write-text"]
+}

@@ -1,0 +1,30 @@
+[package]
+name = "tt-core"
+description = "Pure, deterministic domain core (Decider) of the time tracker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+# Test helpers (random command generator, simulated clock and zone) for this crate's tests
+# and for tt-store/tt-app tests. Never enabled by a driver.
+test-support = ["dep:proptest"]
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+jiff.workspace = true
+nucleo-matcher = "0.3"
+proptest = { version = "1.12", optional = true }
+
+[dev-dependencies]
+# The crate itself with test-support, so integration tests can use `tt_core::testing`.
+tt-core = { path = ".", features = ["test-support"] }
+proptest = "1.12"
+serde_json.workspace = true
+
+[lints]
+workspace = true

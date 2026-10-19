@@ -7,6 +7,8 @@ day: R4 and §2 corrected after an external review; the decisions it raised are 
 OQ-3 to OQ-8 in §4. Third pass the same day: the storage seam was reviewed (whole State in
 memory vs. ports and adapters vs. prefetch); recorded as OQ-9. The write path now evolves a
 candidate State before the commit and reloads from the database on a store error.
+Revised 2026-10-18 (owner): R6, with nothing typed the list continues after the recents with
+the other active combos, so a new catalog is offered before anything is tracked.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -58,7 +60,8 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 - **R6 Global quick-switch.** A configurable global hotkey (default `Ctrl+Alt+Space`) opens
   a small quick-switch popup from any application:
   - It shows the running entry (combo and elapsed time) at the top, then favorites, then
-    recents.
+    recents, then the other active combos (A–Z). The same list serves the combo pickers in
+    the main window.
   - Typing fuzzy-filters over "Client / Project / Task" combos (existing tasks plus
     project-only combos) of active items.
   - `Enter` switches to the highlighted combo and closes the popup. `Tab` on a project

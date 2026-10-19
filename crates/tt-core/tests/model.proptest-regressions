@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc c512f235cab43cb863693b099cae4f5b7e45ad12514ec31b6fe95b2e52015265 # shrinks to start = Ctx { now: Instant(1774735200), tz: TimeZone(TZif("Europe/Berlin")) }, steps = [Step { advance_secs: 3503, op: CreateClient { name: 0, rule: RoundingRule { unit: M6, direction: Up, level: Project } } }, Step { advance_secs: 1397, op: CreateProject { client: 0, name: 0 } }, Step { advance_secs: 106, op: Start { project: 0, task: NoTask } }, Step { advance_secs: 3859, op: CreateClient { name: 0, rule: RoundingRule { unit: M6, direction: Up, level: Project } } }, Step { advance_secs: 2392, op: CreateTask { project: 0, name: 0 } }, Step { advance_secs: 261, op: Start { project: 0, task: Existing(0) } }, Step { advance_secs: 2243, op: AddEntry { project: 0, task: NoTask, minutes_back: 0, length_minutes: 1, note: 0 } }, Step { advance_secs: 0, op: AddEntry { project: 0, task: NoTask, minutes_back: 145, length_minutes: 96, note: 0 } }]

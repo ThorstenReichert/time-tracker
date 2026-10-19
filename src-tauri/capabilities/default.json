@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What both app windows use: listening to the backend's events (spec §2 Security)",
+  "windows": ["main", "quick-switch"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

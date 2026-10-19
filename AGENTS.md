@@ -3,15 +3,9 @@
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`); cross-machine sync uses `bd dolt push/pull` (a
-> git-compatible protocol), stored under `refs/dolt/data` on your git
-> remote — separate from `refs/heads/*` where your code lives.
-> `.beads/issues.jsonl` is a passive export, not the wire protocol.
->
-> See [SYNC_CONCEPTS.md](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
-> for the one-screen overview and anti-patterns (don't treat JSONL as the
-> source of truth; don't `bd import` during normal operation; don't
-> reach for third-party Dolt hosting before trying the default).
+> (`.beads/dolt/`). `.beads/issues.jsonl` is a passive export, not the source of truth;
+> don't `bd import` during normal operation. This repository is local only, with no remote,
+> so beads data isn't synced anywhere.
 
 ## Quick Reference
 
@@ -20,7 +14,6 @@ bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --claim  # Claim work atomically
 bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
 ```
 
 ## Non-Interactive Shell Commands
@@ -67,15 +60,15 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+**Architecture in one line:** issues live in a local Dolt DB; `.beads/issues.jsonl` is a passive export. This repository has no remote (see "Local only, on purpose" below), so there is no sync.
 
 ## Agent Context Profiles
 
 The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
 
-- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits, git pushes, or Dolt remote sync unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
+- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
 - **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
-- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates, commit, and push as part of session close. A current "do not commit" or "do not push" instruction still wins.
+- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates and commit as part of session close. A current "do not commit" instruction still wins.
 
 ## Session Completion
 
@@ -84,22 +77,14 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 1. **File issues for remaining work** - Create beads for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **Handle git/sync by active profile**:
-   ```bash
-   # Conservative/minimal/default: report status and proposed commands; wait for approval.
-   git status
-
-   # Team-maintainer opt-in only, unless current instructions forbid it:
-   git pull --rebase
-   git push
-   git status
-   ```
-5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step
+4. **Handle git by active profile**: report `git status` and the proposed commit; wait for
+   approval unless the current request authorizes the commit. Local only: no pull, no push.
+5. **Hand off** - Summarize changes, validation, issue status, and any blocked commit
 
 **Critical rules:**
 - Explicit user or orchestrator instructions override this Beads block.
-- Do not commit or push without clear authority from the active profile or the current user request.
-- If a required sync or push is blocked, stop and report the exact command and error.
+- Do not commit without clear authority from the active profile or the current user request.
+- If a required commit is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
 
 ## Development process: AI-native SDLC
@@ -110,6 +95,16 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-2-spec` (spec.md), `ai-sdlc-3-build` (plan.md + implementation), `ai-sdlc-4-test`,
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
+
+### Local only, on purpose
+
+This repository is developed locally on purpose (owner, 2026-10-19): no git remote, no push, no
+pull requests, no CI and no branch protection. These are not gaps; don't record or propose them.
+Where the stage skills mention a PR, CI or branch protection, use the local equivalent:
+- Stage 5 review: fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and `plan.md`.
+- The checks: `pwsh scripts/check.ps1` (through the `gatekeeper` subagent).
+- Approval: the owner's explicit "approved to merge", then a local `git merge --no-ff` into
+  `master`. The merge commit message serves as the PR description.
 
 ### Beads ↔ SDLC
 
@@ -125,6 +120,48 @@ follow it.
   (with a "Deviations" note) and create, change or close the matching beads together. Changes
   below plan-step level only touch beads.
 - Follow-up work found while building goes into beads, not into `plan.md` or code comments.
+
+## Build & Test
+
+Prerequisites (Windows): Rust from `rust-toolchain.toml` (1.96.1, MSVC), VS Build Tools with
+the C++ workload, Node 24 + npm, WebView2, and the Tauri CLI
+(`cargo install tauri-cli --version "^2.12" --locked`). Run everything from the repo root; run
+`npm --prefix ui ci` once after cloning.
+
+**One command, before every commit:** `pwsh scripts/check.ps1`. It runs `cargo fmt --all
+--check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
+`npm --prefix ui run typecheck` and `npm --prefix ui test`. It stops at the first failure.
+Healthy output ends with:
+
+```
+==> ui test
+...
+ALL CHECKS PASSED
+```
+
+**In Claude Code, the `gatekeeper` subagent runs the checks** (`.claude/agents/gatekeeper.md`,
+on Haiku). Delegate to it after each meaningful step and before every commit, instead of
+running the checks in the main context. Give it a scope for a subset (for example "`cargo
+test -p tt-core --test read_models`"), or none for the whole gate. Paste its report as the
+evidence. It never edits, fixes or commits anything, and it doesn't re-run a failure to get
+green. Fixing stays with the main session. Other agents run `pwsh scripts/check.ps1`
+themselves.
+
+| Task | Command | Healthy result |
+|---|---|---|
+| Rust tests, one crate | `cargo test -p tt-core` (or `tt-store`, `tt-app`, `tt-cli`, `timetracker-app`) | `test result: ok. N passed; 0 failed` for every test binary |
+| Regenerate TS bindings | `UPDATE_BINDINGS=1 cargo test -p timetracker-app bindings` | rewrites `ui/src/bindings.ts`; commit it. A stale file fails `bindings_up_to_date` |
+| Run the app (dev) | `cargo tauri dev --config src-tauri/tauri.dev.conf.json` | the window "ThorSoft TimeTracker" of the `target\debug` process (product name "ThorSoft TimeTracker (dev)"); hotkey `Ctrl+Alt+Shift+Space`; runs next to the installed app |
+| Installer | `cargo tauri build` | `Finished 1 bundle at: ...\target\release\bundle\nsis\ThorSoft TimeTracker_0.1.0_x64-setup.exe` |
+
+Gotchas:
+- Always pass `--config src-tauri/tauri.dev.conf.json` to `cargo tauri dev`. Without it the
+  dev build has the installed app's identity: single-instance forwards to the installed app,
+  and the dev build exits.
+- `src-tauri/build.rs` links `windows-app-manifest.xml` into every target. Without it,
+  `cargo test -p timetracker-app` fails with `STATUS_ENTRYPOINT_NOT_FOUND`.
+- Release and dev profiles use `panic = "abort"` (crash-only, plan.md). Tests still unwind.
+- `tt-cli` needs `--db <scratch path>` and must never be pointed at the live database.
 
 ## Architecture Overview
 
@@ -217,3 +254,8 @@ matching is a tt-core read model, not UI code.
 - tt-store + tt-app: the same sequences against a temporary SQLite DB. After a reload from disk,
   the serialised State must equal the in-memory State.
 - tt-cli: end-to-end scenario scripts against a temporary DB.
+- ui: component tests (Vitest, `@vue/test-utils`, happy-dom) next to each component, as
+  `<Name>.test.ts`. The backend is faked with Tauri's `mockIPC` through `ui/src/test/backend.ts`
+  (handlers per command, recorded calls, faked events); `test/mount.ts` mounts with PrimeVue
+  and Pinia; `test/page.ts` finds dialogs and AutoComplete suggestions. Pure UI logic goes in
+  `ui/src/lib/` with plain unit tests. No browser or native-shell tests yet (owner, 2026-10-18).

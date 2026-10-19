@@ -4,3 +4,14 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Rust / Tauri
+/target/
+/src-tauri/gen/
+
+# Frontend
+/ui/node_modules/
+/ui/dist/
+
+# IDE
+/.idea/
