@@ -721,3 +721,36 @@ No IT involvement needed; AC-2 is closed for slice 1.
   because a release build would have to replace the installed app or open the live database;
   and the backup folder on a real OneDrive path (a scratch folder was used instead, so no files
   went into OneDrive). Both move to the step 14 install.
+- **Step 14, release and install (2026-10-19).**
+  - The version was already 0.1.0 (workspace `Cargo.toml`, `tauri.conf.json`,
+    `ui/package.json`), so no file changed for it.
+  - There was no step 0 build to install over: this machine had no uninstall entry and no Run
+    entry. But a live database already existed in `%LOCALAPPDATA%\ThorSoft.TimeTracker`
+    (created 2026-10-17, written 2026-10-18, with two startup backups) and held real
+    clients. The owner decided to keep it. The installer ran silently (`/S`) with exit code 0
+    and registered "ThorSoft TimeTracker" 0.1.0 under HKCU, installed to
+    `%LOCALAPPDATA%\ThorSoft TimeTracker`.
+  - Autostart wasn't switched on, because the database already existed, so this wasn't a
+    first run. The owner switches it on in Settings, which is also the step 13 check.
+
+  Proof so far:
+  - `pwsh scripts/check.ps1` passed (gatekeeper; 125 Rust tests, only `load_bench` ignored;
+    117 UI tests in 21 files).
+  - `load_bench` (release): load + check 46 ms (limit 500 ms); 35 MB (limit 50 MB); startup
+    including the backup 85 ms; one `execute(Start)` 16 ms.
+  - `cargo tauri build` → `Finished 1 bundle at: ...\target\release\bundle\nsis\ThorSoft
+    TimeTracker_0.1.0_x64-setup.exe (2.72 MiB)`.
+  - The installed app started on the live database. It took the startup backup
+    `timetracker-20261019T185702Z.db`, showed no banner, and listed the existing recents
+    (screenshot in the session).
+
+  Manual checks by the owner on the installed build (2026-10-19): all passed.
+  - the step 0 checks on this install (tray, hotkey from another app, second launch, starting
+    hidden after sign-in once autostart is on)
+  - the autostart switch, checked against Startup apps
+  - the backup folder on a OneDrive path, then a restart
+  - one real workday tracked, with the evening overview copied into the booking system
+
+  The date pickers start the week on Sunday (bead `qvt.18`, found in step 12). The owner
+  judged this not an issue and closed the bead. It gets raised again if it becomes a
+  problem.
