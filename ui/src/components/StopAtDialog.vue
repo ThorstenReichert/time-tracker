@@ -53,7 +53,7 @@ async function submit() {
   <Dialog v-model:visible="visible" modal header="Stop at…" :style="{ width: '28rem' }">
     <form class="dialog-form" @submit.prevent="submit">
       <p class="started">
-        {{ running.combo.label }}, started {{ splitLocal(running.startLocal).date }} {{ formatClock(running.startLocal) }}
+        <span :title="running.combo.label">{{ running.combo.shortLabel }}</span>, started {{ splitLocal(running.startLocal).date }} {{ formatClock(running.startLocal) }}
       </p>
       <label :for="id">Stopped at</label>
       <LocalTimeInput v-model:date="date" v-model:time="time" label="Stopped at" :time-id="id" autofocus />

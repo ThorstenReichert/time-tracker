@@ -46,6 +46,7 @@ fn catalog() -> State {
         [
             Command::CreateClient {
                 name: "Acme".into(),
+                abbreviation: None,
                 rule: rule(
                     RoundingUnit::M15,
                     RoundingDirection::Nearest,
@@ -55,13 +56,16 @@ fn catalog() -> State {
             Command::CreateProject {
                 client: ACME,
                 name: "Web".into(),
+                abbreviation: None,
             },
             Command::CreateTask {
                 project: WEB,
                 name: "Review".into(),
+                abbreviation: None,
             },
             Command::CreateClient {
                 name: "Beta".into(),
+                abbreviation: None,
                 rule: rule(
                     RoundingUnit::M30,
                     RoundingDirection::Up,
@@ -71,10 +75,12 @@ fn catalog() -> State {
             Command::CreateProject {
                 client: BETA,
                 name: "API".into(),
+                abbreviation: None,
             },
             Command::CreateProject {
                 client: BETA,
                 name: "Ops".into(),
+                abbreviation: None,
             },
         ],
     )
@@ -165,6 +171,7 @@ fn project_level_subtotal_is_the_sum_of_rounded_projects() {
         [Command::CreateProject {
             client: ACME,
             name: "Docs".into(),
+            abbreviation: None,
         }],
     );
     let docs = ProjectId::new(4);
@@ -210,6 +217,7 @@ fn rule_changes_apply_retroactively() {
         [Command::UpdateClient {
             id: BETA,
             name: "Beta".into(),
+            abbreviation: None,
             rule: rule(
                 RoundingUnit::M15,
                 RoundingDirection::Down,
@@ -227,6 +235,7 @@ fn rule_changes_apply_retroactively() {
         [Command::UpdateClient {
             id: BETA,
             name: "Beta".into(),
+            abbreviation: None,
             rule: rule(
                 RoundingUnit::M15,
                 RoundingDirection::Down,
@@ -406,6 +415,7 @@ fn quick_switch_caps_a_blank_query() {
         (0..60).map(|i| Command::CreateTask {
             project: WEB,
             name: format!("Task {i:02}"),
+            abbreviation: None,
         }),
     );
     let recents = s.entries().recent_combos(8);
@@ -434,6 +444,7 @@ fn archived_items_are_not_offered() {
             tt_core::Client {
                 id: ACME,
                 name: name("Acme"),
+                abbreviation: None,
                 rule: RoundingRule::default(),
                 archived_at: None,
                 created_at: now,
@@ -441,6 +452,7 @@ fn archived_items_are_not_offered() {
             tt_core::Client {
                 id: BETA,
                 name: name("Beta"),
+                abbreviation: None,
                 rule: RoundingRule::default(),
                 archived_at: Some(now),
                 created_at: now,
@@ -451,6 +463,7 @@ fn archived_items_are_not_offered() {
                 id: WEB,
                 client: ACME,
                 name: name("Web"),
+                abbreviation: None,
                 archived_at: None,
                 created_at: now,
             },
@@ -458,6 +471,7 @@ fn archived_items_are_not_offered() {
                 id: API,
                 client: BETA,
                 name: name("API"),
+                abbreviation: None,
                 archived_at: None,
                 created_at: now,
             },
@@ -466,6 +480,7 @@ fn archived_items_are_not_offered() {
             id: TaskId::new(1),
             project: WEB,
             name: name("Review"),
+            abbreviation: None,
             archived_at: Some(now),
             created_at: now,
         }],
@@ -537,4 +552,157 @@ fn reads_ignore_entries_of_other_days() {
         date("2026-10-18"),
     );
     assert!(o.clients.is_empty());
+}
+
+// Abbreviations (R24): short labels and matching.
+
+/// NWI (client 3) with the long project ASCP (4), its task Review (2, "Rev") and a decoy
+/// project (5) whose name contains the letters of "ascp" scattered.
+fn with_long_names() -> State {
+    run(
+        catalog(),
+        &ctx("2026-10-17T08:00"),
+        [
+            Command::CreateClient {
+                name: "Northwind Instruments".into(),
+                abbreviation: Some("NWI".into()),
+                rule: RoundingRule::default(),
+            },
+            Command::CreateProject {
+                client: ClientId::new(3),
+                name: "adaptive signal calibration pipeline".into(),
+                abbreviation: Some("ASCP".into()),
+            },
+            Command::CreateTask {
+                project: ProjectId::new(4),
+                name: "Review".into(),
+                abbreviation: Some("Rev".into()),
+            },
+            Command::CreateProject {
+                client: ClientId::new(3),
+                name: "Assembly of sensor components and parts".into(),
+                abbreviation: None,
+            },
+        ],
+    )
+}
+
+#[test]
+fn combo_rows_carry_full_and_short_labels() {
+    let s = with_long_names();
+    let row = |project: u64, task: Option<u64>| {
+        read::combo_row(
+            s.catalog(),
+            Combo {
+                project: ProjectId::new(project),
+                task: task.map(TaskId::new),
+            },
+        )
+        .unwrap()
+    };
+    let ascp = row(4, Some(2));
+    assert_eq!(
+        ascp.label,
+        "Northwind Instruments / adaptive signal calibration pipeline / Review"
+    );
+    assert_eq!(ascp.short_label, "NWI / ASCP / Rev");
+    assert_eq!(
+        row(5, None).short_label,
+        "NWI / Assembly of sensor components and parts"
+    );
+}
+
+#[test]
+fn quick_switch_matches_abbreviations_and_mixed_queries() {
+    let s = with_long_names();
+    let labels = |q: &str| -> Vec<String> {
+        read::quick_switch(s.catalog(), &[], q)
+            .into_iter()
+            .map(|r| r.short_label)
+            .collect()
+    };
+    // An exact abbreviation ranks first, ahead of a fuzzy decoy (AC-7).
+    let ascp = labels("ascp");
+    assert!(
+        ascp.iter().any(|l| l.contains("Assembly")),
+        "the decoy matches too: {ascp:?}"
+    );
+    assert!(ascp[0].starts_with("NWI / ASCP"), "{ascp:?}");
+    // The task's own combo ranks first; the project alone may match fuzzily too.
+    assert_eq!(
+        labels("ascp rev").first().map(String::as_str),
+        Some("NWI / ASCP / Rev")
+    );
+    // Names and abbreviations mix in one query.
+    assert_eq!(labels("nwi calibration review"), ["NWI / ASCP / Rev"]);
+    assert_eq!(
+        labels("Northwind ascp").first().map(String::as_str),
+        Some("NWI / ASCP")
+    );
+}
+
+#[test]
+fn task_matches_cover_abbreviations_and_offer_no_create_for_one() {
+    let s = with_long_names();
+    let m = read::task_matches(s.catalog(), ProjectId::new(4), "REV");
+    assert_eq!(m.tasks.len(), 1);
+    assert_eq!(
+        m.tasks[0].abbreviation.as_ref().map(|a| a.as_str()),
+        Some("Rev")
+    );
+    assert_eq!(m.offer_create, None, "REV is the task's abbreviation");
+    let m = read::task_matches(s.catalog(), ProjectId::new(4), "re");
+    assert_eq!(m.offer_create, Some(Name::parse("re").unwrap()));
+}
+
+#[test]
+fn an_exact_abbreviation_beats_a_name_containing_the_same_word() {
+    // A sibling named "ASCP rollout" scores as well as the abbreviation ASCP; the exact
+    // abbreviation still ranks first (R24), even when the decoy is the most recent combo.
+    let s = run(
+        with_long_names(),
+        &ctx("2026-10-17T08:00"),
+        [Command::CreateProject {
+            client: ClientId::new(3),
+            name: "ASCP rollout".into(),
+            abbreviation: None,
+        }],
+    );
+    let decoy = Combo {
+        project: ProjectId::new(6),
+        task: None,
+    };
+    for recents in [vec![], vec![decoy]] {
+        let first = read::quick_switch(s.catalog(), &recents, "ascp")
+            .into_iter()
+            .next()
+            .map(|r| r.short_label);
+        assert_eq!(first.as_deref(), Some("NWI / ASCP"), "recents {recents:?}");
+    }
+}
+
+#[test]
+fn task_matches_rank_an_exact_abbreviation_first() {
+    let s = run(
+        with_long_names(),
+        &ctx("2026-10-17T08:00"),
+        [
+            Command::CreateTask {
+                project: ProjectId::new(4),
+                name: "Bug triage".into(),
+                abbreviation: Some("BT".into()),
+            },
+            Command::CreateTask {
+                project: ProjectId::new(4),
+                name: "BTW notes".into(),
+                abbreviation: None,
+            },
+        ],
+    );
+    let names: Vec<String> = read::task_matches(s.catalog(), ProjectId::new(4), "bt")
+        .tasks
+        .into_iter()
+        .map(|t| t.name.to_string())
+        .collect();
+    assert_eq!(names, ["Bug triage", "BTW notes"]);
 }

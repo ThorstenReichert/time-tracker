@@ -112,7 +112,7 @@ async function pickTask() {
   const target = targets.value[highlight.value];
   if (target === undefined) return;
   comboQuery = query.value;
-  step.value = { project: target.project, projectLabel: target.projectLabel };
+  step.value = { project: target.project, projectLabel: target.projectLabel, projectTitle: target.projectTitle };
   query.value = "";
 }
 
@@ -172,14 +172,14 @@ onMounted(async () => {
     <header class="running" :class="{ active: running }">
       <template v-if="running">
         <span class="dot" aria-hidden="true"></span>
-        <span class="label" :title="running.combo.label">{{ running.combo.label }}</span>
+        <span class="label" :title="running.combo.label">{{ running.combo.shortLabel }}</span>
         <span class="elapsed">{{ formatElapsed(elapsed) }}</span>
         <button type="button" tabindex="-1" @mousedown.prevent @click="stop">Stop <kbd>Ctrl+S</kbd></button>
       </template>
       <span v-else class="muted">No timer running</span>
     </header>
     <div class="search">
-      <span v-if="step" class="chip">{{ step.projectLabel }}</span>
+      <span v-if="step" class="chip" :title="step.projectTitle">{{ step.projectLabel }}</span>
       <input
         ref="input"
         v-model="query"
@@ -196,11 +196,13 @@ onMounted(async () => {
         role="option"
         :aria-selected="i === highlight"
         :class="{ highlighted: i === highlight, create: target.task?.kind === 'new' }"
+        :title="target.title"
         @mousemove="highlight = i"
         @mousedown.prevent
         @click="choose(i)"
       >
         <span class="label">{{ target.label }}</span>
+        <span v-if="target.hint" class="hint">{{ target.hint }}</span>
         <span v-if="target.running" class="tag">running</span>
       </li>
     </ul>
@@ -358,6 +360,10 @@ kbd {
 .tag {
   font-size: 0.8em;
   color: var(--primary);
+}
+.hint {
+  font-size: 0.85em;
+  color: var(--muted);
 }
 .error {
   flex: none;

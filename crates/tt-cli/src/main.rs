@@ -81,14 +81,20 @@ enum Cmd {
 enum ClientCmd {
     Add {
         name: String,
+        /// An optional abbreviation (R24).
+        #[arg(long)]
+        abbr: Option<String>,
         #[command(flatten)]
         rule: RuleArgs,
     },
-    /// Rename a client or change its rule; omitted options keep their current value.
+    /// Rename a client, set its abbreviation or change its rule; omitted options keep their
+    /// current value, and `--abbr ""` removes the abbreviation.
     Edit {
         id: u64,
         #[arg(long)]
         name: Option<String>,
+        #[arg(long)]
+        abbr: Option<String>,
         #[command(flatten)]
         rule: RuleArgs,
     },
@@ -113,10 +119,16 @@ enum ProjectCmd {
         #[arg(long)]
         client: u64,
         name: String,
+        /// An optional abbreviation (R24).
+        #[arg(long)]
+        abbr: Option<String>,
     },
-    Rename {
+    /// Rename a project or set its abbreviation; omitted options keep their current value,
+    /// and `--abbr ""` removes the abbreviation.
+    Edit {
         id: u64,
-        name: String,
+        #[command(flatten)]
+        naming: NamingArgs,
     },
 }
 
@@ -126,11 +138,39 @@ enum TaskCmd {
         #[arg(long)]
         project: u64,
         name: String,
+        /// An optional abbreviation (R24).
+        #[arg(long)]
+        abbr: Option<String>,
     },
-    Rename {
+    /// Rename a task or set its abbreviation; omitted options keep their current value,
+    /// and `--abbr ""` removes the abbreviation.
+    Edit {
         id: u64,
-        name: String,
+        #[command(flatten)]
+        naming: NamingArgs,
     },
+}
+
+#[derive(Args)]
+struct NamingArgs {
+    #[arg(long)]
+    name: Option<String>,
+    #[arg(long)]
+    abbr: Option<String>,
+}
+
+impl NamingArgs {
+    /// The name and abbreviation to send: the given ones, else the current ones.
+    fn resolve(
+        self,
+        name: &tt_core::Name,
+        abbreviation: Option<&tt_core::Abbreviation>,
+    ) -> (String, Option<String>) {
+        (
+            self.name.unwrap_or_else(|| name.to_string()),
+            self.abbr.or_else(|| abbreviation.map(ToString::to_string)),
+        )
+    }
 }
 
 #[derive(Args)]
@@ -267,38 +307,71 @@ fn run(cli: Cli) -> Result<Value, Failure> {
     let today = || read::local_date(ctx.now, &ctx.tz);
 
     let command = match cli.command {
-        Cmd::Client(ClientCmd::Add { name, rule }) => Command::CreateClient {
+        Cmd::Client(ClientCmd::Add { name, abbr, rule }) => Command::CreateClient {
             name,
+            abbreviation: abbr,
             rule: rule.apply(RoundingRule::default())?,
         },
-        Cmd::Client(ClientCmd::Edit { id, name, rule }) => {
+        Cmd::Client(ClientCmd::Edit {
+            id,
+            name,
+            abbr,
+            rule,
+        }) => {
             let id = ClientId::new(id);
             let catalog = app.catalog()?;
             let current = catalog
                 .client(id)
                 .ok_or(tt_core::DomainError::UnknownClient(id))?;
+            let (name, abbreviation) =
+                NamingArgs { name, abbr }.resolve(&current.name, current.abbreviation.as_ref());
             Command::UpdateClient {
                 id,
-                name: name.unwrap_or_else(|| current.name.to_string()),
+                name,
+                abbreviation,
                 rule: rule.apply(current.rule)?,
             }
         }
-        Cmd::Project(ProjectCmd::Add { client, name }) => Command::CreateProject {
+        Cmd::Project(ProjectCmd::Add { client, name, abbr }) => Command::CreateProject {
             client: ClientId::new(client),
             name,
+            abbreviation: abbr,
         },
-        Cmd::Project(ProjectCmd::Rename { id, name }) => Command::RenameProject {
-            id: ProjectId::new(id),
+        Cmd::Project(ProjectCmd::Edit { id, naming }) => {
+            let id = ProjectId::new(id);
+            let catalog = app.catalog()?;
+            let current = catalog
+                .project(id)
+                .ok_or(tt_core::DomainError::UnknownProject(id))?;
+            let (name, abbreviation) = naming.resolve(&current.name, current.abbreviation.as_ref());
+            Command::UpdateProject {
+                id,
+                name,
+                abbreviation,
+            }
+        }
+        Cmd::Task(TaskCmd::Add {
+            project,
             name,
-        },
-        Cmd::Task(TaskCmd::Add { project, name }) => Command::CreateTask {
+            abbr,
+        }) => Command::CreateTask {
             project: ProjectId::new(project),
             name,
+            abbreviation: abbr,
         },
-        Cmd::Task(TaskCmd::Rename { id, name }) => Command::RenameTask {
-            id: TaskId::new(id),
-            name,
-        },
+        Cmd::Task(TaskCmd::Edit { id, naming }) => {
+            let id = TaskId::new(id);
+            let catalog = app.catalog()?;
+            let current = catalog
+                .task(id)
+                .ok_or(tt_core::DomainError::UnknownTask(id))?;
+            let (name, abbreviation) = naming.resolve(&current.name, current.abbreviation.as_ref());
+            Command::UpdateTask {
+                id,
+                name,
+                abbreviation,
+            }
+        }
         Cmd::Start { project, task } => Command::Start {
             project: ProjectId::new(project),
             task: task.choice(),

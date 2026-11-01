@@ -113,7 +113,7 @@ fn refresh(app: &AppHandle, with_menu: bool) -> Option<i64> {
         .into_iter()
         .collect();
     lines.push(match &running {
-        Ok(Some(entry)) => format!("{} · {}", entry.combo.label, elapsed(entry.duration)),
+        Ok(Some(entry)) => format!("{} · {}", entry.combo.short_label, elapsed(entry.duration)),
         Ok(None) => IDLE_TOOLTIP.to_owned(),
         Err(e) => format!("ThorSoft TimeTracker – {e}"),
     });
@@ -152,7 +152,7 @@ fn menu(
 ) -> tauri::Result<Menu<tauri::Wry>> {
     let menu = Menu::new(app)?;
     let stop = match running {
-        Some(entry) => format!("Stop {}", entry.combo.label),
+        Some(entry) => format!("Stop {}", entry.combo.short_label),
         None => "Stop (no timer running)".to_owned(),
     };
     menu.append(&MenuItem::with_id(
@@ -169,7 +169,7 @@ fn menu(
         menu.append(&MenuItem::with_id(
             app,
             start_id(row.combo),
-            menu_text(&row.label),
+            menu_text(&row.short_label),
             idle,
             None::<&str>,
         )?)?;

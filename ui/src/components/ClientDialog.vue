@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Creates or edits a client: its name and rounding rule (R1, R17). The units and the default
+// Creates or edits a client: its name, optional abbreviation (R24) and rounding rule (R1,
+// R17). The units and the default
 // rule come from the backend, so the UI keeps no copy of the core's rules.
 import { computed, ref, useId, watch } from "vue";
 import { storeToRefs } from "pinia";
@@ -17,8 +18,9 @@ const visible = defineModel<boolean>("visible", { required: true });
 const props = defineProps<{
   header: string;
   /** The client to edit; a new client starts with the default rule. */
-  initial?: { name: string; rule: RuleDto };
-  save: (name: string, rule: RuleDto) => Promise<void>;
+  initial?: { name: string; abbreviation: string | null; rule: RuleDto };
+  /** Gets the abbreviation as typed; the core reads blank text as none (R24). */
+  save: (name: string, abbreviation: string | null, rule: RuleDto) => Promise<void>;
 }>();
 
 const { catalog } = storeToRefs(useCatalogStore());
@@ -33,9 +35,10 @@ const levels: { label: string; value: Level }[] = [
   { label: "Per client", value: "client" },
 ];
 
-const ids = { name: useId(), unit: useId() };
+const ids = { name: useId(), abbreviation: useId(), unit: useId() };
 // The fields are filled when the dialog opens.
 const name = ref("");
+const abbreviation = ref("");
 const unit = ref(0);
 const direction = ref<Direction>("nearest");
 const level = ref<Level>("project");
@@ -46,6 +49,7 @@ watch(visible, (open) => {
   if (!open) return;
   const rule = props.initial?.rule ?? catalog.value?.defaultRule;
   name.value = props.initial?.name ?? "";
+  abbreviation.value = props.initial?.abbreviation ?? "";
   if (rule) {
     unit.value = rule.unit;
     direction.value = rule.direction;
@@ -57,7 +61,11 @@ watch(visible, (open) => {
 async function submit() {
   busy.value = true;
   try {
-    await props.save(name.value, { unit: unit.value, direction: direction.value, level: level.value });
+    await props.save(name.value, abbreviation.value, {
+      unit: unit.value,
+      direction: direction.value,
+      level: level.value,
+    });
     visible.value = false;
   } catch (e) {
     error.value = errorMessage(e);
@@ -72,6 +80,8 @@ async function submit() {
     <form class="dialog-form" @submit.prevent="submit">
       <label :for="ids.name">Name</label>
       <InputText :id="ids.name" v-model="name" autofocus fluid />
+      <label :for="ids.abbreviation">Abbreviation (optional)</label>
+      <InputText :id="ids.abbreviation" v-model="abbreviation" fluid />
       <label :for="ids.unit">Round to</label>
       <Select :input-id="ids.unit" v-model="unit" :options="units" option-label="label" option-value="value" fluid />
       <span>Direction</span>

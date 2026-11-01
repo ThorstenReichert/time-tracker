@@ -5,12 +5,15 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ClientId, EntryId, Instant, Name, ProjectId, RoundingRule, TaskId};
+use crate::{Abbreviation, ClientId, EntryId, Instant, Name, ProjectId, RoundingRule, TaskId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Client {
     pub id: ClientId,
     pub name: Name,
+    /// The short form for compact places (R24).
+    #[serde(default)]
+    pub abbreviation: Option<Abbreviation>,
     pub rule: RoundingRule,
     pub archived_at: Option<Instant>,
     pub created_at: Instant,
@@ -21,6 +24,8 @@ pub struct Project {
     pub id: ProjectId,
     pub client: ClientId,
     pub name: Name,
+    #[serde(default)]
+    pub abbreviation: Option<Abbreviation>,
     pub archived_at: Option<Instant>,
     pub created_at: Instant,
 }
@@ -30,8 +35,52 @@ pub struct Task {
     pub id: TaskId,
     pub project: ProjectId,
     pub name: Name,
+    #[serde(default)]
+    pub abbreviation: Option<Abbreviation>,
     pub archived_at: Option<Instant>,
     pub created_at: Instant,
+}
+
+/// Whether an item with `name` and `abbreviation` is called `key` (a lowercase name or
+/// abbreviation key). Names and abbreviations share one namespace per parent (R1, R24).
+fn is_called(name: &Name, abbreviation: Option<&Abbreviation>, key: &str) -> bool {
+    name.key() == key || abbreviation.is_some_and(|a| a.key() == key)
+}
+
+impl Client {
+    /// Called `key` by its name or its abbreviation, ignoring case.
+    pub fn is_called(&self, key: &str) -> bool {
+        is_called(&self.name, self.abbreviation.as_ref(), key)
+    }
+
+    /// The abbreviation, or else the name (R24).
+    pub fn short_name(&self) -> &str {
+        short_name(&self.name, self.abbreviation.as_ref())
+    }
+}
+
+impl Project {
+    pub fn is_called(&self, key: &str) -> bool {
+        is_called(&self.name, self.abbreviation.as_ref(), key)
+    }
+
+    pub fn short_name(&self) -> &str {
+        short_name(&self.name, self.abbreviation.as_ref())
+    }
+}
+
+impl Task {
+    pub fn is_called(&self, key: &str) -> bool {
+        is_called(&self.name, self.abbreviation.as_ref(), key)
+    }
+
+    pub fn short_name(&self) -> &str {
+        short_name(&self.name, self.abbreviation.as_ref())
+    }
+}
+
+fn short_name<'a>(name: &'a Name, abbreviation: Option<&'a Abbreviation>) -> &'a str {
+    abbreviation.map_or(name.as_str(), Abbreviation::as_str)
 }
 
 /// How hours are formatted for copying (R15). `Auto` follows the OS locale in the UI.
@@ -213,19 +262,20 @@ impl Catalog {
             .is_some_and(|t| t.archived_at.is_none() && self.is_project_active(t.project))
     }
 
-    /// The client with this name, ignoring case (archived ones included, OQ-7).
-    pub fn client_named(&self, name: &Name) -> Option<&Client> {
-        self.clients.values().find(|c| c.name.matches(name))
+    /// The client whose name or abbreviation has this key, ignoring case (archived ones
+    /// included, OQ-7). Names and abbreviations share one namespace (R1, R24).
+    pub fn client_called(&self, key: &str) -> Option<&Client> {
+        self.clients.values().find(|c| c.is_called(key))
     }
 
-    /// The project of `client` with this name, ignoring case (archived ones included).
-    pub fn project_named(&self, client: ClientId, name: &Name) -> Option<&Project> {
-        self.projects_of(client).find(|p| p.name.matches(name))
+    /// The project of `client` whose name or abbreviation has this key (archived included).
+    pub fn project_called(&self, client: ClientId, key: &str) -> Option<&Project> {
+        self.projects_of(client).find(|p| p.is_called(key))
     }
 
-    /// The task of `project` with this name, ignoring case (archived ones included).
-    pub fn task_named(&self, project: ProjectId, name: &Name) -> Option<&Task> {
-        self.tasks_of(project).find(|t| t.name.matches(name))
+    /// The task of `project` whose name or abbreviation has this key (archived included).
+    pub fn task_called(&self, project: ProjectId, key: &str) -> Option<&Task> {
+        self.tasks_of(project).find(|t| t.is_called(key))
     }
 
     pub fn settings(&self) -> &Settings {

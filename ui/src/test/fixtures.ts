@@ -1,9 +1,33 @@
 import type { CatalogDto, ComboDto, EntryDto, OverviewDto, StatusDto } from "../bindings";
 
-function combo(project: number, task: number | null, client: number, names: [string, string, string?]): ComboDto {
+/** A combo as the backend sends it; `abbreviations` are per level (R24). */
+export function combo(
+  project: number,
+  task: number | null,
+  client: number,
+  names: [string, string, string?],
+  abbreviations: [string | null, string | null, (string | null)?] = [null, null, null],
+): ComboDto {
   const [clientName, projectName, taskName = null] = names;
-  const label = [clientName, projectName, taskName].filter((n) => n !== null).join(" / ");
-  return { project, task, client, clientName, projectName, taskName, label };
+  const [clientAbbreviation, projectAbbreviation, taskAbbreviation = null] = abbreviations;
+  const join = (parts: (string | null)[]) => parts.filter((n) => n !== null).join(" / ");
+  return {
+    project,
+    task,
+    client,
+    clientName,
+    clientAbbreviation,
+    projectName,
+    projectAbbreviation,
+    taskName,
+    taskAbbreviation: taskName === null ? null : taskAbbreviation,
+    label: join([clientName, projectName, taskName]),
+    shortLabel: join([
+      clientAbbreviation ?? clientName,
+      projectAbbreviation ?? projectName,
+      taskName === null ? null : (taskAbbreviation ?? taskName),
+    ]),
+  };
 }
 
 // The demo catalog: Acme (Web with Review and Docs, Intern) and Beta (API, Ops).
@@ -46,18 +70,18 @@ export function finishedEntry(
 
 export const catalog: CatalogDto = {
   clients: [
-    { id: 1, name: "Acme", rule: { unit: 15, direction: "nearest", level: "project" }, archived: false },
-    { id: 2, name: "Beta", rule: { unit: 30, direction: "up", level: "client" }, archived: false },
+    { id: 1, name: "Acme", abbreviation: null, rule: { unit: 15, direction: "nearest", level: "project" }, archived: false },
+    { id: 2, name: "Beta", abbreviation: null, rule: { unit: 30, direction: "up", level: "client" }, archived: false },
   ],
   projects: [
-    { id: 1, client: 1, name: "Web", archived: false },
-    { id: 2, client: 1, name: "Intern", archived: false },
-    { id: 3, client: 2, name: "API", archived: false },
-    { id: 4, client: 2, name: "Ops", archived: false },
+    { id: 1, client: 1, name: "Web", abbreviation: null, archived: false },
+    { id: 2, client: 1, name: "Intern", abbreviation: null, archived: false },
+    { id: 3, client: 2, name: "API", abbreviation: null, archived: false },
+    { id: 4, client: 2, name: "Ops", abbreviation: null, archived: false },
   ],
   tasks: [
-    { id: 1, project: 1, name: "Review", archived: false },
-    { id: 2, project: 1, name: "Docs", archived: false },
+    { id: 1, project: 1, name: "Review", abbreviation: null, archived: false },
+    { id: 2, project: 1, name: "Docs", abbreviation: null, archived: false },
   ],
   settings: { hotkey: null, decimalSeparator: "auto", recentsN: 8, backupDir: null, backupKeep: 14 },
   defaultRule: { unit: 15, direction: "nearest", level: "project" },

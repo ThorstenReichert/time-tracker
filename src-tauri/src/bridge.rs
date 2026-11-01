@@ -47,7 +47,7 @@ fn touches_entries(event: &Event) -> bool {
             | Event::EntryDeleted { .. }
             // A rename changes the running combo's label.
             | Event::ClientUpdated { .. }
-            | Event::ProjectRenamed { .. }
-            | Event::TaskRenamed { .. }
+            | Event::ProjectUpdated { .. }
+            | Event::TaskUpdated { .. }
     )
 }

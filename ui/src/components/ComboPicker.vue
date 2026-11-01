@@ -36,6 +36,9 @@ function select(event: { value: ComboDto }) {
   model.value = choice;
 }
 
+/** The full label of the picked combo, shown on hover over its short label (R24). */
+const pickedTitle = computed(() => (typeof projectText.value === "object" ? projectText.value?.label : undefined));
+
 const task = computed<TaskPick | null>({
   get: () => model.value?.task ?? null,
   set: (pick) => {
@@ -46,10 +49,11 @@ const task = computed<TaskPick | null>({
 
 <template>
   <div class="combo-picker">
-    <AutoComplete
+    <div class="project" :title="pickedTitle">
+      <AutoComplete
       v-model="projectText"
       :suggestions="suggestions"
-      option-label="label"
+      option-label="shortLabel"
       placeholder="Client / Project (type to search)"
       dropdown
       complete-on-focus
@@ -57,7 +61,12 @@ const task = computed<TaskPick | null>({
       fluid
       @complete="complete"
       @option-select="select"
-    />
+    >
+      <template #option="{ option }">
+        <span :title="option.label">{{ option.shortLabel }}</span>
+      </template>
+      </AutoComplete>
+    </div>
     <TaskInput v-model="task" :project="model?.project.project ?? null" />
   </div>
 </template>

@@ -21,18 +21,7 @@ impl Name {
     pub const MAX_CHARS: usize = 100;
 
     pub fn parse(input: &str) -> Result<Self, DomainError> {
-        let text = input.trim();
-        if text.is_empty() {
-            return Err(DomainError::InvalidName(NameProblem::Empty));
-        }
-        if text.chars().count() > Self::MAX_CHARS {
-            return Err(DomainError::InvalidName(NameProblem::TooLong {
-                max: Self::MAX_CHARS,
-            }));
-        }
-        if text.chars().any(char::is_control) {
-            return Err(DomainError::InvalidName(NameProblem::ControlCharacter));
-        }
+        let text = clean(input, Self::MAX_CHARS).map_err(DomainError::InvalidName)?;
         Ok(Self {
             text: text.to_owned(),
             key: text.to_lowercase(),
@@ -52,6 +41,22 @@ impl Name {
     pub fn matches(&self, other: &Name) -> bool {
         self.key == other.key
     }
+}
+
+/// The text rules shared by names and abbreviations (R1, R24): trimmed, 1 to `max`
+/// characters, no control characters.
+pub(crate) fn clean(input: &str, max: usize) -> Result<&str, NameProblem> {
+    let text = input.trim();
+    if text.is_empty() {
+        return Err(NameProblem::Empty);
+    }
+    if text.chars().count() > max {
+        return Err(NameProblem::TooLong { max });
+    }
+    if text.chars().any(char::is_control) {
+        return Err(NameProblem::ControlCharacter);
+    }
+    Ok(text)
 }
 
 impl TryFrom<String> for Name {

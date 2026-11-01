@@ -3,7 +3,7 @@
 //! `one_running` index is never violated in between.
 
 use rusqlite::{Transaction, params};
-use tt_core::{Entry, Event, Settings};
+use tt_core::{Abbreviation, Entry, Event, Settings};
 
 use crate::{Store, StoreError, keys};
 
@@ -40,13 +40,18 @@ fn bump_counter(tx: &Transaction<'_>, name: &str, id: u64) -> Result<(), StoreEr
     Ok(())
 }
 
+/// An abbreviation as stored: its text, or NULL for none (R24).
+fn abbr(abbreviation: Option<&Abbreviation>) -> Option<&str> {
+    abbreviation.map(Abbreviation::as_str)
+}
+
 fn apply_one(tx: &Transaction<'_>, event: &Event) -> Result<(), StoreError> {
     match event {
         Event::ClientCreated { client } => {
             tx.execute(
                 "INSERT INTO client (id, name, round_unit_min, round_direction, round_level,
-                                     archived_at, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                                     archived_at, created_at, abbreviation)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 params![
                     i(client.id.get()),
                     client.name.as_str(),
@@ -55,14 +60,20 @@ fn apply_one(tx: &Transaction<'_>, event: &Event) -> Result<(), StoreError> {
                     client.rule.level.as_str(),
                     client.archived_at.map(|a| a.unix_seconds()),
                     client.created_at.unix_seconds(),
+                    abbr(client.abbreviation.as_ref()),
                 ],
             )?;
             bump_counter(tx, "client", client.id.get())
         }
-        Event::ClientUpdated { id, name, rule } => {
+        Event::ClientUpdated {
+            id,
+            name,
+            abbreviation,
+            rule,
+        } => {
             let changed = tx.execute(
                 "UPDATE client SET name = ?2, round_unit_min = ?3, round_direction = ?4,
-                                   round_level = ?5
+                                   round_level = ?5, abbreviation = ?6
                  WHERE id = ?1",
                 params![
                     i(id.get()),
@@ -70,49 +81,60 @@ fn apply_one(tx: &Transaction<'_>, event: &Event) -> Result<(), StoreError> {
                     rule.unit.minutes(),
                     rule.direction.as_str(),
                     rule.level.as_str(),
+                    abbr(abbreviation.as_ref()),
                 ],
             )?;
             expect_one(changed, "client", id.get())
         }
         Event::ProjectCreated { project } => {
             tx.execute(
-                "INSERT INTO project (id, client_id, name, archived_at, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO project (id, client_id, name, abbreviation, archived_at, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     i(project.id.get()),
                     i(project.client.get()),
                     project.name.as_str(),
+                    abbr(project.abbreviation.as_ref()),
                     project.archived_at.map(|a| a.unix_seconds()),
                     project.created_at.unix_seconds(),
                 ],
             )?;
             bump_counter(tx, "project", project.id.get())
         }
-        Event::ProjectRenamed { id, name } => {
+        Event::ProjectUpdated {
+            id,
+            name,
+            abbreviation,
+        } => {
             let changed = tx.execute(
-                "UPDATE project SET name = ?2 WHERE id = ?1",
-                params![i(id.get()), name.as_str()],
+                "UPDATE project SET name = ?2, abbreviation = ?3 WHERE id = ?1",
+                params![i(id.get()), name.as_str(), abbr(abbreviation.as_ref())],
             )?;
             expect_one(changed, "project", id.get())
         }
         Event::TaskCreated { task } => {
             tx.execute(
-                "INSERT INTO task (id, project_id, name, archived_at, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO task (id, project_id, name, abbreviation, archived_at, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                     i(task.id.get()),
                     i(task.project.get()),
                     task.name.as_str(),
+                    abbr(task.abbreviation.as_ref()),
                     task.archived_at.map(|a| a.unix_seconds()),
                     task.created_at.unix_seconds(),
                 ],
             )?;
             bump_counter(tx, "task", task.id.get())
         }
-        Event::TaskRenamed { id, name } => {
+        Event::TaskUpdated {
+            id,
+            name,
+            abbreviation,
+        } => {
             let changed = tx.execute(
-                "UPDATE task SET name = ?2 WHERE id = ?1",
-                params![i(id.get()), name.as_str()],
+                "UPDATE task SET name = ?2, abbreviation = ?3 WHERE id = ?1",
+                params![i(id.get()), name.as_str(), abbr(abbreviation.as_ref())],
             )?;
             expect_one(changed, "task", id.get())
         }

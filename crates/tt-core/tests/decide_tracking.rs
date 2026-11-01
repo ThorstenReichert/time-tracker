@@ -33,23 +33,28 @@ fn catalog() -> State {
         [
             Command::CreateClient {
                 name: "Acme".into(),
+                abbreviation: None,
                 rule: RoundingRule::default(),
             },
             Command::CreateProject {
                 client: ClientId::new(1),
                 name: "Web".into(),
+                abbreviation: None,
             },
             Command::CreateTask {
                 project: WEB,
                 name: "Review".into(),
+                abbreviation: None,
             },
             Command::CreateClient {
                 name: "Beta".into(),
+                abbreviation: None,
                 rule: RoundingRule::default(),
             },
             Command::CreateProject {
                 client: ClientId::new(2),
                 name: "API".into(),
+                abbreviation: None,
             },
         ],
     )

@@ -9,9 +9,9 @@ import { mountInApp } from "../test/mount";
 import { clickButton, dialog } from "../test/page";
 import ClientDialog from "./ClientDialog.vue";
 
-type Save = (name: string, rule: RuleDto) => Promise<void>;
+type Save = (name: string, abbreviation: string | null, rule: RuleDto) => Promise<void>;
 
-async function open(save: Save, initial?: { name: string; rule: RuleDto }) {
+async function open(save: Save, initial?: { name: string; abbreviation: string | null; rule: RuleDto }) {
   const wrapper = mountInApp(ClientDialog, { props: { visible: false, header: "Client", initial, save } });
   useCatalogStore().catalog = catalog;
   await wrapper.setProps({ visible: true });
@@ -39,18 +39,28 @@ describe("ClientDialog", () => {
     await clickButton("Up", dialog());
     await clickButton("Per client", dialog());
     await clickButton("Save", dialog());
-    expect(save).toHaveBeenCalledWith("Gamma", { unit: 15, direction: "up", level: "client" });
+    expect(save).toHaveBeenCalledWith("Gamma", "", { unit: 15, direction: "up", level: "client" });
     expect(wrapper.emitted("update:visible")).toEqual([[false]]);
   });
 
   it("starts an edit with the client's name and rule", async () => {
     const save = vi.fn<Save>(async () => {});
-    await open(save, { name: "Beta", rule: { unit: 30, direction: "up", level: "client" } });
-    expect((dialog().get("input").element as HTMLInputElement).value).toBe("Beta");
+    await open(save, { name: "Beta", abbreviation: "B", rule: { unit: 30, direction: "up", level: "client" } });
+    const [name, abbreviation] = dialog().findAll("input");
+    expect((name!.element as HTMLInputElement).value).toBe("Beta");
+    expect((abbreviation!.element as HTMLInputElement).value).toBe("B");
     expect(dialog().text()).toContain("30 min");
     expect(pressed()).toEqual(["Up", "Per client"]);
     await clickButton("Save", dialog());
-    expect(save).toHaveBeenCalledWith("Beta", { unit: 30, direction: "up", level: "client" });
+    expect(save).toHaveBeenCalledWith("Beta", "B", { unit: 30, direction: "up", level: "client" });
+  });
+
+  it("sends a cleared abbreviation as typed, which the core reads as none (R24)", async () => {
+    const save = vi.fn<Save>(async () => {});
+    await open(save, { name: "Beta", abbreviation: "B", rule: { unit: 30, direction: "up", level: "client" } });
+    await dialog().findAll("input")[1]!.setValue(" ");
+    await clickButton("Save", dialog());
+    expect(save).toHaveBeenCalledWith("Beta", " ", { unit: 30, direction: "up", level: "client" });
   });
 
   it("shows a rejected client and stays open", async () => {

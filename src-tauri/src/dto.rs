@@ -74,6 +74,8 @@ impl RuleDto {
 pub struct ClientDto {
     pub id: u64,
     pub name: String,
+    /// The optional short form (R24).
+    pub abbreviation: Option<String>,
     pub rule: RuleDto,
     pub archived: bool,
 }
@@ -83,6 +85,7 @@ impl From<&Client> for ClientDto {
         Self {
             id: c.id.get(),
             name: c.name.to_string(),
+            abbreviation: c.abbreviation.as_ref().map(ToString::to_string),
             rule: c.rule.into(),
             archived: c.archived_at.is_some(),
         }
@@ -95,6 +98,7 @@ pub struct ProjectDto {
     pub id: u64,
     pub client: u64,
     pub name: String,
+    pub abbreviation: Option<String>,
     pub archived: bool,
 }
 
@@ -104,6 +108,7 @@ impl From<&Project> for ProjectDto {
             id: p.id.get(),
             client: p.client.get(),
             name: p.name.to_string(),
+            abbreviation: p.abbreviation.as_ref().map(ToString::to_string),
             archived: p.archived_at.is_some(),
         }
     }
@@ -115,6 +120,7 @@ pub struct TaskDto {
     pub id: u64,
     pub project: u64,
     pub name: String,
+    pub abbreviation: Option<String>,
     pub archived: bool,
 }
 
@@ -124,6 +130,7 @@ impl From<&Task> for TaskDto {
             id: t.id.get(),
             project: t.project.get(),
             name: t.name.to_string(),
+            abbreviation: t.abbreviation.as_ref().map(ToString::to_string),
             archived: t.archived_at.is_some(),
         }
     }
@@ -250,10 +257,15 @@ pub struct ComboDto {
     pub task: Option<u64>,
     pub client: u64,
     pub client_name: String,
+    pub client_abbreviation: Option<String>,
     pub project_name: String,
+    pub project_abbreviation: Option<String>,
     pub task_name: Option<String>,
+    pub task_abbreviation: Option<String>,
     /// "Client / Project / Task"
     pub label: String,
+    /// The same with each level's abbreviation where it has one (R24).
+    pub short_label: String,
 }
 
 impl From<&ComboRow> for ComboDto {
@@ -263,11 +275,19 @@ impl From<&ComboRow> for ComboDto {
             task: r.combo.task.map(|t| t.get()),
             client: r.client.get(),
             client_name: r.client_name.to_string(),
+            client_abbreviation: text(r.client_abbreviation.as_ref()),
             project_name: r.project_name.to_string(),
+            project_abbreviation: text(r.project_abbreviation.as_ref()),
             task_name: r.task_name.as_ref().map(ToString::to_string),
+            task_abbreviation: text(r.task_abbreviation.as_ref()),
             label: r.label.clone(),
+            short_label: r.short_label.clone(),
         }
     }
+}
+
+fn text(abbreviation: Option<&tt_core::Abbreviation>) -> Option<String> {
+    abbreviation.map(ToString::to_string)
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -406,6 +426,7 @@ impl TaskMatchesDto {
                     id: t.id.get(),
                     project,
                     name: t.name.to_string(),
+                    abbreviation: text(t.abbreviation.as_ref()),
                     archived: false,
                 })
                 .collect(),

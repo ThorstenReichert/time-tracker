@@ -1,17 +1,56 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Catalog, ClientId, Combo, Name};
+use crate::{Abbreviation, Catalog, ClientId, Combo, Name};
 
 /// A combo with its names, for lists and matching. `label` is "Client / Project / Task"
-/// (or "Client / Project" without a task).
+/// (or "Client / Project" without a task). `short_label` has the same shape with each
+/// level's abbreviation where it has one (R24).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ComboRow {
     pub combo: Combo,
     pub client: ClientId,
     pub client_name: Name,
+    pub client_abbreviation: Option<Abbreviation>,
     pub project_name: Name,
+    pub project_abbreviation: Option<Abbreviation>,
     pub task_name: Option<Name>,
+    pub task_abbreviation: Option<Abbreviation>,
     pub label: String,
+    pub short_label: String,
+}
+
+impl ComboRow {
+    /// The lowercase keys of the abbreviations of every level that has one (R24).
+    pub(crate) fn abbreviation_keys(&self) -> Vec<&str> {
+        [
+            &self.client_abbreviation,
+            &self.project_abbreviation,
+            &self.task_abbreviation,
+        ]
+        .into_iter()
+        .flatten()
+        .map(Abbreviation::key)
+        .collect()
+    }
+
+    /// What typed text is matched against (R3, R6, R24): the names and abbreviations of
+    /// every level, so a query can mix them ("nwi calibration").
+    pub(crate) fn match_text(&self) -> String {
+        let level = |name: &Name, abbreviation: Option<&Abbreviation>| match abbreviation {
+            Some(a) => format!("{name} {a}"),
+            None => name.to_string(),
+        };
+        let mut text = format!(
+            "{} / {}",
+            level(&self.client_name, self.client_abbreviation.as_ref()),
+            level(&self.project_name, self.project_abbreviation.as_ref())
+        );
+        if let Some(task) = &self.task_name {
+            text.push_str(" / ");
+            text.push_str(&level(task, self.task_abbreviation.as_ref()));
+        }
+        text
+    }
 }
 
 /// The names for `combo`, or `None` if an item doesn't exist.
@@ -23,17 +62,24 @@ pub fn combo_row(catalog: &Catalog, combo: Combo) -> Option<ComboRow> {
         None => None,
     };
     let mut label = format!("{} / {}", client.name, project.name);
+    let mut short_label = format!("{} / {}", client.short_name(), project.short_name());
     if let Some(task) = task {
         label.push_str(" / ");
         label.push_str(task.name.as_str());
+        short_label.push_str(" / ");
+        short_label.push_str(task.short_name());
     }
     Some(ComboRow {
         combo,
         client: client.id,
         client_name: client.name.clone(),
+        client_abbreviation: client.abbreviation.clone(),
         project_name: project.name.clone(),
+        project_abbreviation: project.abbreviation.clone(),
         task_name: task.map(|t| t.name.clone()),
+        task_abbreviation: task.and_then(|t| t.abbreviation.clone()),
         label,
+        short_label,
     })
 }
 

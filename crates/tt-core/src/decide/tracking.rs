@@ -194,7 +194,7 @@ fn resolve_combo(
             (Some(*id), None)
         }
         TaskChoice::New(name) => {
-            let task = new_task(catalog, ctx, project, name)?;
+            let task = new_task(catalog, ctx, project, (name, None))?;
             (Some(task.id), Some(task))
         }
     };

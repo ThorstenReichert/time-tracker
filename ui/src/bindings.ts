@@ -9,12 +9,14 @@ export const commands = {
 	/**  Today's date in the OS time zone (YYYY-MM-DD). */
 	getToday: () => typedError<string, UiError>(__TAURI_INVOKE("get_today")),
 	getCatalog: () => typedError<CatalogDto, UiError>(__TAURI_INVOKE("get_catalog")),
-	createClient: (name: string, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("create_client", { name, rule })),
-	updateClient: (id: number, name: string, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("update_client", { id, name, rule })),
-	createProject: (client: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("create_project", { client, name })),
-	renameProject: (id: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("rename_project", { id, name })),
-	createTask: (project: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("create_task", { project, name })),
-	renameTask: (id: number, name: string) => typedError<null, UiError>(__TAURI_INVOKE("rename_task", { id, name })),
+	createClient: (name: string, abbreviation: string | null, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("create_client", { name, abbreviation, rule })),
+	updateClient: (id: number, name: string, abbreviation: string | null, rule: RuleDto) => typedError<null, UiError>(__TAURI_INVOKE("update_client", { id, name, abbreviation, rule })),
+	createProject: (client: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("create_project", { client, name, abbreviation })),
+	/**  Renames a project and/or sets its abbreviation (R24). */
+	updateProject: (id: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("update_project", { id, name, abbreviation })),
+	createTask: (project: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("create_task", { project, name, abbreviation })),
+	/**  Renames a task and/or sets its abbreviation (R24). */
+	updateTask: (id: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("update_task", { id, name, abbreviation })),
 	/**  Starts a timer on the combo, or switches to it (R5). */
 	start: (project: number, task: TaskChoiceDto) => typedError<null, UiError>(__TAURI_INVOKE("start", { project, task })),
 	/**  Stops the running timer now, or at a typed local time (R11). */
@@ -85,6 +87,8 @@ export type ClientBlockDto = {
 export type ClientDto = {
 	id: number,
 	name: string,
+	/**  The optional short form (R24). */
+	abbreviation: string | null,
 	rule: RuleDto,
 	archived: boolean,
 };
@@ -94,10 +98,15 @@ export type ComboDto = {
 	task: number | null,
 	client: number,
 	clientName: string,
+	clientAbbreviation: string | null,
 	projectName: string,
+	projectAbbreviation: string | null,
 	taskName: string | null,
+	taskAbbreviation: string | null,
 	/**  "Client / Project / Task" */
 	label: string,
+	/**  The same with each level's abbreviation where it has one (R24). */
+	shortLabel: string,
 };
 
 export type Direction = "up" | "nearest" | "down";
@@ -149,6 +158,7 @@ export type ProjectDto = {
 	id: number,
 	client: number,
 	name: string,
+	abbreviation: string | null,
 	archived: boolean,
 };
 
@@ -201,6 +211,7 @@ export type TaskDto = {
 	id: number,
 	project: number,
 	name: string,
+	abbreviation: string | null,
 	archived: boolean,
 };
 
