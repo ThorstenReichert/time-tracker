@@ -168,7 +168,7 @@ tfoot td {
 }
 .sum {
   font-weight: 600;
-  /* Lines up with the CopyValue numbers above it, which have the button to their right. */
-  margin-right: 4.75rem;
+  /* Lines up with the CopyValue numbers above it, which sit inside a small text button. */
+  padding-right: calc(var(--p-button-sm-padding-x) + 1px);
 }
 </style>
