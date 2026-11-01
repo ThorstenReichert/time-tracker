@@ -3,9 +3,8 @@
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`). `.beads/issues.jsonl` is a passive export, not the source of truth;
-> don't `bd import` during normal operation. This repository is local only, with no remote,
-> so beads data isn't synced anywhere.
+> (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so
+> beads data exists only on this machine and isn't synced anywhere (not even to GitHub).
 
 ## Quick Reference
 
@@ -60,7 +59,7 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB; `.beads/issues.jsonl` is a passive export. This repository has no remote (see "Local only, on purpose" below), so there is no sync.
+**Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub remote, local workflow" below).
 
 ## Agent Context Profiles
 
@@ -78,7 +77,8 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Handle git by active profile**: report `git status` and the proposed commit; wait for
-   approval unless the current request authorizes the commit. Local only: no pull, no push.
+   approval unless the current request authorizes the commit. Push only on the owner's
+   explicit request (see "GitHub remote, local workflow" below).
 5. **Hand off** - Summarize changes, validation, issue status, and any blocked commit
 
 **Critical rules:**
@@ -96,15 +96,23 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
 
-### Local only, on purpose
+### GitHub remote, local workflow
 
-This repository is developed locally on purpose (owner, 2026-10-19): no git remote, no push, no
-pull requests, no CI and no branch protection. These are not gaps; don't record or propose them.
-Where the stage skills mention a PR, CI or branch protection, use the local equivalent:
+Since 2026-11-01 the repository is public on GitHub: `origin` is
+https://github.com/ThorstenReichert/time-tracker. The local `master` tracks `origin/main`.
+Development stays local on purpose (owner, 2026-10-19): no pull requests, no CI and no branch
+protection. These are not gaps; don't record or propose them. Where the stage skills mention a
+PR, CI or branch protection, use the local equivalent:
 - Stage 5 review: fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and `plan.md`.
 - The checks: `pwsh scripts/check.ps1` (through the `gatekeeper` subagent).
 - Approval: the owner's explicit "approved to merge", then a local `git merge --no-ff` into
   `master`. The merge commit message serves as the PR description.
+- Publishing: push only on the owner's explicit request, never as part of a merge or session
+  close. `git push origin master:main` (the branch names differ, so a bare `git push` fails);
+  release tags with `git push origin v<x.y.z>`. Feature branches stay local unless asked.
+- Never force-push or rewrite pushed history. If `origin/main` has commits that `master`
+  lacks, fetch and merge them; don't overwrite them.
+- The repository is public: commit no secrets, tokens, databases, exports or personal data.
 
 ### Beads ↔ SDLC
 

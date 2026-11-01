@@ -65,8 +65,8 @@ Humans approve, based on the findings and evidence the agent provides.
 When there is no CI, branch protection or deploy targets yet, keep the **decision points** and
 make them explicit: run a fresh-context review against `REVIEW.md`/spec/plan, ask the owner
 for an explicit "approved to merge", and ask for an explicit "approved to release". Don't
-pretend the controls exist. If the repository is local only on purpose (its `CLAUDE.md` says
-so), their absence isn't a gap: don't record it or propose it.
+pretend the controls exist. If the repository works without them on purpose (its `CLAUDE.md`
+says so), their absence isn't a gap: don't record it or propose it.
 
 ## Anti-patterns
 
