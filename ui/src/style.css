@@ -1,3 +1,8 @@
+:root {
+  /* Light only (R25): native controls and scrollbars stay light in Windows dark mode. */
+  color-scheme: light;
+}
+
 html,
 body {
   margin: 0;

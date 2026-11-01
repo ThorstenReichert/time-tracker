@@ -3,9 +3,9 @@ import { createPinia } from "pinia";
 import PrimeVue from "primevue/config";
 import ConfirmationService from "primevue/confirmationservice";
 import ToastService from "primevue/toastservice";
-import Aura from "@primeuix/themes/aura";
 import { listen } from "@tauri-apps/api/event";
 import App from "./App.vue";
+import { ThorSoftPreset } from "./lib/brand";
 import { router } from "./router";
 import { useCatalogStore } from "./stores/catalog";
 import { useTimerStore } from "./stores/timer";
@@ -14,7 +14,8 @@ import "./style.css";
 const app = createApp(App)
   .use(createPinia())
   .use(router)
-  .use(PrimeVue, { theme: { preset: Aura, options: { darkModeSelector: "system" } } })
+  // The ThorSoft theme, light only (R25).
+  .use(PrimeVue, { theme: { preset: ThorSoftPreset, options: { darkModeSelector: false } } })
   .use(ToastService)
   .use(ConfirmationService);
 

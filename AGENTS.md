@@ -246,6 +246,11 @@ No port traits: tests use a temporary SQLite database, not fakes.
 must be reachable without the UI (through `tt-app`, and so from tests and `tt-cli`). Quick-switch
 matching is a tt-core read model, not UI code.
 
+UI look (R25): light only. The PrimeVue theme is `ThorSoftPreset` in `ui/src/lib/brand.ts` (Aura
+with the ThorSoft logo colours as `primary`). Components use PrimeVue tokens (`--p-primary-color`,
+`--p-primary-800`), not hex literals; the quick-switch popup has no PrimeVue and mirrors
+`brand[500]` in its CSS (pinned by `brand.test.ts`). The logo is `BrandLogo.vue`.
+
 ### Testing seams (details: stage 4)
 
 - tt-core: given State / when Command / then Events-or-error tests. Model-based property tests:

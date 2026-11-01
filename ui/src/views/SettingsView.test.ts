@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { flushPromises, type VueWrapper } from "@vue/test-utils";
 import type { AutostartDto, SettingsDto } from "../bindings";
@@ -43,6 +44,18 @@ const value = (wrapper: VueWrapper, label: string) => (field(wrapper, label).ele
 const pressed = (wrapper: VueWrapper) => wrapper.findAll("[aria-pressed=true]").map((b) => b.text());
 
 describe("SettingsView", () => {
+  it("shows the ThorSoft logo, the product name and the version from package.json in About (R25)", async () => {
+    backend();
+    const wrapper = await mountSettings();
+    const { version } = JSON.parse(readFileSync("package.json", "utf8")) as { version: string };
+    expect(version).toMatch(/^\d+\.\d+\.\d+/);
+
+    const about = wrapper.get(".about");
+    expect(about.get('img[alt="ThorSoft"]').attributes("width")).toBe("64");
+    expect(about.text()).toContain("ThorSoft TimeTracker");
+    expect(about.text()).toContain(`Version ${version}`);
+  });
+
   it("shows the saved settings, with the defaults for what is unset", async () => {
     backend();
     const wrapper = await mountSettings({ recentsN: 5, backupKeep: 30, decimalSeparator: "comma" });

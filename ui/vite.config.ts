@@ -1,11 +1,17 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
 import vue from "@vitejs/plugin-vue";
+
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
 // Two pages: the main window and the quick-switch popup (spec §2 "Windows").
 // Tauri expects a fixed dev port (tauri.conf.json build.devUrl).
 export default defineConfig({
   plugins: [vue()],
+  // The version shown in Settings > About (R25). src-tauri/tests/version.rs keeps it equal to the
+  // Cargo and Tauri versions.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   clearScreen: false,
   server: { port: 5173, strictPort: true },
   build: {

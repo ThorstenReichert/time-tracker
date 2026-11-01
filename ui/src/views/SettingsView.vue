@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Settings: the hotkey (R6), recents (R7), the decimal separator (R15) and the backups (R22) are
 // saved together; the bridge registers a new hotkey at once. Autostart (R9) is applied at once,
-// because Windows' entry is its only record. The limits are checked in the core.
+// because Windows' entry is its only record. The limits are checked in the core. About shows the
+// brand and the version (R25).
 import { computed, onMounted, ref, useId, watch } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
@@ -10,6 +11,7 @@ import Message from "primevue/message";
 import SelectButton from "primevue/selectbutton";
 import ToggleSwitch from "primevue/toggleswitch";
 import { useToast } from "primevue/usetoast";
+import BrandLogo from "../components/BrandLogo.vue";
 import { commands, type AutostartDto, type Separator, type SettingsDefaultsDto, type SettingsDto } from "../bindings";
 import { call, errorMessage } from "../lib/api";
 import { useAttempt } from "../lib/attempt";
@@ -18,6 +20,7 @@ import { useCatalogStore } from "../stores/catalog";
 
 const { catalog, status } = storeToRefs(useCatalogStore());
 const toast = useToast();
+const version = __APP_VERSION__;
 const attempt = useAttempt();
 
 const sample = (setting: Separator) => formatHours(4500, decimalMark(setting));
@@ -173,6 +176,15 @@ async function setAutostart(enabled: boolean) {
     <small v-if="autostart !== null && !autostart.available" class="muted">
       Only the installed app changes this, so a development build never adds itself to Windows' startup.
     </small>
+
+    <h3>About</h3>
+    <div class="about">
+      <BrandLogo :size="64" />
+      <div>
+        <div class="product">ThorSoft TimeTracker</div>
+        <div class="muted">Version {{ version }}</div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -197,6 +209,16 @@ async function setAutostart(enabled: boolean) {
 .actions {
   display: flex;
   justify-content: flex-end;
+}
+.about {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.product {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--p-primary-800);
 }
 .autostart {
   display: flex;
