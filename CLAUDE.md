@@ -65,9 +65,12 @@ follow it.
 `origin` is the public repository https://github.com/ThorstenReichert/time-tracker. The local
 `master` tracks `origin/main`. Since 2026-11-01 (owner), rulesets on `main` require a pull
 request with one approval and signed commits, and forbid force pushes and deleting `main`.
-Every change reaches `main` through a PR. Nothing is pushed to `main` directly. There is no
-CI on purpose; the checks run locally. Don't record or propose CI as a gap. Where the stage
-skills mention CI, use the local checks.
+Every change reaches `main` through a PR. Nothing is pushed to `main` directly. CI (since
+2026-11-01, owner): the GitHub Actions workflow `.github/workflows/check.yml` runs the local
+gate `pwsh scripts/check.ps1` on every PR against `main` and every push to `main`. Its status
+check is `check`, which the owner makes required in the `main` ruleset. The local checks stay
+the feedback loop and CI is the backstop. Where the stage skills mention CI, they mean this
+workflow.
 - **Branch.** Start each change from an up-to-date `master` (`git pull --ff-only`) on a branch
   `feat/<slug>`, `fix/<slug>` or `docs/<slug>`. Don't commit on `master`. It only
   fast-forwards to `origin/main`.
@@ -75,10 +78,12 @@ skills mention CI, use the local checks.
   as `ThorstenReichert@users.noreply.github.com`. Never bypass signing or change that
   identity: an unsigned commit on the branch blocks the merge.
 - **The checks:** `pwsh scripts/check.ps1` (through the `gatekeeper` subagent) before every
-  push.
+  push. CI then runs the same script on the PR from a clean checkout. If `check` is red, fix
+  it on the branch with a new commit; don't re-run a failed job just to get green.
 - **Push and open the PR** only with the owner's go-ahead, because it is outward-facing:
   `git push -u origin <branch>`, then a PR against `main`. The description follows stage 5:
-  links to intent, spec and plan, the `R<n>` covered, deviations, and the check evidence.
+  links to intent, spec and plan, the `R<n>` covered, deviations, and the check evidence (the
+  `gatekeeper` report; the PR's `check` run adds the CI result).
 - **Stage 5 review:** fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and
   `plan.md`. Fixes go on the same branch as new commits. Docs-only PRs need no reviewer
   subagents.
@@ -134,6 +139,11 @@ test -p tt-core --test read_models`"), or none for the whole gate. Paste its rep
 evidence. It never edits, fixes or commits anything, and it doesn't re-run a failure to get
 green. Fixing stays with the main session. Other agents run `pwsh scripts/check.ps1`
 themselves.
+
+**CI** (`.github/workflows/check.yml`, job `check`) runs the same `pwsh scripts/check.ps1` on
+`windows-latest` after `npm --prefix ui ci`, from a clean checkout. It needs no secrets and no
+`ui/dist`, because debug builds don't embed the frontend. Change the gate in `check.ps1`, not in
+the workflow, so local runs and CI stay the same. The actions are pinned to commit SHAs.
 
 | Task | Command | Healthy result |
 |---|---|---|
