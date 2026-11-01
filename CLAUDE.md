@@ -22,7 +22,7 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub remote, local workflow" below).
+**Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub and pull requests" below).
 
 ## Agent Context Profiles
 
@@ -40,8 +40,8 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Handle git by active profile**: report `git status` and the proposed commit; wait for
-   approval unless the current request authorizes the commit. Push only on the owner's
-   explicit request (see "GitHub remote, local workflow" below).
+   approval unless the current request authorizes the commit. Push a branch and open its PR
+   only on the owner's explicit request (see "GitHub and pull requests" below).
 5. **Hand off** - Summarize changes, validation, issue status, and any blocked commit
 
 **Critical rules:**
@@ -60,22 +60,38 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
 
-### GitHub remote, local workflow
+### GitHub and pull requests
 
-Since 2026-11-01 the repository is public on GitHub: `origin` is
-https://github.com/ThorstenReichert/time-tracker. The local `master` tracks `origin/main`.
-Development stays local on purpose (owner, 2026-10-19): no pull requests, no CI and no branch
-protection. These are not gaps; don't record or propose them. Where the stage skills mention a
-PR, CI or branch protection, use the local equivalent:
-- Stage 5 review: fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and `plan.md`.
-- The checks: `pwsh scripts/check.ps1` (through the `gatekeeper` subagent).
-- Approval: the owner's explicit "approved to merge", then a local `git merge --no-ff` into
-  `master`. The merge commit message serves as the PR description.
-- Publishing: push only on the owner's explicit request, never as part of a merge or session
-  close. `git push origin master:main` (the branch names differ, so a bare `git push` fails);
-  release tags with `git push origin v<x.y.z>`. Feature branches stay local unless asked.
+`origin` is the public repository https://github.com/ThorstenReichert/time-tracker. The local
+`master` tracks `origin/main`. Since 2026-11-01 (owner), rulesets on `main` require a pull
+request with one approval and signed commits, and forbid force pushes and deleting `main`.
+Every change reaches `main` through a PR. Nothing is pushed to `main` directly. There is no
+CI on purpose; the checks run locally. Don't record or propose CI as a gap. Where the stage
+skills mention CI, use the local checks.
+- **Branch.** Start each change from an up-to-date `master` (`git pull --ff-only`) on a branch
+  `feat/<slug>`, `fix/<slug>` or `docs/<slug>`. Don't commit on `master`. It only
+  fast-forwards to `origin/main`.
+- **Signed commits.** The repository's git config signs every commit (`commit.gpgsign`, GnuPG)
+  as `ThorstenReichert@users.noreply.github.com`. Never bypass signing or change that
+  identity: an unsigned commit on the branch blocks the merge.
+- **The checks:** `pwsh scripts/check.ps1` (through the `gatekeeper` subagent) before every
+  push.
+- **Push and open the PR** only with the owner's go-ahead, because it is outward-facing:
+  `git push -u origin <branch>`, then a PR against `main`. The description follows stage 5:
+  links to intent, spec and plan, the `R<n>` covered, deviations, and the check evidence.
+- **Stage 5 review:** fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and
+  `plan.md`. Fixes go on the same branch as new commits. Docs-only PRs need no reviewer
+  subagents.
+- **Approval and merge.** The owner gives the explicit "approved to merge" and merges the PR on
+  GitHub with a merge commit (no squash or rebase, like the earlier `--no-ff` merges). GitHub
+  doesn't count an approval from the PR's author, so the owner merges through the ruleset
+  bypass. Agents never approve, merge or bypass a ruleset.
+- **After the merge:** `git switch master`, `git pull --ff-only`, delete the merged branch
+  locally (`git branch -d`) and on GitHub. A release tag goes on the PR's merge commit:
+  `git tag -a v<x.y.z>`, pushed with `git push origin v<x.y.z>` on the owner's request. The
+  release record (release notes, installer SHA-256) follows in a docs PR.
 - Never force-push or rewrite pushed history. If `origin/main` has commits that `master`
-  lacks, fetch and merge them; don't overwrite them.
+  lacks, `git pull --ff-only` them in.
 - The repository is public: commit no secrets, tokens, databases, exports or personal data.
 
 ### Beads ↔ SDLC
