@@ -2,11 +2,13 @@
 // The quick-switch popup (R6): the running entry on top, then the combos (recents first, then
 // the other active combos A–Z; typing filters them). Enter starts or switches and hides, Tab
 // picks a task of the highlighted project (R3), Ctrl+S stops, Esc hides. The matching is a
-// tt-core read model; this page only renders it and handles the keys.
+// tt-core read model; this page only renders it and handles the keys. The header carries the
+// ThorSoft logo; the popup follows Windows' light or dark mode (R25).
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands, type EntryDto } from "../bindings";
+import BrandLogo from "../components/BrandLogo.vue";
 import { call, errorMessage } from "../lib/api";
 import { taskChoice } from "../lib/combo";
 import { formatElapsed } from "../lib/format";
@@ -170,6 +172,7 @@ onMounted(async () => {
 <template>
   <div class="popup">
     <header class="running" :class="{ active: running }">
+      <BrandLogo :size="18" />
       <template v-if="running">
         <span class="dot" aria-hidden="true"></span>
         <span class="label" :title="running.combo.label">{{ running.combo.shortLabel }}</span>
@@ -216,8 +219,11 @@ onMounted(async () => {
 </template>
 
 <style>
+/* Light or dark, following Windows (R25). The popup doesn't use PrimeVue, so it mirrors the main
+   window's theme from lib/brand.ts: light = brand 500 on white and slate, dark = brand 300 on
+   `night` (pinned by brand.test.ts). */
 :root {
-  --primary: #10b981;
+  --primary: #436088;
   --text: #334155;
   --muted: #64748b;
   --border: #cbd5e1;
@@ -227,11 +233,11 @@ onMounted(async () => {
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #34d399;
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
-    --border: #52525b;
-    --surface: #18181b;
+    --primary: #9fb2cd;
+    --text: #ffffff;
+    --muted: #8291aa;
+    --border: #48566f;
+    --surface: #17233a;
     --danger: #f87171;
   }
 }

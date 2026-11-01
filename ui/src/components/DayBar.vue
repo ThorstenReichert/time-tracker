@@ -94,6 +94,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .error {
-  color: var(--p-red-500);
+  color: var(--error-text);
 }
 </style>

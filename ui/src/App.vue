@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// The main window's shell: navigation, the running timer, the status banner and the views.
+// The main window's shell: the brand mark (R25), navigation, the running timer, the status banner and the views.
 import { listen } from "@tauri-apps/api/event";
 import ConfirmDialog from "primevue/confirmdialog";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
+import BrandMark from "./components/BrandMark.vue";
 import RunningBar from "./components/RunningBar.vue";
 import StatusBanner from "./components/StatusBanner.vue";
 
@@ -24,6 +25,7 @@ const nav = [
 <template>
   <div class="shell">
     <nav class="nav">
+      <BrandMark />
       <RouterLink v-for="item in nav" :key="item.to" :to="item.to" class="nav-link">{{ item.label }}</RouterLink>
     </nav>
     <RunningBar />

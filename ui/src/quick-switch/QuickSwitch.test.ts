@@ -80,6 +80,16 @@ describe("QuickSwitch", () => {
     expect(wrapper.get("header").text()).toContain("0:01:23");
   });
 
+  it("shows the ThorSoft logo at the left of the header, with or without a running timer (R25)", async () => {
+    for (const running of [undefined, null]) {
+      const { wrapper } = await popup({ running });
+      const first = wrapper.get("header").element.firstElementChild;
+      expect(first?.tagName).toBe("PICTURE");
+      expect(first?.querySelector("img")?.getAttribute("alt")).toBe("ThorSoft");
+      wrapper.unmount();
+    }
+  });
+
   it("lists the other combos with the previous one highlighted, so hotkey + Enter switches back", async () => {
     const { rows, highlighted, press, backend, hidden } = await popup();
     expect(rows()).toEqual(["Beta / Ops", "Acme / Web / Docs", "Acme / Intern", "Acme / Web"]);

@@ -4568,7 +4568,7 @@ dependencies = [
 
 [[package]]
 name = "timetracker-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "jiff",
  "serde",
@@ -4843,7 +4843,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tt-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "jiff",
  "memory-stats",
@@ -4858,7 +4858,7 @@ dependencies = [
 
 [[package]]
 name = "tt-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -4872,7 +4872,7 @@ dependencies = [
 
 [[package]]
 name = "tt-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "jiff",
  "nucleo-matcher",
@@ -4885,7 +4885,7 @@ dependencies = [
 
 [[package]]
 name = "tt-store"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "jiff",
  "proptest",
