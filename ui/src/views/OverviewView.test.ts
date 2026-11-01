@@ -42,12 +42,15 @@ describe("OverviewView", () => {
 
     expect(fake.called("get_overview")).toEqual([{ day: TODAY }]);
     // Project level: one value to book per project, and a subtotal.
-    expect(cells(wrapper, "Acme", "Web")).toEqual(["Web", "1.25Copy", "1.37", "-0.12"]);
+    expect(cells(wrapper, "Acme", "Web")).toEqual(["Web", "1.25", "1.37", "-0.12"]);
     expect(cells(wrapper, "Acme")).toEqual(["Subtotal", "1.25", "1.37", "-0.12"]);
+    // The value to book is the copy button; the subtotal is only a sum, not copyable.
+    expect(wrapper.find('[data-project="Web"] button').text()).toBe("1.25");
+    expect(wrapper.find('[data-client="Acme"] tr.total button').exists()).toBe(false);
     // Client level: the projects are raw only; the client total is the value to book.
     expect(cells(wrapper, "Beta", "API")).toEqual(["API", "", "0.75", ""]);
     expect(cells(wrapper, "Beta", "Ops")).toEqual(["Ops", "", "0.22", ""]);
-    expect(cells(wrapper, "Beta")).toEqual(["Client total", "1.00Copy", "0.97", "+0.03"]);
+    expect(cells(wrapper, "Beta")).toEqual(["Client total", "1.00", "0.97", "+0.03"]);
     expect(wrapper.get('[data-client="Beta"]').text()).toContain("30 min · up · per client");
     expect(wrapper.find(".running").exists()).toBe(false);
   });
@@ -55,11 +58,11 @@ describe("OverviewView", () => {
   it("copies just the number, with the separator from the settings (R15)", async () => {
     const fake = backend();
     const wrapper = await mountOverview("comma");
-    expect(cells(wrapper, "Acme", "Web")).toEqual(["Web", "1,25Copy", "1,37", "-0,12"]);
+    expect(cells(wrapper, "Acme", "Web")).toEqual(["Web", "1,25", "1,37", "-0,12"]);
 
     await clickButton("Copy 1,25");
     expect(fake.called(COPY)).toEqual([{ text: "1,25" }]);
-    expect(wrapper.get('[aria-label="Copy 1,25"]').text()).toBe("Copied");
+    expect(wrapper.get('[aria-label="Copy 1,25"]').attributes("title")).toBe("Copied");
 
     await clickButton("Copy 1,00");
     expect(fake.called(COPY)).toEqual([{ text: "1,25" }, { text: "1,00" }]);

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// A value to book with a button that copies just the number, e.g. "1,25" (R15).
+// A value to book that is itself the button copying just the number, e.g. "1,25" (R15).
 import { onUnmounted, ref } from "vue";
 import Button from "primevue/button";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -23,31 +23,27 @@ onUnmounted(() => clearTimeout(reset));
 </script>
 
 <template>
-  <span class="copy-value">
+  <Button
+    :aria-label="`Copy ${value}`"
+    :title="copied ? 'Copied' : 'Copy'"
+    size="small"
+    text
+    class="copy-value"
+    @click="copy"
+  >
+    <!-- The check sits left of the number, so the right-aligned number doesn't move. -->
+    <span v-if="copied" class="copied" aria-hidden="true">✓</span>
     <span class="value">{{ value }}</span>
-    <Button
-      :label="copied ? 'Copied' : 'Copy'"
-      :aria-label="`Copy ${value}`"
-      size="small"
-      text
-      class="copy"
-      @click="copy"
-    />
-  </span>
+  </Button>
 </template>
 
 <style scoped>
 .copy-value {
-  display: inline-flex;
-  align-items: center;
   gap: 0.25rem;
 }
 .value {
-  font-weight: 600;
+  /* The slot replaces the button's label, so the label's weight is set here. */
+  font-weight: var(--p-button-label-font-weight);
   font-variant-numeric: tabular-nums;
-}
-.copy {
-  /* Wide enough for "Copied", so the column doesn't jump. */
-  min-width: 4.5rem;
 }
 </style>
