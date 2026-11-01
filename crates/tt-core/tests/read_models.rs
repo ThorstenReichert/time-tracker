@@ -654,3 +654,55 @@ fn task_matches_cover_abbreviations_and_offer_no_create_for_one() {
     let m = read::task_matches(s.catalog(), ProjectId::new(4), "re");
     assert_eq!(m.offer_create, Some(Name::parse("re").unwrap()));
 }
+
+#[test]
+fn an_exact_abbreviation_beats_a_name_containing_the_same_word() {
+    // A sibling named "ASCP rollout" scores as well as the abbreviation ASCP; the exact
+    // abbreviation still ranks first (R24), even when the decoy is the most recent combo.
+    let s = run(
+        with_long_names(),
+        &ctx("2026-10-17T08:00"),
+        [Command::CreateProject {
+            client: ClientId::new(3),
+            name: "ASCP rollout".into(),
+            abbreviation: None,
+        }],
+    );
+    let decoy = Combo {
+        project: ProjectId::new(6),
+        task: None,
+    };
+    for recents in [vec![], vec![decoy]] {
+        let first = read::quick_switch(s.catalog(), &recents, "ascp")
+            .into_iter()
+            .next()
+            .map(|r| r.short_label);
+        assert_eq!(first.as_deref(), Some("NWI / ASCP"), "recents {recents:?}");
+    }
+}
+
+#[test]
+fn task_matches_rank_an_exact_abbreviation_first() {
+    let s = run(
+        with_long_names(),
+        &ctx("2026-10-17T08:00"),
+        [
+            Command::CreateTask {
+                project: ProjectId::new(4),
+                name: "Bug triage".into(),
+                abbreviation: Some("BT".into()),
+            },
+            Command::CreateTask {
+                project: ProjectId::new(4),
+                name: "BTW notes".into(),
+                abbreviation: None,
+            },
+        ],
+    );
+    let names: Vec<String> = read::task_matches(s.catalog(), ProjectId::new(4), "bt")
+        .tasks
+        .into_iter()
+        .map(|t| t.name.to_string())
+        .collect();
+    assert_eq!(names, ["Bug triage", "BTW notes"]);
+}

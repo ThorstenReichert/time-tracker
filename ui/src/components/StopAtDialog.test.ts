@@ -2,16 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 import { CommandError } from "../lib/api";
 import { fakeBackend, uiError } from "../test/backend";
-import { acmeWebReview, runningEntry } from "../test/fixtures";
+import { acmeWebReview, combo, runningEntry } from "../test/fixtures";
 import { mountInApp } from "../test/mount";
 import { clickButton, dialog } from "../test/page";
 import StopAtDialog from "./StopAtDialog.vue";
 
 type Save = (at: string) => Promise<void>;
 
-async function open(save: Save) {
+async function open(save: Save, running = runningEntry(acmeWebReview, 4920)) {
   fakeBackend({});
-  const running = runningEntry(acmeWebReview, 4920);
   const wrapper = mountInApp(StopAtDialog, { props: { visible: false, running, save } });
   await wrapper.setProps({ visible: true });
   await flushPromises();
@@ -31,6 +30,14 @@ describe("StopAtDialog", () => {
     await clickButton("Stop", dialog());
     expect(save).toHaveBeenCalledWith("2026-10-18T17:30:00");
     expect(wrapper.emitted("update:visible")).toEqual([[false]]);
+  });
+
+  it("names the running combo by its short label, the full one on hover (R24)", async () => {
+    await open(vi.fn<Save>(), runningEntry(combo(9, 9, 9, ["Northwind Instruments", "adaptive signal calibration pipeline", "Review"], ["NWI", "ASCP", "Rev"]), 60));
+    expect(dialog().text()).toContain("NWI / ASCP / Rev, started");
+    expect(dialog().get("span[title]").attributes("title")).toBe(
+      "Northwind Instruments / adaptive signal calibration pipeline / Review",
+    );
   });
 
   it("asks for a readable time", async () => {

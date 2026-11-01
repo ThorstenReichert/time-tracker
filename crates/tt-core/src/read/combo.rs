@@ -20,6 +20,19 @@ pub struct ComboRow {
 }
 
 impl ComboRow {
+    /// The lowercase keys of the abbreviations of every level that has one (R24).
+    pub(crate) fn abbreviation_keys(&self) -> Vec<&str> {
+        [
+            &self.client_abbreviation,
+            &self.project_abbreviation,
+            &self.task_abbreviation,
+        ]
+        .into_iter()
+        .flatten()
+        .map(Abbreviation::key)
+        .collect()
+    }
+
     /// What typed text is matched against (R3, R6, R24): the names and abbreviations of
     /// every level, so a query can mix them ("nwi calibration").
     pub(crate) fn match_text(&self) -> String {

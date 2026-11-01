@@ -27,7 +27,7 @@ describe("NameDialog", () => {
     expect((abbreviation!.element as HTMLInputElement).value).toBe("");
     await name!.setValue("Website");
     await clickButton("Save", dialog());
-    expect(save).toHaveBeenCalledWith("Website", null);
+    expect(save).toHaveBeenCalledWith("Website", "");
     expect(wrapper.emitted("update:visible")).toEqual([[false]]);
   });
 

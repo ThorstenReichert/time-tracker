@@ -612,3 +612,53 @@ fn loaded_data_with_a_name_clashing_with_an_abbreviation_is_detected() {
         client(2, "Beta", Some("x"))
     ]));
 }
+
+#[test]
+fn archived_siblings_count_for_names_and_abbreviations() {
+    // R1, R24, OQ-7: an archived item keeps its name and abbreviation.
+    let project =
+        |id: u64, name: &str, abbreviation: Option<&str>, archived: bool| tt_core::Project {
+            id: ProjectId::new(id),
+            client: ClientId::new(1),
+            name: Name::parse(name).unwrap(),
+            abbreviation: abbreviation.map(|a| Abbreviation::parse(a).unwrap()),
+            archived_at: archived.then(|| ctx().now),
+            created_at: ctx().now,
+        };
+    let client = Client {
+        id: ClientId::new(1),
+        name: Name::parse("Acme").unwrap(),
+        abbreviation: None,
+        rule: RoundingRule::default(),
+        archived_at: None,
+        created_at: ctx().now,
+    };
+    let counters = Counters {
+        next_client: 2,
+        next_project: 3,
+        ..Counters::default()
+    };
+    let state = State::from_parts(
+        Catalog::from_parts(
+            [client],
+            [
+                project(1, "Old web", Some("OW"), true),
+                project(2, "Mobile", None, false),
+            ],
+            [],
+            Settings::default(),
+            counters,
+        ),
+        Entries::default(),
+    );
+    state.check_invariants().unwrap();
+    let archived = ItemRef::Project(ProjectId::new(1));
+    assert_eq!(
+        when(&state, &ctx(), create_project(1, "ow")).unwrap_err(),
+        DomainError::DuplicateName { existing: archived }
+    );
+    assert_eq!(
+        when(&state, &ctx(), update_project(2, "Mobile", abbr("old web"))).unwrap_err(),
+        DomainError::DuplicateAbbreviation { existing: archived }
+    );
+}

@@ -7,7 +7,6 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
 import { errorMessage } from "../lib/api";
-import { blankToNull } from "../lib/format";
 
 export interface Naming {
   name: string;
@@ -19,7 +18,7 @@ const props = defineProps<{
   header: string;
   label: string;
   initial?: Naming;
-  /** Gets the abbreviation as `null` when its field is blank. */
+  /** Gets the abbreviation as typed; the core reads blank text as none (R24). */
   save: (name: string, abbreviation: string | null) => Promise<void>;
 }>();
 
@@ -39,7 +38,7 @@ watch(visible, (open) => {
 async function submit() {
   busy.value = true;
   try {
-    await props.save(name.value, blankToNull(abbreviation.value));
+    await props.save(name.value, abbreviation.value);
     visible.value = false;
   } catch (e) {
     error.value = errorMessage(e);

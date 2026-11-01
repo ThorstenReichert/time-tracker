@@ -66,6 +66,17 @@ names). Both decisions are recorded in spec.md.
 - The fake migration in `crates/tt-app/tests/startup.rs` moved from version 2 to 3, because 0002
   is now real.
 
+- Stage 5 review fixes (2026-11-01):
+  - Ranking: the fuzzy score alone let a name containing the query as a whole word ("ASCP
+    rollout") tie with, and beat, the exact abbreviation. Quick-switch and task matching now
+    rank first by how many query words are exactly one of the item's abbreviations. Tests use
+    whole-word decoys, also with the decoy as the most recent combo.
+  - A test pins that archived siblings count for names and abbreviations.
+  - The combo picker shows the picked combo's full label on hover. The combo picker and the
+    stop-at dialog got short-label tests.
+  - The dialogs send the abbreviation as typed. The blank-means-none rule stays in tt-core
+    (`Abbreviation::parse_optional`), not in the UI.
+
 ## Coverage
 R24: steps 1–6. R1 amendment: step 1 (+ step 3 backstop). R3/R6 amendments: step 2 (+ step 6
 display).

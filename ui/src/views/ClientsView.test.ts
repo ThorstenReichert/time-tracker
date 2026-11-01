@@ -64,7 +64,7 @@ describe("ClientsView", () => {
     expect(dialog().text()).toContain("Edit client Beta");
     await saveAs("Beta GmbH");
     expect(backend.called("update_client")).toEqual([
-      { id: 2, name: "Beta GmbH", abbreviation: null, rule: { unit: 30, direction: "up", level: "client" } },
+      { id: 2, name: "Beta GmbH", abbreviation: "", rule: { unit: 30, direction: "up", level: "client" } },
     ]);
   });
 
@@ -84,8 +84,8 @@ describe("ClientsView", () => {
     await saveAs("Code review", "  ");
     expect(backend.called("create_project")).toEqual([{ client: 2, name: "Support", abbreviation: "Sup" }]);
     expect(backend.called("update_project")).toEqual([{ id: 2, name: "Internal", abbreviation: "Int" }]);
-    expect(backend.called("create_task")).toEqual([{ project: 2, name: "Deploy", abbreviation: null }]);
-    expect(backend.called("update_task")).toEqual([{ id: 1, name: "Code review", abbreviation: null }]);
+    expect(backend.called("create_task")).toEqual([{ project: 2, name: "Deploy", abbreviation: "" }]);
+    expect(backend.called("update_task")).toEqual([{ id: 1, name: "Code review", abbreviation: "  " }]);
   });
 
   it("shows abbreviations next to the names and starts an edit with them (R24)", async () => {

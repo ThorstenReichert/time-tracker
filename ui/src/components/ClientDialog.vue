@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// Creates or edits a client: its name, optional abbreviation (R24) and rounding rule (R1, R17). The units and the default
+// Creates or edits a client: its name, optional abbreviation (R24) and rounding rule (R1,
+// R17). The units and the default
 // rule come from the backend, so the UI keeps no copy of the core's rules.
 import { computed, ref, useId, watch } from "vue";
 import { storeToRefs } from "pinia";
@@ -11,7 +12,6 @@ import Select from "primevue/select";
 import SelectButton from "primevue/selectbutton";
 import type { Direction, Level, RuleDto } from "../bindings";
 import { errorMessage } from "../lib/api";
-import { blankToNull } from "../lib/format";
 import { useCatalogStore } from "../stores/catalog";
 
 const visible = defineModel<boolean>("visible", { required: true });
@@ -19,7 +19,7 @@ const props = defineProps<{
   header: string;
   /** The client to edit; a new client starts with the default rule. */
   initial?: { name: string; abbreviation: string | null; rule: RuleDto };
-  /** Gets the abbreviation as `null` when its field is blank. */
+  /** Gets the abbreviation as typed; the core reads blank text as none (R24). */
   save: (name: string, abbreviation: string | null, rule: RuleDto) => Promise<void>;
 }>();
 
@@ -61,7 +61,7 @@ watch(visible, (open) => {
 async function submit() {
   busy.value = true;
   try {
-    await props.save(name.value, blankToNull(abbreviation.value), {
+    await props.save(name.value, abbreviation.value, {
       unit: unit.value,
       direction: direction.value,
       level: level.value,

@@ -39,7 +39,7 @@ describe("ClientDialog", () => {
     await clickButton("Up", dialog());
     await clickButton("Per client", dialog());
     await clickButton("Save", dialog());
-    expect(save).toHaveBeenCalledWith("Gamma", null, { unit: 15, direction: "up", level: "client" });
+    expect(save).toHaveBeenCalledWith("Gamma", "", { unit: 15, direction: "up", level: "client" });
     expect(wrapper.emitted("update:visible")).toEqual([[false]]);
   });
 
@@ -55,12 +55,12 @@ describe("ClientDialog", () => {
     expect(save).toHaveBeenCalledWith("Beta", "B", { unit: 30, direction: "up", level: "client" });
   });
 
-  it("sends a cleared abbreviation as none (R24)", async () => {
+  it("sends a cleared abbreviation as typed, which the core reads as none (R24)", async () => {
     const save = vi.fn<Save>(async () => {});
     await open(save, { name: "Beta", abbreviation: "B", rule: { unit: 30, direction: "up", level: "client" } });
     await dialog().findAll("input")[1]!.setValue(" ");
     await clickButton("Save", dialog());
-    expect(save).toHaveBeenCalledWith("Beta", null, { unit: 30, direction: "up", level: "client" });
+    expect(save).toHaveBeenCalledWith("Beta", " ", { unit: 30, direction: "up", level: "client" });
   });
 
   it("shows a rejected client and stays open", async () => {

@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { ComboChoice } from "../lib/combo";
 import { fakeBackend } from "../test/backend";
-import { acmeIntern, acmeWeb, acmeWebReview, betaOps } from "../test/fixtures";
+import { acmeIntern, acmeWeb, acmeWebReview, betaOps, combo } from "../test/fixtures";
 import { mountInApp } from "../test/mount";
 import { fakeSearchDelay, pickSuggestion, suggestions, typeAhead } from "../test/page";
 import ComboPicker from "./ComboPicker.vue";
 
-const combos = [acmeWebReview, betaOps, acmeIntern, acmeWeb];
+const ascpReview = combo(9, 9, 9, ["Northwind Instruments", "adaptive signal calibration pipeline", "Review"], ["NWI", "ASCP", "Rev"]);
+const combos = [acmeWebReview, betaOps, acmeIntern, acmeWeb, ascpReview];
 
 function comboPicker() {
   const backend = fakeBackend({
@@ -32,6 +33,22 @@ describe("ComboPicker", () => {
     await typeAhead(project, "acme");
     expect(backend.called("quick_switch").at(-1)).toEqual({ query: "acme" });
     expect(suggestions()).toEqual(["Acme / Web / Review", "Acme / Intern", "Acme / Web"]);
+  });
+
+  it("shows short labels, with the full label on hover before and after the pick (R24)", async () => {
+    const { wrapper, project, value } = comboPicker();
+    expect(wrapper.get(".project").attributes("title")).toBeUndefined();
+    await typeAhead(project, "northwind");
+    expect(suggestions()).toEqual(["NWI / ASCP / Rev"]);
+    const option = document.querySelector(".p-autocomplete-option span");
+    expect(option?.getAttribute("title")).toBe(
+      "Northwind Instruments / adaptive signal calibration pipeline / Review",
+    );
+    await pickSuggestion("NWI / ASCP / Rev");
+    expect(value(project)).toBe("NWI / ASCP");
+    expect(wrapper.get(".project").attributes("title")).toBe(
+      "Northwind Instruments / adaptive signal calibration pipeline",
+    );
   });
 
   it("fills project and task from a picked task combo", async () => {
