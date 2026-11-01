@@ -1,10 +1,10 @@
-//! The invariants the core guarantees (R1, R2, R4, R12). They run after every `evolve` in
+//! The invariants the core guarantees (R1, R2, R4, R12, R24). They run after every `evolve` in
 //! debug builds and tests, and on every load in all builds.
 
 use std::collections::BTreeSet;
 
 use crate::decide::validate_settings;
-use crate::{InvariantViolation, State};
+use crate::{Abbreviation, InvariantViolation, Name, State};
 
 impl State {
     pub fn check_invariants(&self) -> Result<(), InvariantViolation> {
@@ -58,31 +58,36 @@ fn check_catalog(state: &State) -> Result<(), InvariantViolation> {
         }
     }
 
-    // Names are unique within their parent, ignoring case (R1).
+    // Names and abbreviations share one namespace per parent, ignoring case (R1, R24). An
+    // item's own name and abbreviation may be equal.
     let mut seen = BTreeSet::new();
     for client in c.clients() {
-        if !seen.insert(client.name.key()) {
-            return violation(format!("duplicate client name {:?}", client.name.as_str()));
+        for key in keys(&client.name, client.abbreviation.as_ref()) {
+            if !seen.insert(key) {
+                return violation(format!("duplicate client name or abbreviation {key:?}"));
+            }
         }
     }
     let mut seen = BTreeSet::new();
     for project in c.projects() {
-        if !seen.insert((project.client, project.name.key())) {
-            return violation(format!(
-                "duplicate project name {:?} in client {}",
-                project.name.as_str(),
-                project.client
-            ));
+        for key in keys(&project.name, project.abbreviation.as_ref()) {
+            if !seen.insert((project.client, key)) {
+                return violation(format!(
+                    "duplicate project name or abbreviation {key:?} in client {}",
+                    project.client
+                ));
+            }
         }
     }
     let mut seen = BTreeSet::new();
     for task in c.tasks() {
-        if !seen.insert((task.project, task.name.key())) {
-            return violation(format!(
-                "duplicate task name {:?} in project {}",
-                task.name.as_str(),
-                task.project
-            ));
+        for key in keys(&task.name, task.abbreviation.as_ref()) {
+            if !seen.insert((task.project, key)) {
+                return violation(format!(
+                    "duplicate task name or abbreviation {key:?} in project {}",
+                    task.project
+                ));
+            }
         }
     }
 
@@ -148,4 +153,13 @@ fn check_entries(state: &State) -> Result<(), InvariantViolation> {
         previous = Some(entry);
     }
     Ok(())
+}
+
+/// The keys an item is called by: its name, and its abbreviation if that differs.
+fn keys<'a>(name: &'a Name, abbreviation: Option<&'a Abbreviation>) -> Vec<&'a str> {
+    let mut keys = vec![name.key()];
+    if let Some(a) = abbreviation.filter(|a| a.key() != name.key()) {
+        keys.push(a.key());
+    }
+    keys
 }

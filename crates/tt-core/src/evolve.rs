@@ -29,29 +29,45 @@ fn apply(state: &mut State, event: &Event) {
             counters.next_client = counters.next_client.max(client.id.get() + 1);
             catalog.clients.insert(client.id, client.clone());
         }
-        Event::ClientUpdated { id, name, rule } => {
+        Event::ClientUpdated {
+            id,
+            name,
+            abbreviation,
+            rule,
+        } => {
             let client = catalog.clients.get_mut(id).expect("updated client exists");
             client.name = name.clone();
+            client.abbreviation = abbreviation.clone();
             client.rule = *rule;
         }
         Event::ProjectCreated { project } => {
             counters.next_project = counters.next_project.max(project.id.get() + 1);
             catalog.projects.insert(project.id, project.clone());
         }
-        Event::ProjectRenamed { id, name } => {
+        Event::ProjectUpdated {
+            id,
+            name,
+            abbreviation,
+        } => {
             let project = catalog
                 .projects
                 .get_mut(id)
-                .expect("renamed project exists");
+                .expect("updated project exists");
             project.name = name.clone();
+            project.abbreviation = abbreviation.clone();
         }
         Event::TaskCreated { task } => {
             counters.next_task = counters.next_task.max(task.id.get() + 1);
             catalog.tasks.insert(task.id, task.clone());
         }
-        Event::TaskRenamed { id, name } => {
-            let task = catalog.tasks.get_mut(id).expect("renamed task exists");
+        Event::TaskUpdated {
+            id,
+            name,
+            abbreviation,
+        } => {
+            let task = catalog.tasks.get_mut(id).expect("updated task exists");
             task.name = name.clone();
+            task.abbreviation = abbreviation.clone();
         }
         Event::SettingsChanged { settings } => {
             catalog.settings = settings.clone();

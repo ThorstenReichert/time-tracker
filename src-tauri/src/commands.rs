@@ -89,9 +89,22 @@ pub async fn get_catalog(backend: State<'_, Backend>) -> Res<CatalogDto> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_client(backend: State<'_, Backend>, name: String, rule: RuleDto) -> Res<()> {
+pub async fn create_client(
+    backend: State<'_, Backend>,
+    name: String,
+    abbreviation: Option<String>,
+    rule: RuleDto,
+) -> Res<()> {
     let rule = parse_rule(rule)?;
-    execute(&backend, &ctx(), Command::CreateClient { name, rule })
+    execute(
+        &backend,
+        &ctx(),
+        Command::CreateClient {
+            name,
+            abbreviation,
+            rule,
+        },
+    )
 }
 
 #[tauri::command]
@@ -100,39 +113,103 @@ pub async fn update_client(
     backend: State<'_, Backend>,
     id: u64,
     name: String,
+    abbreviation: Option<String>,
     rule: RuleDto,
 ) -> Res<()> {
     let rule = parse_rule(rule)?;
     let id = ClientId::new(id);
-    execute(&backend, &ctx(), Command::UpdateClient { id, name, rule })
+    execute(
+        &backend,
+        &ctx(),
+        Command::UpdateClient {
+            id,
+            name,
+            abbreviation,
+            rule,
+        },
+    )
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_project(backend: State<'_, Backend>, client: u64, name: String) -> Res<()> {
+pub async fn create_project(
+    backend: State<'_, Backend>,
+    client: u64,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<()> {
     let client = ClientId::new(client);
-    execute(&backend, &ctx(), Command::CreateProject { client, name })
+    execute(
+        &backend,
+        &ctx(),
+        Command::CreateProject {
+            client,
+            name,
+            abbreviation,
+        },
+    )
 }
 
+/// Renames a project and/or sets its abbreviation (R24).
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_project(backend: State<'_, Backend>, id: u64, name: String) -> Res<()> {
+pub async fn update_project(
+    backend: State<'_, Backend>,
+    id: u64,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<()> {
     let id = ProjectId::new(id);
-    execute(&backend, &ctx(), Command::RenameProject { id, name })
+    execute(
+        &backend,
+        &ctx(),
+        Command::UpdateProject {
+            id,
+            name,
+            abbreviation,
+        },
+    )
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn create_task(backend: State<'_, Backend>, project: u64, name: String) -> Res<()> {
+pub async fn create_task(
+    backend: State<'_, Backend>,
+    project: u64,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<()> {
     let project = ProjectId::new(project);
-    execute(&backend, &ctx(), Command::CreateTask { project, name })
+    execute(
+        &backend,
+        &ctx(),
+        Command::CreateTask {
+            project,
+            name,
+            abbreviation,
+        },
+    )
 }
 
+/// Renames a task and/or sets its abbreviation (R24).
 #[tauri::command]
 #[specta::specta]
-pub async fn rename_task(backend: State<'_, Backend>, id: u64, name: String) -> Res<()> {
+pub async fn update_task(
+    backend: State<'_, Backend>,
+    id: u64,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<()> {
     let id = TaskId::new(id);
-    execute(&backend, &ctx(), Command::RenameTask { id, name })
+    execute(
+        &backend,
+        &ctx(),
+        Command::UpdateTask {
+            id,
+            name,
+            abbreviation,
+        },
+    )
 }
 
 /// Starts a timer on the combo, or switches to it (R5).

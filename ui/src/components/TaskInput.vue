@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Picks a task of a project by typing: matches the project's active tasks and offers
-// Create "<text>" when no task has that name (R3). The matching is a tt-core read model.
+// Create "<text>" when no task has that name or abbreviation (R3, R24). The matching is a
+// tt-core read model.
 import { nextTick, ref, watch } from "vue";
 import AutoComplete from "primevue/autocomplete";
 import { commands } from "../bindings";
@@ -13,6 +14,8 @@ const props = defineProps<{ project: number | null; inputId?: string }>();
 // What the input holds: the picked task, or the text typed so far.
 const text = ref<TaskPick | string | null>(model.value);
 const suggestions = ref<TaskPick[]>([]);
+/** The abbreviations of the suggested tasks, shown muted next to their names (R24). */
+const abbreviations = ref(new Map<number, string>());
 /** The text the suggestions on screen were searched for. */
 let suggestionsFor: string | null = null;
 let latest = 0;
@@ -37,6 +40,9 @@ async function complete(event: { query: string }) {
   const matches = await call(commands.taskMatches(props.project, event.query));
   if (request !== latest) return;
   suggestions.value = taskPicks(matches);
+  abbreviations.value = new Map(
+    matches.tasks.flatMap((t) => (t.abbreviation === null ? [] : [[t.id, t.abbreviation] as const])),
+  );
   suggestionsFor = event.query;
 }
 
@@ -92,8 +98,19 @@ function select(event: { value: TaskPick }) {
     >
       <template #option="{ option }">
         <span v-if="option.kind === 'new'">Create "<strong>{{ option.name }}</strong>"</span>
-        <span v-else>{{ option.name }}</span>
+        <span v-else>
+          {{ option.name }}
+          <span v-if="abbreviations.has(option.id)" class="hint">{{ abbreviations.get(option.id) }}</span>
+        </span>
       </template>
     </AutoComplete>
   </div>
 </template>
+
+<style scoped>
+.hint {
+  margin-left: 0.4rem;
+  font-size: 0.85em;
+  color: var(--p-text-muted-color);
+}
+</style>

@@ -36,6 +36,7 @@ fn generated_events() -> Vec<Event> {
             client: Client {
                 id: ClientId::new(c),
                 name: name(format!("Client {c}")),
+                abbreviation: None,
                 rule: RoundingRule::default(),
                 archived_at: None,
                 created_at: created,
@@ -48,6 +49,7 @@ fn generated_events() -> Vec<Event> {
                     id: ProjectId::new(pid),
                     client: ClientId::new(c),
                     name: name(format!("Project {p}")),
+                    abbreviation: None,
                     archived_at: None,
                     created_at: created,
                 },
@@ -58,6 +60,7 @@ fn generated_events() -> Vec<Event> {
                         id: TaskId::new((pid - 1) * 3 + t),
                         project: ProjectId::new(pid),
                         name: name(format!("Task {t}")),
+                        abbreviation: None,
                         archived_at: None,
                         created_at: created,
                     },

@@ -95,18 +95,36 @@ fn domain_message(error: &DomainError, app: &App, ctx: &Ctx) -> String {
     {
         return format!("The name is already used by {item}");
     }
+    if let DomainError::DuplicateAbbreviation { existing } = error
+        && let Some(item) = item_name(app, *existing)
+    {
+        return format!("The abbreviation is already used by {item}");
+    }
     capitalise(&error.to_string())
 }
 
-/// `client "Acme"`, or `None` if the item is gone.
+/// `client "Acme"`, or `client "Acme" (AC)` with its abbreviation (R24), or `None` if the
+/// item is gone.
 fn item_name(app: &App, item: ItemRef) -> Option<String> {
     let catalog = app.catalog().ok()?;
-    let (kind, name) = match item {
-        ItemRef::Client(id) => ("client", catalog.client(id)?.name.to_string()),
-        ItemRef::Project(id) => ("project", catalog.project(id)?.name.to_string()),
-        ItemRef::Task(id) => ("task", catalog.task(id)?.name.to_string()),
+    let (kind, name, abbreviation) = match item {
+        ItemRef::Client(id) => {
+            let c = catalog.client(id)?;
+            ("client", &c.name, &c.abbreviation)
+        }
+        ItemRef::Project(id) => {
+            let p = catalog.project(id)?;
+            ("project", &p.name, &p.abbreviation)
+        }
+        ItemRef::Task(id) => {
+            let t = catalog.task(id)?;
+            ("task", &t.name, &t.abbreviation)
+        }
     };
-    Some(format!("{kind} \"{name}\""))
+    Some(match abbreviation {
+        Some(a) => format!("{kind} \"{name}\" ({a})"),
+        None => format!("{kind} \"{name}\""),
+    })
 }
 
 fn capitalise(text: &str) -> String {
@@ -140,11 +158,13 @@ mod tests {
         for cmd in [
             Command::CreateClient {
                 name: "Acme".into(),
+                abbreviation: None,
                 rule: RoundingRule::default(),
             },
             Command::CreateProject {
                 client: ClientId::new(1),
                 name: "Web".into(),
+                abbreviation: None,
             },
             add("2026-10-17T09:00", "2026-10-17T10:22"),
         ] {
@@ -162,6 +182,7 @@ mod tests {
                 &ctx,
                 Command::CreateClient {
                     name: "ACME".into(),
+                    abbreviation: None,
                     rule: RoundingRule::default(),
                 },
             )
@@ -169,6 +190,31 @@ mod tests {
         assert_eq!(
             UiError::from_app(err, &app, &ctx).message,
             "The name is already used by client \"Acme\""
+        );
+
+        // An abbreviation clash names the item with its abbreviation (R24).
+        app.execute(
+            &ctx,
+            Command::UpdateProject {
+                id: ProjectId::new(1),
+                name: "Web".into(),
+                abbreviation: Some("W".into()),
+            },
+        )
+        .unwrap();
+        let err = app
+            .execute(
+                &ctx,
+                Command::CreateProject {
+                    client: ClientId::new(1),
+                    name: "Mobile".into(),
+                    abbreviation: Some("w".into()),
+                },
+            )
+            .unwrap_err();
+        assert_eq!(
+            UiError::from_app(err, &app, &ctx).message,
+            "The abbreviation is already used by project \"Web\" (W)"
         );
 
         let err = app.execute(&ctx, Command::Stop { at: None }).unwrap_err();

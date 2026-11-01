@@ -9,13 +9,15 @@ export interface ComboChoice {
   task: TaskPick | null;
 }
 
-/** The combo without its task, labelled "Client / Project". */
+/** The combo without its task, labelled "Client / Project" (short: with abbreviations, R24). */
 export function projectOnly(combo: ComboDto): ComboDto {
   return {
     ...combo,
     task: null,
     taskName: null,
+    taskAbbreviation: null,
     label: `${combo.clientName} / ${combo.projectName}`,
+    shortLabel: `${combo.clientAbbreviation ?? combo.clientName} / ${combo.projectAbbreviation ?? combo.projectName}`,
   };
 }
 

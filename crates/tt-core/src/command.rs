@@ -9,31 +9,41 @@ use crate::{ClientId, EntryId, ProjectId, RoundingRule, Settings, TaskId};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Command {
+    /// Abbreviations are optional everywhere: `None` or blank text means none (R24).
     CreateClient {
         name: String,
+        abbreviation: Option<String>,
         rule: RoundingRule,
     },
-    /// Renames a client and/or changes its rounding rule (R17, R19).
+    /// Renames a client, sets its abbreviation and/or changes its rounding rule (R17, R19,
+    /// R24).
     UpdateClient {
         id: ClientId,
         name: String,
+        abbreviation: Option<String>,
         rule: RoundingRule,
     },
     CreateProject {
         client: ClientId,
         name: String,
+        abbreviation: Option<String>,
     },
-    RenameProject {
+    /// Renames a project and/or sets its abbreviation (R24).
+    UpdateProject {
         id: ProjectId,
         name: String,
+        abbreviation: Option<String>,
     },
     CreateTask {
         project: ProjectId,
         name: String,
+        abbreviation: Option<String>,
     },
-    RenameTask {
+    /// Renames a task and/or sets its abbreviation (R24).
+    UpdateTask {
         id: TaskId,
         name: String,
+        abbreviation: Option<String>,
     },
     UpdateSettings {
         settings: Settings,

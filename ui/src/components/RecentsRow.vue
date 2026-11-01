@@ -25,10 +25,10 @@ function startCombo(combo: ComboDto) {
       <Button
         v-for="combo in recents"
         :key="`${combo.project}-${combo.task}`"
-        :label="combo.label"
+        :label="combo.shortLabel"
         :severity="isRunning(combo) ? undefined : 'secondary'"
         :outlined="!isRunning(combo)"
-        :title="isRunning(combo) ? 'Running' : 'Start ' + combo.label"
+        :title="(isRunning(combo) ? 'Running: ' : 'Start ') + combo.label"
         size="small"
         @click="startCombo(combo)"
       />

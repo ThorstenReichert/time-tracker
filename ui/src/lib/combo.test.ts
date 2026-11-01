@@ -10,11 +10,22 @@ const review: ComboDto = {
   projectName: "Web",
   taskName: "Review",
   label: "Acme / Web / Review",
+  clientAbbreviation: null,
+  projectAbbreviation: "W",
+  taskAbbreviation: "Rev",
+  shortLabel: "Acme / W / Rev",
 };
 
 describe("combo choices", () => {
   it("drops the task from a combo", () => {
-    expect(projectOnly(review)).toEqual({ ...review, task: null, taskName: null, label: "Acme / Web" });
+    expect(projectOnly(review)).toEqual({
+      ...review,
+      task: null,
+      taskName: null,
+      taskAbbreviation: null,
+      label: "Acme / Web",
+      shortLabel: "Acme / W",
+    });
   });
 
   it("picks a combo with its task", () => {

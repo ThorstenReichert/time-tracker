@@ -8,9 +8,15 @@ use crate::{ClientId, EntryId, Instant, ProjectId, TaskId};
 pub enum DomainError {
     #[error("invalid name: {0}")]
     InvalidName(NameProblem),
-    /// Names are unique within their parent, ignoring case; archived items count too (OQ-7).
+    #[error("invalid abbreviation: {0}")]
+    InvalidAbbreviation(NameProblem),
+    /// Names and abbreviations share one namespace per parent, ignoring case; archived items
+    /// count too (R1, R24, OQ-7). The new name clashes with `existing`.
     #[error("the name is already used by {existing}")]
     DuplicateName { existing: ItemRef },
+    /// The new abbreviation clashes with the name or abbreviation of `existing` (R24).
+    #[error("the abbreviation is already used by {existing}")]
+    DuplicateAbbreviation { existing: ItemRef },
     #[error("unknown client {0}")]
     UnknownClient(ClientId),
     #[error("unknown project {0}")]

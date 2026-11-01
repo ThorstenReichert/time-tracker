@@ -36,6 +36,7 @@ fn a_backup_is_a_complete_single_file_copy() {
         &ctx,
         [Command::CreateClient {
             name: "Acme".into(),
+            abbreviation: None,
             rule: RoundingRule::default(),
         }],
     );

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 import { useTimerStore } from "../stores/timer";
 import { fakeBackend, uiError } from "../test/backend";
-import { acmeWebReview, runningEntry } from "../test/fixtures";
+import { acmeWebReview, combo, runningEntry } from "../test/fixtures";
 import { mountInApp, withOverlays } from "../test/mount";
 import { clickButton, dialog } from "../test/page";
 import RunningBar from "./RunningBar.vue";
@@ -32,6 +32,16 @@ describe("RunningBar", () => {
     expect(wrapper.get(".elapsed").text()).toBe("1:22:00");
     await vi.advanceTimersByTimeAsync(2000);
     expect(wrapper.get(".elapsed").text()).toBe("1:22:02");
+  });
+
+  it("shows the running combo's short label, the full one on hover (R24)", async () => {
+    fakeBackend({});
+    const wrapper = mountInApp(withOverlays(RunningBar));
+    useTimerStore().running = runningEntry(combo(9, 9, 9, ["Northwind Instruments", "adaptive signal calibration pipeline", "Review"], ["NWI", "ASCP", "Rev"]), 60);
+    await flushPromises();
+    const label = wrapper.get(".label");
+    expect(label.text()).toBe("NWI / ASCP / Rev");
+    expect(label.attributes("title")).toBe("Northwind Instruments / adaptive signal calibration pipeline / Review");
   });
 
   it("stops the timer now", async () => {

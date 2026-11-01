@@ -49,7 +49,7 @@ const task = computed<TaskPick | null>({
     <AutoComplete
       v-model="projectText"
       :suggestions="suggestions"
-      option-label="label"
+      option-label="shortLabel"
       placeholder="Client / Project (type to search)"
       dropdown
       complete-on-focus
@@ -57,7 +57,11 @@ const task = computed<TaskPick | null>({
       fluid
       @complete="complete"
       @option-select="select"
-    />
+    >
+      <template #option="{ option }">
+        <span :title="option.label">{{ option.shortLabel }}</span>
+      </template>
+    </AutoComplete>
     <TaskInput v-model="task" :project="model?.project.project ?? null" />
   </div>
 </template>

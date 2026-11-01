@@ -4,9 +4,9 @@
 
 use rusqlite::Row;
 use tt_core::{
-    Catalog, Client, ClientId, Counters, DecimalSeparator, Entries, Entry, EntryId, Instant, Name,
-    Note, Project, ProjectId, RoundingDirection, RoundingLevel, RoundingRule, RoundingUnit,
-    Settings, State, Task, TaskId,
+    Abbreviation, Catalog, Client, ClientId, Counters, DecimalSeparator, Entries, Entry, EntryId,
+    Instant, Name, Note, Project, ProjectId, RoundingDirection, RoundingLevel, RoundingRule,
+    RoundingUnit, Settings, State, Task, TaskId,
 };
 
 use crate::{Store, StoreError, keys};
@@ -25,6 +25,11 @@ fn opt_instant(seconds: Option<i64>) -> Result<Option<Instant>, StoreError> {
 
 fn name(text: &str) -> Result<Name, StoreError> {
     Name::parse(text).map_err(|e| corrupt(format!("name {text:?}: {e}")))
+}
+
+fn abbreviation(text: Option<String>) -> Result<Option<Abbreviation>, StoreError> {
+    text.map(|t| Abbreviation::parse(&t).map_err(|e| corrupt(format!("abbreviation {t:?}: {e}"))))
+        .transpose()
 }
 
 fn id(raw: i64) -> Result<u64, StoreError> {
@@ -62,7 +67,8 @@ impl Store {
 
     fn load_clients(&self) -> Result<Vec<Client>, StoreError> {
         self.rows(
-            "SELECT id, name, round_unit_min, round_direction, round_level, archived_at, created_at
+            "SELECT id, name, round_unit_min, round_direction, round_level, archived_at, created_at,
+                    abbreviation
              FROM client",
             |r| {
                 let unit: u32 = r.get(2)?;
@@ -71,6 +77,7 @@ impl Store {
                 Ok(Client {
                     id: ClientId::new(id(r.get(0)?)?),
                     name: name(&r.get::<_, String>(1)?)?,
+                    abbreviation: abbreviation(r.get(7)?)?,
                     rule: RoundingRule {
                         unit: RoundingUnit::from_minutes(unit)
                             .ok_or_else(|| corrupt(format!("rounding unit {unit}")))?,
@@ -88,12 +95,13 @@ impl Store {
 
     fn load_projects(&self) -> Result<Vec<Project>, StoreError> {
         self.rows(
-            "SELECT id, client_id, name, archived_at, created_at FROM project",
+            "SELECT id, client_id, name, archived_at, created_at, abbreviation FROM project",
             |r| {
                 Ok(Project {
                     id: ProjectId::new(id(r.get(0)?)?),
                     client: ClientId::new(id(r.get(1)?)?),
                     name: name(&r.get::<_, String>(2)?)?,
+                    abbreviation: abbreviation(r.get(5)?)?,
                     archived_at: opt_instant(r.get(3)?)?,
                     created_at: instant(r.get(4)?)?,
                 })
@@ -103,12 +111,13 @@ impl Store {
 
     fn load_tasks(&self) -> Result<Vec<Task>, StoreError> {
         self.rows(
-            "SELECT id, project_id, name, archived_at, created_at FROM task",
+            "SELECT id, project_id, name, archived_at, created_at, abbreviation FROM task",
             |r| {
                 Ok(Task {
                     id: TaskId::new(id(r.get(0)?)?),
                     project: ProjectId::new(id(r.get(1)?)?),
                     name: name(&r.get::<_, String>(2)?)?,
+                    abbreviation: abbreviation(r.get(5)?)?,
                     archived_at: opt_instant(r.get(3)?)?,
                     created_at: instant(r.get(4)?)?,
                 })

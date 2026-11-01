@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// Clients with their rounding rule, their projects and tasks: create and rename (R1, R17).
+// Clients with their rounding rule, their projects and tasks: create, rename and abbreviate
+// (R1, R17, R24).
 // Archiving comes in slice 2 (R2).
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
-import { commands, type RuleDto } from "../bindings";
+import { commands, type RuleDto, type TaskDto } from "../bindings";
 import ClientDialog from "../components/ClientDialog.vue";
-import NameDialog from "../components/NameDialog.vue";
+import NameDialog, { type Naming } from "../components/NameDialog.vue";
 import { call } from "../lib/api";
 import { formatRule } from "../lib/format";
 import { useCatalogStore, type ClientNode, type ProjectNode } from "../stores/catalog";
@@ -17,15 +18,15 @@ const { tree } = storeToRefs(useCatalogStore());
 const clientDialog = ref({
   visible: false,
   header: "",
-  initial: undefined as { name: string; rule: RuleDto } | undefined,
-  save: async (_name: string, _rule: RuleDto) => {},
+  initial: undefined as (Naming & { rule: RuleDto }) | undefined,
+  save: async (_name: string, _abbreviation: string | null, _rule: RuleDto) => {},
 });
 const nameDialog = ref({
   visible: false,
   header: "",
   label: "Name",
-  initial: undefined as string | undefined,
-  save: async (_name: string) => {},
+  initial: undefined as Naming | undefined,
+  save: async (_name: string, _abbreviation: string | null) => {},
 });
 
 function newClient() {
@@ -33,8 +34,8 @@ function newClient() {
     visible: true,
     header: "New client",
     initial: undefined,
-    save: async (name, rule) => {
-      await call(commands.createClient(name, rule));
+    save: async (name, abbreviation, rule) => {
+      await call(commands.createClient(name, abbreviation, rule));
     },
   };
 }
@@ -43,33 +44,49 @@ function editClient(client: ClientNode) {
   clientDialog.value = {
     visible: true,
     header: `Edit client ${client.name}`,
-    initial: { name: client.name, rule: client.rule },
-    save: async (name, rule) => {
-      await call(commands.updateClient(client.id, name, rule));
+    initial: { name: client.name, abbreviation: client.abbreviation, rule: client.rule },
+    save: async (name, abbreviation, rule) => {
+      await call(commands.updateClient(client.id, name, abbreviation, rule));
     },
   };
 }
 
-function askName(header: string, initial: string | undefined, save: (name: string) => Promise<unknown>) {
+function askName(
+  header: string,
+  initial: Naming | undefined,
+  save: (name: string, abbreviation: string | null) => Promise<unknown>,
+) {
   nameDialog.value = {
     visible: true,
     header,
     label: "Name",
     initial,
-    save: async (name) => {
-      await save(name);
+    save: async (name, abbreviation) => {
+      await save(name, abbreviation);
     },
   };
 }
 
 const newProject = (client: ClientNode) =>
-  askName(`New project for ${client.name}`, undefined, (name) => call(commands.createProject(client.id, name)));
-const renameProject = (project: ProjectNode) =>
-  askName(`Rename project ${project.name}`, project.name, (name) => call(commands.renameProject(project.id, name)));
+  askName(`New project for ${client.name}`, undefined, (name, abbreviation) =>
+    call(commands.createProject(client.id, name, abbreviation)),
+  );
+const editProject = (project: ProjectNode) =>
+  askName(`Edit project ${project.name}`, project, (name, abbreviation) =>
+    call(commands.updateProject(project.id, name, abbreviation)),
+  );
 const newTask = (project: ProjectNode) =>
-  askName(`New task for ${project.name}`, undefined, (name) => call(commands.createTask(project.id, name)));
-const renameTask = (task: { id: number; name: string }) =>
-  askName(`Rename task ${task.name}`, task.name, (name) => call(commands.renameTask(task.id, name)));
+  askName(`New task for ${project.name}`, undefined, (name, abbreviation) =>
+    call(commands.createTask(project.id, name, abbreviation)),
+  );
+const editTask = (task: TaskDto) =>
+  askName(`Edit task ${task.name}`, task, (name, abbreviation) =>
+    call(commands.updateTask(task.id, name, abbreviation)),
+  );
+
+/** "Name (ABBR)" for a task button, or just the name. */
+const withAbbreviation = (item: Naming) =>
+  item.abbreviation === null ? item.name : `${item.name} (${item.abbreviation})`;
 </script>
 
 <template>
@@ -83,6 +100,9 @@ const renameTask = (task: { id: number; name: string }) =>
     <section v-for="client in tree" :key="client.id" class="client">
       <div class="row">
         <strong class="client-name">{{ client.name }}</strong>
+        <span v-if="client.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
+          client.abbreviation
+        }}</span>
         <span class="muted">{{ formatRule(client.rule) }}</span>
         <span class="spacer"></span>
         <Button label="Edit" text size="small" @click="editClient(client)" />
@@ -92,20 +112,23 @@ const renameTask = (task: { id: number; name: string }) =>
       <div v-for="project in client.projects" :key="project.id" class="project indent">
         <div class="row">
           <span class="project-name">{{ project.name }}</span>
+          <span v-if="project.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
+            project.abbreviation
+          }}</span>
           <span class="spacer"></span>
-          <Button label="Rename" text size="small" @click="renameProject(project)" />
+          <Button label="Edit" text size="small" @click="editProject(project)" />
           <Button label="New task" text size="small" @click="newTask(project)" />
         </div>
         <div v-if="project.tasks.length" class="tasks">
           <Button
             v-for="task in project.tasks"
             :key="task.id"
-            :label="task.name"
-            title="Rename"
+            :label="withAbbreviation(task)"
+            title="Edit"
             severity="secondary"
             outlined
             size="small"
-            @click="renameTask(task)"
+            @click="editTask(task)"
           />
         </div>
       </div>
@@ -149,6 +172,13 @@ const renameTask = (task: { id: number; name: string }) =>
 }
 .client-name {
   font-size: 1.1rem;
+}
+.abbreviation {
+  font-size: 0.85rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 4px;
+  color: var(--p-text-muted-color);
 }
 .indent {
   margin-left: 1.25rem;

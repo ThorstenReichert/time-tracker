@@ -3,9 +3,9 @@
 
 use tt_core::testing::{ctx_berlin, given, run, when};
 use tt_core::{
-    Catalog, Client, ClientId, Command, Counters, DecimalSeparator, DomainError, Entries, Event,
-    ItemRef, Name, NameProblem, ProjectId, RoundingDirection, RoundingLevel, RoundingRule,
-    RoundingUnit, SettingProblem, Settings, State, TaskId,
+    Abbreviation, Catalog, Client, ClientId, Command, Counters, DecimalSeparator, DomainError,
+    Entries, Event, ItemRef, Name, NameProblem, ProjectId, RoundingDirection, RoundingLevel,
+    RoundingRule, RoundingUnit, SettingProblem, Settings, State, TaskId,
 };
 
 fn ctx() -> tt_core::Ctx {
@@ -15,6 +15,7 @@ fn ctx() -> tt_core::Ctx {
 fn create_client(name: &str) -> Command {
     Command::CreateClient {
         name: name.into(),
+        abbreviation: None,
         rule: RoundingRule::default(),
     }
 }
@@ -23,6 +24,7 @@ fn create_project(client: u64, name: &str) -> Command {
     Command::CreateProject {
         client: ClientId::new(client),
         name: name.into(),
+        abbreviation: None,
     }
 }
 
@@ -30,6 +32,7 @@ fn create_task(project: u64, name: &str) -> Command {
     Command::CreateTask {
         project: ProjectId::new(project),
         name: name.into(),
+        abbreviation: None,
     }
 }
 
@@ -60,6 +63,7 @@ fn create_client_emits_the_full_row_with_the_next_id() {
         &ctx(),
         Command::CreateClient {
             name: "  Acme ".into(),
+            abbreviation: None,
             rule,
         },
     )
@@ -70,6 +74,7 @@ fn create_client_emits_the_full_row_with_the_next_id() {
             client: Client {
                 id: ClientId::new(1),
                 name: Name::parse("Acme").unwrap(),
+                abbreviation: None,
                 rule,
                 archived_at: None,
                 created_at: ctx().now,
@@ -129,6 +134,7 @@ fn update_client_renames_and_changes_the_rule() {
         Command::UpdateClient {
             id: ClientId::new(1),
             name: "Acme GmbH".into(),
+            abbreviation: None,
             rule,
         },
     )
@@ -138,6 +144,7 @@ fn update_client_renames_and_changes_the_rule() {
         [Event::ClientUpdated {
             id: ClientId::new(1),
             name: Name::parse("Acme GmbH").unwrap(),
+            abbreviation: None,
             rule
         }]
     );
@@ -153,6 +160,7 @@ fn a_case_only_rename_of_the_item_itself_is_allowed() {
         Command::UpdateClient {
             id: ClientId::new(1),
             name: "ACME".into(),
+            abbreviation: None,
             rule: RoundingRule::default(),
         },
     )
@@ -161,9 +169,10 @@ fn a_case_only_rename_of_the_item_itself_is_allowed() {
     let (events, _) = when(
         &acme_and_beta(),
         &ctx(),
-        Command::RenameTask {
+        Command::UpdateTask {
             id: TaskId::new(1),
             name: "review".into(),
+            abbreviation: None,
         },
     )
     .unwrap();
@@ -178,6 +187,7 @@ fn renaming_to_another_items_name_is_rejected() {
         Command::UpdateClient {
             id: ClientId::new(2),
             name: "acme".into(),
+            abbreviation: None,
             rule: RoundingRule::default(),
         },
     )
@@ -195,9 +205,10 @@ fn an_unchanged_update_emits_nothing() {
     let (events, _) = when(
         &acme_and_beta(),
         &ctx(),
-        Command::RenameProject {
+        Command::UpdateProject {
             id: ProjectId::new(1),
             name: "Web".into(),
+            abbreviation: None,
         },
     )
     .unwrap();
@@ -244,9 +255,10 @@ fn unknown_parents_are_rejected() {
         when(
             &state,
             &ctx(),
-            Command::RenameTask {
+            Command::UpdateTask {
                 id: TaskId::new(9),
-                name: "X".into()
+                name: "X".into(),
+                abbreviation: None,
             }
         )
         .unwrap_err(),
@@ -338,6 +350,7 @@ fn loaded_data_that_breaks_an_invariant_is_detected() {
     let client = |id: u64, name: &str| Client {
         id: ClientId::new(id),
         name: Name::parse(name).unwrap(),
+        abbreviation: None,
         rule: RoundingRule::default(),
         archived_at: None,
         created_at: ctx().now,
@@ -379,9 +392,223 @@ fn commands_and_events_serialise_as_tagged_plain_data() {
     let json = serde_json::to_string(&create_client("Acme")).unwrap();
     assert_eq!(
         json,
-        r#"{"type":"CreateClient","name":"Acme","rule":{"unit":15,"direction":"nearest","level":"project"}}"#
+        r#"{"type":"CreateClient","name":"Acme","abbreviation":null,"rule":{"unit":15,"direction":"nearest","level":"project"}}"#
     );
     let state = acme_and_beta();
     let round_trip: State = serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
     assert_eq!(round_trip, state);
+}
+
+// Abbreviations (R24) and the shared namespace of names and abbreviations (R1).
+
+fn abbr(text: &str) -> Option<String> {
+    Some(text.into())
+}
+
+fn update_project(id: u64, name: &str, abbreviation: Option<String>) -> Command {
+    Command::UpdateProject {
+        id: ProjectId::new(id),
+        name: name.into(),
+        abbreviation,
+    }
+}
+
+/// Acme (1) with Web (1, "W") and its task Review (1, "Rev"), and Mobile (3).
+fn with_abbreviations() -> State {
+    run(
+        acme_and_beta(),
+        &ctx(),
+        [
+            update_project(1, "Web", abbr("W")),
+            Command::UpdateTask {
+                id: TaskId::new(1),
+                name: "Review".into(),
+                abbreviation: abbr("Rev"),
+            },
+            create_project(1, "Mobile"),
+        ],
+    )
+}
+
+const LONG: &str = "Northwind Instruments: adaptive signal calibration pipeline";
+
+#[test]
+fn an_abbreviation_is_set_on_create_and_changed_or_removed_on_update() {
+    let (events, state) = when(
+        &acme_and_beta(),
+        &ctx(),
+        Command::CreateProject {
+            client: ClientId::new(1),
+            name: LONG.into(),
+            abbreviation: abbr(" ASCP "),
+        },
+    )
+    .unwrap();
+    let Event::ProjectCreated { project } = &events[0] else {
+        panic!("{events:?}");
+    };
+    assert_eq!(
+        project.abbreviation,
+        Some(Abbreviation::parse("ASCP").unwrap())
+    );
+    assert_eq!(project.short_name(), "ASCP");
+
+    let (events, state) = when(&state, &ctx(), update_project(3, LONG, abbr("ascp2"))).unwrap();
+    assert_eq!(
+        events,
+        [Event::ProjectUpdated {
+            id: ProjectId::new(3),
+            name: Name::parse(LONG).unwrap(),
+            abbreviation: Some(Abbreviation::parse("ascp2").unwrap()),
+        }]
+    );
+    // Blank text removes it.
+    let (events, state) = when(&state, &ctx(), update_project(3, LONG, abbr("  "))).unwrap();
+    assert!(matches!(
+        &events[..],
+        [Event::ProjectUpdated {
+            abbreviation: None,
+            ..
+        }]
+    ));
+    let project = state.catalog().project(ProjectId::new(3)).unwrap();
+    assert_eq!(project.short_name(), LONG);
+}
+
+#[test]
+fn an_update_without_a_change_emits_nothing() {
+    let state = with_abbreviations();
+    let (events, _) = when(&state, &ctx(), update_project(1, "Web", abbr("W"))).unwrap();
+    assert!(events.is_empty());
+    let (events, _) = when(&state, &ctx(), update_project(1, "Web", abbr("w"))).unwrap();
+    assert_eq!(events.len(), 1, "a case change is a change");
+}
+
+#[test]
+fn an_abbreviation_may_not_clash_with_a_sibling_name_or_abbreviation() {
+    let state = with_abbreviations();
+    let web = ItemRef::Project(ProjectId::new(1));
+    // New abbreviation vs a sibling's name and abbreviation, ignoring case.
+    for clash in ["web", "w"] {
+        assert_eq!(
+            when(&state, &ctx(), update_project(3, "Mobile", abbr(clash))).unwrap_err(),
+            DomainError::DuplicateAbbreviation { existing: web },
+            "{clash}"
+        );
+    }
+    // New name vs a sibling's abbreviation.
+    assert_eq!(
+        when(&state, &ctx(), update_project(3, "W", None)).unwrap_err(),
+        DomainError::DuplicateName { existing: web }
+    );
+    assert_eq!(
+        when(&state, &ctx(), create_project(1, "w")).unwrap_err(),
+        DomainError::DuplicateName { existing: web }
+    );
+    // Tasks and clients follow the same rule.
+    assert_eq!(
+        when(&state, &ctx(), create_task(1, "REV")).unwrap_err(),
+        DomainError::DuplicateName {
+            existing: ItemRef::Task(TaskId::new(1))
+        }
+    );
+    assert_eq!(
+        when(
+            &state,
+            &ctx(),
+            Command::CreateClient {
+                name: "Gamma".into(),
+                abbreviation: abbr("beta"),
+                rule: RoundingRule::default(),
+            }
+        )
+        .unwrap_err(),
+        DomainError::DuplicateAbbreviation {
+            existing: ItemRef::Client(ClientId::new(2))
+        }
+    );
+}
+
+#[test]
+fn the_namespace_is_per_parent_and_an_item_may_reuse_its_own_name() {
+    let state = with_abbreviations();
+    // Another client's project may use the same abbreviation.
+    assert!(when(&state, &ctx(), update_project(2, "API", abbr("W"))).is_ok());
+    // An item's abbreviation may equal its own name.
+    assert!(when(&state, &ctx(), update_project(1, "Web", abbr("WEB"))).is_ok());
+    // A task created on the fly (R3) can't take a sibling's abbreviation as its name.
+    assert_eq!(
+        when(
+            &state,
+            &ctx(),
+            Command::Start {
+                project: ProjectId::new(1),
+                task: tt_core::TaskChoice::New("rev".into()),
+            }
+        )
+        .unwrap_err(),
+        DomainError::DuplicateName {
+            existing: ItemRef::Task(TaskId::new(1))
+        }
+    );
+}
+
+#[test]
+fn invalid_abbreviations_are_rejected() {
+    let state = acme_and_beta();
+    assert_eq!(
+        when(
+            &state,
+            &ctx(),
+            update_project(1, "Web", abbr(&"x".repeat(21)))
+        )
+        .unwrap_err(),
+        DomainError::InvalidAbbreviation(NameProblem::TooLong {
+            max: Abbreviation::MAX_CHARS
+        })
+    );
+    assert_eq!(
+        when(&state, &ctx(), update_project(1, "Web", abbr("a\nb"))).unwrap_err(),
+        DomainError::InvalidAbbreviation(NameProblem::ControlCharacter)
+    );
+}
+
+#[test]
+fn loaded_data_with_a_name_clashing_with_an_abbreviation_is_detected() {
+    let client = |id: u64, name: &str, abbreviation: Option<&str>| Client {
+        id: ClientId::new(id),
+        name: Name::parse(name).unwrap(),
+        abbreviation: abbreviation.map(|a| Abbreviation::parse(a).unwrap()),
+        rule: RoundingRule::default(),
+        archived_at: None,
+        created_at: ctx().now,
+    };
+    let counters = Counters {
+        next_client: 3,
+        ..Counters::default()
+    };
+    let valid = |clients: [Client; 2]| {
+        State::from_parts(
+            Catalog::from_parts(clients, [], [], Settings::default(), counters),
+            Entries::default(),
+        )
+        .check_invariants()
+        .is_ok()
+    };
+    assert!(valid([
+        client(1, "Acme", Some("ACME")),
+        client(2, "Beta", Some("B"))
+    ]));
+    assert!(valid([
+        client(1, "Acme", Some("B")),
+        client(2, "Beta", None)
+    ]));
+    assert!(!valid([
+        client(1, "Acme", Some("beta")),
+        client(2, "Beta", None)
+    ]));
+    assert!(!valid([
+        client(1, "Acme", Some("X")),
+        client(2, "Beta", Some("x"))
+    ]));
 }

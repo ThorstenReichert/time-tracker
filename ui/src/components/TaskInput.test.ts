@@ -44,6 +44,19 @@ describe("TaskInput", () => {
     expect(pick()).toEqual({ kind: "existing", id: 1, name: "Review" });
   });
 
+  it("shows a task's abbreviation muted next to its name (R24)", async () => {
+    fakeBackend({
+      task_matches: (): TaskMatchesDto => ({
+        tasks: [{ id: 1, project: 1, name: "Review", abbreviation: "Rev", archived: false }],
+        offerCreate: null,
+      }),
+    });
+    const wrapper = mountInApp(TaskInput, { props: { modelValue: null, project: 1 } });
+    await typeAhead(wrapper.get("input"), "rev");
+    const option = document.querySelector(".p-autocomplete-option");
+    expect(option?.querySelector(".hint")?.textContent).toBe("Rev");
+  });
+
   it("offers Create for a new name and picks it as a new task (R3)", async () => {
     const { input, pick } = taskInput(1);
     await typeAhead(input, "Deploy");

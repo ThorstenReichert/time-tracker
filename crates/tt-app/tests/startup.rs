@@ -66,10 +66,12 @@ fn the_backup_folder_setting_and_the_override_are_honoured() {
     assert_eq!(files_in(&other), ["timetracker-20261017T090000Z.db"]);
 }
 
+/// The real migrations plus one more, so an existing database has one pending.
 static WITH_TEST_MIGRATION: &[Migration] = &[
     MIGRATIONS[0],
+    MIGRATIONS[1],
     Migration {
-        version: 2,
+        version: 3,
         name: "test marker",
         sql: "CREATE TABLE test_marker (id INTEGER PRIMARY KEY) STRICT;",
     },

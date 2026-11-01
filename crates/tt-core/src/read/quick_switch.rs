@@ -1,6 +1,6 @@
 //! Quick-switch matching (R6): fuzzy filtering over the active "Client / Project / Task"
-//! combos, ranked by match score, then recency, then label. Ranking is tuned during use
-//! (OQ-2).
+//! combos, names and abbreviations alike (R24), ranked by match score, then recency, then
+//! label. Ranking is tuned during use (OQ-2).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -16,7 +16,7 @@ pub const QUICK_SWITCH_LIMIT: usize = 50;
 
 /// The popup's and the pickers' list for `query`. A blank query gives the recents, then the
 /// other active combos by label; otherwise every active combo (each task, plus the project
-/// without a task) whose label matches all words of the query, best first. `recents` is
+/// without a task) whose names and abbreviations match all words of the query, best first. `recents` is
 /// newest first and may be longer than `recents_n`: all of it ranks typed matches, and its
 /// first `recents_n` active combos are the recents of a blank query.
 pub fn quick_switch(catalog: &Catalog, recents: &[Combo], query: &str) -> Vec<ComboRow> {
@@ -36,7 +36,8 @@ pub fn quick_switch(catalog: &Catalog, recents: &[Combo], query: &str) -> Vec<Co
     let mut buf = Vec::new();
     let mut scored: Vec<(u32, usize, String, ComboRow)> = candidates(catalog)
         .filter_map(|row| {
-            let score = pattern.score(Utf32Str::new(&row.label, &mut buf), &mut matcher)?;
+            let text = row.match_text();
+            let score = pattern.score(Utf32Str::new(&text, &mut buf), &mut matcher)?;
             let rank = recency.get(&row.combo).copied().unwrap_or(usize::MAX);
             Some((score, rank, row.label.to_lowercase(), row))
         })

@@ -356,3 +356,53 @@ fn assert_refused(local_app_data: &Path, cwd: &Path, db: &Path) {
         "{db:?}"
     );
 }
+
+#[test]
+fn abbreviations_are_set_matched_and_removed() {
+    let s = Scenario::new();
+    catalog(&s);
+    let now = "2026-10-17T09:00";
+    s.ok(
+        now,
+        &[
+            "project",
+            "add",
+            "--client",
+            "1",
+            "adaptive signal calibration pipeline",
+            "--abbr",
+            "ASCP",
+        ],
+    );
+    s.ok(
+        now,
+        &["task", "add", "--project", "4", "Review", "--abbr", "Rev"],
+    );
+    s.ok(now, &["client", "edit", "1", "--abbr", "AC"]);
+    let matches = s.ok(now, &["quick-switch", "ascp rev"]);
+    assert_eq!(matches[0]["short_label"], "AC / ASCP / Rev");
+    assert_eq!(
+        matches[0]["label"],
+        "Acme / adaptive signal calibration pipeline / Review"
+    );
+
+    // A name may not clash with a sibling's abbreviation (exit 3).
+    let out = s.run(now, &["project", "edit", "1", "--name", "ascp"]);
+    assert_eq!(out.status.code(), Some(3));
+    let err = stderr_json(&out);
+    assert!(err.to_string().contains("DuplicateName"), "{err}");
+
+    // Renaming keeps the abbreviation; an empty --abbr removes it.
+    s.ok(
+        now,
+        &["project", "edit", "4", "--name", "Adaptive calibration"],
+    );
+    let state = s.ok(now, &["state"]);
+    assert_eq!(state["catalog"]["projects"]["4"]["abbreviation"], "ASCP");
+    s.ok(now, &["project", "edit", "4", "--abbr", ""]);
+    let state = s.ok(now, &["state"]);
+    assert_eq!(
+        state["catalog"]["projects"]["4"]["abbreviation"],
+        Value::Null
+    );
+}

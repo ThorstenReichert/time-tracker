@@ -2,6 +2,7 @@
 //! invariants, rounding and read models. Pure and deterministic: no IO, no clock, no
 //! time-zone lookup. Everything non-deterministic comes in through [`Ctx`].
 
+mod abbreviation;
 mod catalog;
 mod command;
 mod ctx;
@@ -23,6 +24,7 @@ mod state;
 #[cfg(feature = "test-support")]
 pub mod testing;
 
+pub use abbreviation::Abbreviation;
 pub use catalog::{Catalog, Client, Counters, DecimalSeparator, Project, Settings, Task};
 pub use command::{Command, TaskChoice};
 pub use ctx::Ctx;

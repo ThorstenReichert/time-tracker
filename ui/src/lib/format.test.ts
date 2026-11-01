@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decimalMark, formatDiff, formatDuration, formatElapsed, formatHours, formatRule } from "./format";
+import { blankToNull, decimalMark, formatDiff, formatDuration, formatElapsed, formatHours, formatRule } from "./format";
 
 describe("formatElapsed", () => {
   it("shows hours, minutes and seconds", () => {
@@ -77,5 +77,13 @@ describe("decimalMark", () => {
 describe("formatRule", () => {
   it("names unit, direction and level", () => {
     expect(formatRule({ unit: 15, direction: "nearest", level: "project" })).toBe("15 min · nearest · per project");
+  });
+});
+
+describe("blankToNull", () => {
+  it("turns blank text into null and keeps the rest as typed", () => {
+    expect(blankToNull("")).toBeNull();
+    expect(blankToNull("   ")).toBeNull();
+    expect(blankToNull(" ASCP ")).toBe(" ASCP ");
   });
 });

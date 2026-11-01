@@ -51,3 +51,8 @@ export function formatDiff(seconds: number, mark: DecimalMark): string {
 export function formatRule(rule: RuleDto): string {
   return `${rule.unit} min · ${rule.direction} · per ${rule.level}`;
 }
+
+/** Optional text from a form field: blank means none (an abbreviation, R24). */
+export function blankToNull(text: string): string | null {
+  return text.trim() === "" ? null : text;
+}

@@ -1,22 +1,43 @@
-//! Catalog commands: clients, projects, tasks (R1, R3, R17) and settings.
+//! Catalog commands: clients, projects, tasks (R1, R3, R17, R24) and settings.
 
 use crate::error::{ItemRef, SettingProblem};
 use crate::{
-    Catalog, Client, ClientId, Ctx, DomainError, Event, Name, Project, ProjectId, RoundingRule,
-    Settings, Task, TaskId,
+    Abbreviation, Catalog, Client, ClientId, Ctx, DomainError, Event, Name, Project, ProjectId,
+    RoundingRule, Settings, Task, TaskId,
 };
+
+/// A name and an optional abbreviation as typed (R24).
+pub(super) type Typed<'a> = (&'a str, Option<&'a str>);
+
+/// A parsed name and abbreviation.
+struct Naming {
+    name: Name,
+    abbreviation: Option<Abbreviation>,
+}
+
+impl Naming {
+    fn parse((name, abbreviation): Typed<'_>) -> Result<Self, DomainError> {
+        Ok(Self {
+            name: Name::parse(name)?,
+            abbreviation: Abbreviation::parse_optional(abbreviation)?,
+        })
+    }
+}
 
 pub(super) fn create_client(
     catalog: &Catalog,
     ctx: &Ctx,
-    name: &str,
+    typed: Typed<'_>,
     rule: RoundingRule,
 ) -> Result<Vec<Event>, DomainError> {
-    let name = Name::parse(name)?;
-    ensure_client_name_free(catalog, &name, None)?;
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog.client_called(key).map(|c| ItemRef::Client(c.id))
+    })?;
     let client = Client {
         id: catalog.counters.client(),
         name,
+        abbreviation,
         rule,
         archived_at: None,
         created_at: ctx.now,
@@ -27,97 +48,135 @@ pub(super) fn create_client(
 pub(super) fn update_client(
     catalog: &Catalog,
     id: ClientId,
-    name: &str,
+    typed: Typed<'_>,
     rule: RoundingRule,
 ) -> Result<Vec<Event>, DomainError> {
     let client = catalog.client(id).ok_or(DomainError::UnknownClient(id))?;
-    let name = Name::parse(name)?;
-    ensure_client_name_free(catalog, &name, Some(id))?;
-    if client.name == name && client.rule == rule {
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog
+            .clients()
+            .find(|c| c.id != id && c.is_called(key))
+            .map(|c| ItemRef::Client(c.id))
+    })?;
+    if client.name == name && client.abbreviation == abbreviation && client.rule == rule {
         return Ok(vec![]);
     }
-    Ok(vec![Event::ClientUpdated { id, name, rule }])
+    Ok(vec![Event::ClientUpdated {
+        id,
+        name,
+        abbreviation,
+        rule,
+    }])
 }
 
 pub(super) fn create_project(
     catalog: &Catalog,
     ctx: &Ctx,
     client: ClientId,
-    name: &str,
+    typed: Typed<'_>,
 ) -> Result<Vec<Event>, DomainError> {
     catalog
         .client(client)
         .ok_or(DomainError::UnknownClient(client))?;
-    let name = Name::parse(name)?;
-    ensure_project_name_free(catalog, client, &name, None)?;
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog
+            .project_called(client, key)
+            .map(|p| ItemRef::Project(p.id))
+    })?;
     let project = Project {
         id: catalog.counters.project(),
         client,
         name,
+        abbreviation,
         archived_at: None,
         created_at: ctx.now,
     };
     Ok(vec![Event::ProjectCreated { project }])
 }
 
-pub(super) fn rename_project(
+pub(super) fn update_project(
     catalog: &Catalog,
     id: ProjectId,
-    name: &str,
+    typed: Typed<'_>,
 ) -> Result<Vec<Event>, DomainError> {
     let project = catalog.project(id).ok_or(DomainError::UnknownProject(id))?;
-    let name = Name::parse(name)?;
-    ensure_project_name_free(catalog, project.client, &name, Some(id))?;
-    if project.name == name {
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog
+            .projects_of(project.client)
+            .find(|p| p.id != id && p.is_called(key))
+            .map(|p| ItemRef::Project(p.id))
+    })?;
+    if project.name == name && project.abbreviation == abbreviation {
         return Ok(vec![]);
     }
-    Ok(vec![Event::ProjectRenamed { id, name }])
+    Ok(vec![Event::ProjectUpdated {
+        id,
+        name,
+        abbreviation,
+    }])
 }
 
 pub(super) fn create_task(
     catalog: &Catalog,
     ctx: &Ctx,
     project: ProjectId,
-    name: &str,
+    typed: Typed<'_>,
 ) -> Result<Vec<Event>, DomainError> {
-    let task = new_task(catalog, ctx, project, name)?;
+    let task = new_task(catalog, ctx, project, typed)?;
     Ok(vec![Event::TaskCreated { task }])
 }
 
 /// A new task for `project`, with the next task ID. Also used when an entry command creates
-/// its task on the fly (R3).
+/// its task on the fly (R3), without an abbreviation.
 pub(crate) fn new_task(
     catalog: &Catalog,
     ctx: &Ctx,
     project: ProjectId,
-    name: &str,
+    typed: Typed<'_>,
 ) -> Result<Task, DomainError> {
     catalog
         .project(project)
         .ok_or(DomainError::UnknownProject(project))?;
-    let name = Name::parse(name)?;
-    ensure_task_name_free(catalog, project, &name, None)?;
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog
+            .task_called(project, key)
+            .map(|t| ItemRef::Task(t.id))
+    })?;
     Ok(Task {
         id: catalog.counters.task(),
         project,
         name,
+        abbreviation,
         archived_at: None,
         created_at: ctx.now,
     })
 }
 
-pub(super) fn rename_task(
+pub(super) fn update_task(
     catalog: &Catalog,
     id: TaskId,
-    name: &str,
+    typed: Typed<'_>,
 ) -> Result<Vec<Event>, DomainError> {
     let task = catalog.task(id).ok_or(DomainError::UnknownTask(id))?;
-    let name = Name::parse(name)?;
-    ensure_task_name_free(catalog, task.project, &name, Some(id))?;
-    if task.name == name {
+    let Naming { name, abbreviation } = Naming::parse(typed)?;
+    ensure_free(&name, abbreviation.as_ref(), |key| {
+        catalog
+            .tasks_of(task.project)
+            .find(|t| t.id != id && t.is_called(key))
+            .map(|t| ItemRef::Task(t.id))
+    })?;
+    if task.name == name && task.abbreviation == abbreviation {
         return Ok(vec![]);
     }
-    Ok(vec![Event::TaskRenamed { id, name }])
+    Ok(vec![Event::TaskUpdated {
+        id,
+        name,
+        abbreviation,
+    }])
 }
 
 pub(super) fn update_settings(settings: &Settings) -> Result<Vec<Event>, DomainError> {
@@ -164,45 +223,20 @@ pub(crate) fn validate_settings(settings: &Settings) -> Result<(), SettingProble
     Ok(())
 }
 
-// Uniqueness (R1): `except` is the item being renamed, which may keep its own name in any case.
-
-fn ensure_client_name_free(
-    catalog: &Catalog,
+// Uniqueness (R1, R24): names and abbreviations share one namespace per parent, ignoring
+// case, archived items included (OQ-7). `sibling_called` finds another item of the same parent
+// whose name or abbreviation has the key; the item being updated is not its own sibling, so it
+// may keep its name in any case, or use its name as its abbreviation.
+fn ensure_free(
     name: &Name,
-    except: Option<ClientId>,
+    abbreviation: Option<&Abbreviation>,
+    sibling_called: impl Fn(&str) -> Option<ItemRef>,
 ) -> Result<(), DomainError> {
-    match catalog.client_named(name) {
-        Some(c) if Some(c.id) != except => Err(DomainError::DuplicateName {
-            existing: ItemRef::Client(c.id),
-        }),
-        _ => Ok(()),
+    if let Some(existing) = sibling_called(name.key()) {
+        return Err(DomainError::DuplicateName { existing });
     }
-}
-
-fn ensure_project_name_free(
-    catalog: &Catalog,
-    client: ClientId,
-    name: &Name,
-    except: Option<ProjectId>,
-) -> Result<(), DomainError> {
-    match catalog.project_named(client, name) {
-        Some(p) if Some(p.id) != except => Err(DomainError::DuplicateName {
-            existing: ItemRef::Project(p.id),
-        }),
-        _ => Ok(()),
+    if let Some(existing) = abbreviation.and_then(|a| sibling_called(a.key())) {
+        return Err(DomainError::DuplicateAbbreviation { existing });
     }
-}
-
-fn ensure_task_name_free(
-    catalog: &Catalog,
-    project: ProjectId,
-    name: &Name,
-    except: Option<TaskId>,
-) -> Result<(), DomainError> {
-    match catalog.task_named(project, name) {
-        Some(t) if Some(t.id) != except => Err(DomainError::DuplicateName {
-            existing: ItemRef::Task(t.id),
-        }),
-        _ => Ok(()),
-    }
+    Ok(())
 }

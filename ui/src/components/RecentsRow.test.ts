@@ -3,7 +3,7 @@ import { flushPromises } from "@vue/test-utils";
 import type { ComboDto } from "../bindings";
 import { useTimerStore } from "../stores/timer";
 import { fakeBackend, uiError, type Handler } from "../test/backend";
-import { acmeWeb, acmeWebReview, betaOps, runningEntry } from "../test/fixtures";
+import { acmeWeb, acmeWebReview, betaOps, combo, runningEntry } from "../test/fixtures";
 import { mountInApp, withOverlays } from "../test/mount";
 import RecentsRow from "./RecentsRow.vue";
 
@@ -27,8 +27,16 @@ describe("RecentsRow", () => {
   it("lists the recents and marks the running one (R7)", async () => {
     const { wrapper, button } = await recentsRow([acmeWebReview, betaOps], acmeWebReview);
     expect(wrapper.findAll("button").map((b) => b.text())).toEqual(["Acme / Web / Review", "Beta / Ops"]);
-    expect(button("Acme / Web / Review").attributes("title")).toBe("Running");
+    expect(button("Acme / Web / Review").attributes("title")).toBe("Running: Acme / Web / Review");
     expect(button("Beta / Ops").attributes("title")).toBe("Start Beta / Ops");
+  });
+
+  it("labels a recent with its short label and shows the full one on hover (R24)", async () => {
+    const ascp = combo(9, 9, 9, ["Northwind Instruments", "adaptive signal calibration pipeline", "Review"], ["NWI", "ASCP", "Rev"]);
+    const { button } = await recentsRow([ascp], null);
+    expect(button("NWI / ASCP / Rev").attributes("title")).toBe(
+      "Start Northwind Instruments / adaptive signal calibration pipeline / Review",
+    );
   });
 
   it("starts or switches with one click, with or without a task (R5, R7)", async () => {

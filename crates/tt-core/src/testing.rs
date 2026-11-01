@@ -74,24 +74,34 @@ pub struct Step {
 pub enum Op {
     CreateClient {
         name: u8,
+        abbreviation: Option<u8>,
         rule: RoundingRule,
     },
     UpdateClient {
         client: u8,
         name: u8,
+        abbreviation: Option<u8>,
         rule: RoundingRule,
     },
     CreateProject {
         client: u8,
         name: u8,
+        abbreviation: Option<u8>,
     },
-    RenameProject {
+    UpdateProject {
         project: u8,
         name: u8,
+        abbreviation: Option<u8>,
     },
     CreateTask {
         project: u8,
         name: u8,
+        abbreviation: Option<u8>,
+    },
+    UpdateTask {
+        task: u8,
+        name: u8,
+        abbreviation: Option<u8>,
     },
     Start {
         project: u8,
@@ -135,6 +145,8 @@ pub enum TaskPick {
 const NAMES: [&str; 8] = [
     "Acme", "acme", "Beta", "Web", "API", "Review", "Ops", " web ",
 ];
+/// Abbreviations (R24): some clash with the names above, one is blank (no abbreviation).
+const ABBREVIATIONS: [&str; 6] = ["ACM", "web", "Rev", "  ", "api", "X"];
 const NOTES: [&str; 4] = ["", "   ", "standup", "fixed bug\nand reviewed"];
 
 fn arb_rule() -> impl Strategy<Value = RoundingRule> {
@@ -162,16 +174,26 @@ fn arb_task_pick() -> impl Strategy<Value = TaskPick> {
     ]
 }
 
+fn abbreviation() -> impl Strategy<Value = Option<u8>> {
+    proptest::option::of(any::<u8>())
+}
+
 fn arb_op() -> impl Strategy<Value = Op> {
     let minutes_back = prop_oneof![9 => 0..600i32, 1 => -30..0i32];
     let length = prop_oneof![9 => 1..240i32, 1 => -10..1i32];
     prop_oneof![
-        2 => (any::<u8>(), arb_rule()).prop_map(|(name, rule)| Op::CreateClient { name, rule }),
-        1 => (any::<u8>(), any::<u8>(), arb_rule())
-            .prop_map(|(client, name, rule)| Op::UpdateClient { client, name, rule }),
-        3 => (any::<u8>(), any::<u8>()).prop_map(|(client, name)| Op::CreateProject { client, name }),
-        1 => (any::<u8>(), any::<u8>()).prop_map(|(project, name)| Op::RenameProject { project, name }),
-        2 => (any::<u8>(), any::<u8>()).prop_map(|(project, name)| Op::CreateTask { project, name }),
+        2 => (any::<u8>(), abbreviation(), arb_rule())
+            .prop_map(|(name, abbreviation, rule)| Op::CreateClient { name, abbreviation, rule }),
+        1 => (any::<u8>(), any::<u8>(), abbreviation(), arb_rule())
+            .prop_map(|(client, name, abbreviation, rule)| Op::UpdateClient { client, name, abbreviation, rule }),
+        3 => (any::<u8>(), any::<u8>(), abbreviation())
+            .prop_map(|(client, name, abbreviation)| Op::CreateProject { client, name, abbreviation }),
+        1 => (any::<u8>(), any::<u8>(), abbreviation())
+            .prop_map(|(project, name, abbreviation)| Op::UpdateProject { project, name, abbreviation }),
+        2 => (any::<u8>(), any::<u8>(), abbreviation())
+            .prop_map(|(project, name, abbreviation)| Op::CreateTask { project, name, abbreviation }),
+        1 => (any::<u8>(), any::<u8>(), abbreviation())
+            .prop_map(|(task, name, abbreviation)| Op::UpdateTask { task, name, abbreviation }),
         8 => (any::<u8>(), arb_task_pick()).prop_map(|(project, task)| Op::Start { project, task }),
         4 => proptest::option::of(minutes_back.clone())
             .prop_map(|minutes_back| Op::Stop { minutes_back }),
@@ -237,6 +259,10 @@ fn name(choice: u8) -> String {
     NAMES[choice as usize % NAMES.len()].to_owned()
 }
 
+fn abbreviation_of(choice: Option<u8>) -> Option<String> {
+    choice.map(|c| ABBREVIATIONS[c as usize % ABBREVIATIONS.len()].to_owned())
+}
+
 /// A typed local time `minutes_back` minutes of wall-clock time before now. Wall-clock
 /// arithmetic, so near a DST change it can land in the gap or the fold.
 fn local_back(ctx: &Ctx, minutes_back: i32) -> civil::DateTime {
@@ -267,33 +293,65 @@ fn task_choice(pick_: &TaskPick, state: &State, project: ProjectId) -> TaskChoic
 pub fn materialize(op: &Op, state: &State, ctx: &Ctx) -> Command {
     let clients: Vec<ClientId> = state.catalog.clients().map(|c| c.id).collect();
     let projects: Vec<ProjectId> = state.catalog.projects().map(|p| p.id).collect();
+    let tasks: Vec<TaskId> = state.catalog.tasks().map(|t| t.id).collect();
     let entries: Vec<EntryId> = state.entries.all().map(|e| e.id).collect();
     let project_of = |choice| pick(choice, &projects, ProjectId::new(999));
     match op {
-        Op::CreateClient { name: n, rule } => Command::CreateClient {
+        Op::CreateClient {
+            name: n,
+            abbreviation: a,
+            rule,
+        } => Command::CreateClient {
             name: name(*n),
+            abbreviation: abbreviation_of(*a),
             rule: *rule,
         },
         Op::UpdateClient {
             client,
             name: n,
+            abbreviation: a,
             rule,
         } => Command::UpdateClient {
             id: pick(*client, &clients, ClientId::new(999)),
             name: name(*n),
+            abbreviation: abbreviation_of(*a),
             rule: *rule,
         },
-        Op::CreateProject { client, name: n } => Command::CreateProject {
+        Op::CreateProject {
+            client,
+            name: n,
+            abbreviation: a,
+        } => Command::CreateProject {
             client: pick(*client, &clients, ClientId::new(999)),
             name: name(*n),
+            abbreviation: abbreviation_of(*a),
         },
-        Op::RenameProject { project, name: n } => Command::RenameProject {
+        Op::UpdateProject {
+            project,
+            name: n,
+            abbreviation: a,
+        } => Command::UpdateProject {
             id: project_of(*project),
             name: name(*n),
+            abbreviation: abbreviation_of(*a),
         },
-        Op::CreateTask { project, name: n } => Command::CreateTask {
+        Op::CreateTask {
+            project,
+            name: n,
+            abbreviation: a,
+        } => Command::CreateTask {
             project: project_of(*project),
             name: name(*n),
+            abbreviation: abbreviation_of(*a),
+        },
+        Op::UpdateTask {
+            task,
+            name: n,
+            abbreviation: a,
+        } => Command::UpdateTask {
+            id: pick(*task, &tasks, TaskId::new(999)),
+            name: name(*n),
+            abbreviation: abbreviation_of(*a),
         },
         Op::Start { project, task } => {
             let project = project_of(*project);

@@ -28,7 +28,7 @@ async function saveEdit(id: number, f: EntryFields) {
   <div class="running-bar" :class="{ active: running }">
     <template v-if="running">
       <span class="dot" aria-hidden="true"></span>
-      <span class="label" :title="running.combo.label">{{ running.combo.label }}</span>
+      <span class="label" :title="running.combo.label">{{ running.combo.shortLabel }}</span>
       <span class="elapsed">{{ formatElapsed(elapsed) }}</span>
       <Button label="Edit" severity="secondary" size="small" text @click="editing = true" />
       <Button label="Stop at…" severity="secondary" size="small" text @click="stoppingAt = true" />

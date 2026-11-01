@@ -4,8 +4,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Client, ClientId, Entry, EntryId, Instant, Name, Project, ProjectId, RoundingRule, Settings,
-    Task, TaskId,
+    Abbreviation, Client, ClientId, Entry, EntryId, Instant, Name, Project, ProjectId,
+    RoundingRule, Settings, Task, TaskId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,21 +17,24 @@ pub enum Event {
     ClientUpdated {
         id: ClientId,
         name: Name,
+        abbreviation: Option<Abbreviation>,
         rule: RoundingRule,
     },
     ProjectCreated {
         project: Project,
     },
-    ProjectRenamed {
+    ProjectUpdated {
         id: ProjectId,
         name: Name,
+        abbreviation: Option<Abbreviation>,
     },
     TaskCreated {
         task: Task,
     },
-    TaskRenamed {
+    TaskUpdated {
         id: TaskId,
         name: Name,
+        abbreviation: Option<Abbreviation>,
     },
     SettingsChanged {
         settings: Settings,

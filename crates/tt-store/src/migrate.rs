@@ -12,11 +12,18 @@ pub struct Migration {
 }
 
 /// All migrations, in order. Never edit a released one; add a new one.
-pub static MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "init",
-    sql: include_str!("../migrations/0001_init.sql"),
-}];
+pub static MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "init",
+        sql: include_str!("../migrations/0001_init.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "abbreviations",
+        sql: include_str!("../migrations/0002_abbreviations.sql"),
+    },
+];
 
 const CREATE_TABLE: &str = "CREATE TABLE IF NOT EXISTS schema_migrations (
     version    INTEGER PRIMARY KEY,

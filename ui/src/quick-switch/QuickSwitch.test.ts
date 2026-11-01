@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { emit } from "@tauri-apps/api/event";
 import type { ComboDto, EntryDto, TaskMatchesDto } from "../bindings";
 import { deferred, fakeBackend, uiError, type Handler } from "../test/backend";
-import { acmeIntern, acmeWeb, acmeWebDocs, acmeWebReview, betaOps, runningEntry } from "../test/fixtures";
+import { acmeIntern, acmeWeb, acmeWebDocs, acmeWebReview, betaOps, combo, runningEntry } from "../test/fixtures";
 import QuickSwitch from "./QuickSwitch.vue";
 
 const allCombos = [acmeWebReview, betaOps, acmeWebDocs, acmeIntern, acmeWeb];
@@ -14,7 +14,7 @@ async function popup(options: { running?: EntryDto | null; handlers?: Record<str
     {
       get_running: () => (options.running === undefined ? runningEntry(acmeWebReview, 83) : options.running),
       quick_switch: ({ query }) => (query === "" ? allCombos : allCombos.filter((c) => c.label.toLowerCase().includes(query))),
-      task_matches: (): TaskMatchesDto => ({ tasks: [{ id: 1, project: 1, name: "Review", archived: false }], offerCreate: null }),
+      task_matches: (): TaskMatchesDto => ({ tasks: [{ id: 1, project: 1, name: "Review", abbreviation: null, archived: false }], offerCreate: null }),
       start: () => null,
       stop: () => null,
       "plugin:window|hide": () => null,
@@ -47,6 +47,31 @@ const started = (combo: ComboDto) => ({
 });
 
 describe("QuickSwitch", () => {
+  it("shows short labels with the full ones on hover, and task abbreviations in the task step (R24)", async () => {
+    const ascp = combo(9, 9, 9, ["Northwind Instruments", "adaptive signal calibration pipeline", "Review"], ["NWI", "ASCP", "Rev"]);
+    const { wrapper, rows, press } = await popup({
+      running: runningEntry(ascp, 60),
+      handlers: {
+        quick_switch: () => [ascp, acmeWeb],
+        task_matches: (): TaskMatchesDto => ({
+          tasks: [{ id: 9, project: 9, name: "Review", abbreviation: "Rev", archived: false }],
+          offerCreate: null,
+        }),
+      },
+    });
+    expect(wrapper.get("header .label").text()).toBe("NWI / ASCP / Rev");
+    expect(rows()).toEqual(["Acme / Web"]);
+    await wrapper.get("input").setValue("ascp");
+    await flushPromises();
+    const row = wrapper.get("[role=option]");
+    expect(row.get(".label").text()).toBe("NWI / ASCP / Rev");
+    expect(row.attributes("title")).toBe("Northwind Instruments / adaptive signal calibration pipeline / Review");
+    await press("Tab");
+    expect(wrapper.get(".chip").text()).toBe("NWI / ASCP");
+    expect(wrapper.get(".chip").attributes("title")).toBe("Northwind Instruments / adaptive signal calibration pipeline");
+    expect(wrapper.findAll("[role=option] .hint").map((h) => h.text())).toEqual(["Rev"]);
+  });
+
   it("shows the running entry with its elapsed time on top", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-18T10:00:00Z"));
