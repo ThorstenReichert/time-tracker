@@ -1,5 +1,40 @@
 # Release notes
 
+## 0.2.0 (2026-11-01)
+
+Abbreviations for clients, projects and tasks, from
+[changes/2026-11-01-abbreviations](changes/2026-11-01-abbreviations/plan.md).
+
+- **Source:** tag `v0.2.0` on `master`, which is the merge commit `a46e274` of branch
+  `feat/abbreviations`. Approved to merge by Thorsten Reichert (owner), 2026-11-01, after the
+  stage 5 review against [REVIEW.md](REVIEW.md).
+- **Installer:** `ThorSoft TimeTracker_0.2.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `9B9D3C1EA7511A1D90A1DA19E7F3F40B064C8B1C106B8739E6EEAF4CF677B3C9`.
+- **Database:** adds schema migration `0002` (abbreviation columns and their unique indexes).
+  The first start of 0.2.0 backs up the database, then migrates it. **0.1.0 can't open the
+  migrated database**: it starts with an "unknown migration 2" error and accepts no writes.
+
+### What's in it
+- Optional abbreviations (up to 20 characters) for clients, projects and tasks, set in the
+  Clients view (R24).
+- The quick-switch popup, combo pickers, recents, running bar, stop-at dialog and tray show
+  the short label, e.g. `NWI / ASCP / Review`. Hovering shows the full label. The daily
+  overview, entry lists and the Clients view keep the full names.
+- Typing matches abbreviations as well as names, and an exact abbreviation ranks first (R3,
+  R6). In the task input, typing an existing abbreviation doesn't offer to create a task.
+- Names and abbreviations share one namespace per parent, ignoring case: a new name or
+  abbreviation can't equal a sibling's name or abbreviation (R1).
+- The value to book on the daily overview is the copy button itself (R15, since 0.1.0).
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.1.0 installer (or build tag
+  `v0.1.0`). 0.1.0 needs the database from before the migration, see Data.
+- **Data:** the first start of 0.2.0 wrote a backup (`timetracker-YYYYMMDDTHHMMSSZ.db`) to
+  the backup folder before migrating. To go back to 0.1.0: quit the app from the tray, delete
+  the `-wal` and `-shm` files next to `%LOCALAPPDATA%\ThorSoft.TimeTracker\timetracker.db`,
+  then copy that backup over `timetracker.db`. Entries made with 0.2.0 after the backup are
+  lost that way.
+
 ## 0.1.0 (2026-10-19)
 
 Slice 0+1 from [plan.md](plan.md): the thin vertical slice, ready for daily tracking.

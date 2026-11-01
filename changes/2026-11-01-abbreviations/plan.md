@@ -1,6 +1,7 @@
 # Plan: Abbreviations for clients, projects and tasks
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-01). Branch: `feat/abbreviations`. Target release: 0.2.0.
+Status: approved (owner, 2026-11-01); released as 0.2.0 on 2026-11-01 (tag `v0.2.0`, see
+[release-notes.md](../../release-notes.md)). Branch: `feat/abbreviations`.
 Scope: R24, plus the amendments to R1, R3 and R6. Deferred: the notes for R2 and R23 (slice 2).
 
 ## Context
