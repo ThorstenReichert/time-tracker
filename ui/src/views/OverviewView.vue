@@ -109,7 +109,7 @@ onUnmounted(() => {
 
 <style scoped>
 .error {
-  color: var(--p-red-500);
+  color: var(--error-text);
 }
 .client {
   margin-bottom: 1.5rem;

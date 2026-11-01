@@ -1,6 +1,15 @@
+/* Light or dark, following Windows like the PrimeVue theme (R25). Text colours that PrimeVue has
+   no semantic token for: --brand-text (product name, wordmark) and --error-text. */
 :root {
-  /* Light only (R25): native controls and scrollbars stay light in Windows dark mode. */
-  color-scheme: light;
+  color-scheme: light dark;
+  --brand-text: var(--p-primary-800);
+  --error-text: var(--p-red-500);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand-text: var(--p-primary-100);
+    --error-text: var(--p-red-400);
+  }
 }
 
 html,

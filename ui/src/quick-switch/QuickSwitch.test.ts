@@ -84,8 +84,8 @@ describe("QuickSwitch", () => {
     for (const running of [undefined, null]) {
       const { wrapper } = await popup({ running });
       const first = wrapper.get("header").element.firstElementChild;
-      expect(first?.tagName).toBe("IMG");
-      expect(first?.getAttribute("alt")).toBe("ThorSoft");
+      expect(first?.tagName).toBe("PICTURE");
+      expect(first?.querySelector("img")?.getAttribute("alt")).toBe("ThorSoft");
       wrapper.unmount();
     }
   });

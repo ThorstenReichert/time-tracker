@@ -14,8 +14,8 @@ import "./style.css";
 const app = createApp(App)
   .use(createPinia())
   .use(router)
-  // The ThorSoft theme, light only (R25).
-  .use(PrimeVue, { theme: { preset: ThorSoftPreset, options: { darkModeSelector: false } } })
+  // The ThorSoft theme, following Windows' light or dark mode (R25).
+  .use(PrimeVue, { theme: { preset: ThorSoftPreset, options: { darkModeSelector: "system" } } })
   .use(ToastService)
   .use(ConfirmationService);
 

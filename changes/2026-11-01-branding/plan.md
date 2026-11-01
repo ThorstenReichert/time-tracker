@@ -1,6 +1,6 @@
 # Plan: ThorSoft branding (logo and colour theme)
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-01). Branch: `feat/branding`.
+Status: approved (owner, 2026-11-01); step 6 added the same day (owner). Branch: `feat/branding`.
 Scope: R25 and the amendment to spec §2 "Frontend".
 
 ## Context
@@ -33,8 +33,16 @@ quick-switch popup, and a compact change chain.
    `QuickSwitch.test.ts` checks the logo.
 5. **Docs and release.** `CLAUDE.md`/`AGENTS.md` (identical): where the theme lives. Root
    `spec.md` header: the amendment. Release notes at stage 5.
+6. **Dark mode (R25, revised).** `lib/brand.ts`: `night` surfaces, the dark accent and
+   `darkLogoColours`; `main.ts` follows the system. `assets/thorsoft-logo-dark.svg` (the
+   original with the colours swapped). `BrandLogo.vue`: a `<picture>` with the dark source.
+   `style.css`: `--brand-text`, `--error-text` with dark values, used by `BrandMark`,
+   `SettingsView`, `DayBar`, `TodayView`, `OverviewView`. `QuickSwitch.vue`: a dark block.
+   Tests: dark contrast, the popup's dark mirror, the dark logo derived from the original.
 
 ## Deviations
+- Step 6 (owner, 2026-11-01): the owner reversed "light only" after seeing the light theme;
+  the dark mode replaces steps 1 and 4's light-only parts.
 - Step 2: only the SVG is in the repo; the owner removed the PNG and ICO exports, which nothing used.
 - Step 3: the version test also checks `ui/package-lock.json`, which a version bump changes too.
 - Step 4: `brand.test.ts` also pins that the popup's `--primary` equals brand 500 and that the

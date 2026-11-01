@@ -1,5 +1,6 @@
 # Intent: ThorSoft branding (logo and colour theme)
 Author: Thorsten Reichert. Status: approved (owner, 2026-11-01).
+Revised 2026-11-01 (owner): a branded dark mode after all, following Windows, with a lighter logo.
 Builds on: [../../intent.md](../../intent.md), [../../spec.md](../../spec.md) (0.2.0).
 
 ## Problem
@@ -13,16 +14,17 @@ to do with the brand.
   "About" section in Settings (with the product name and version), and in the quick-switch
   popup.
 - The UI uses a colour theme that matches the logo (navy and slate blue) for its accents.
-- The theme is light. White stays the predominant colour, as it is now.
+- The light theme stays white-dominant, as it is now. In Windows dark mode the app uses a
+  matching dark theme (navy from the logo) and a lighter variant of the logo.
 
 ## Constraints
-- Light only: the app no longer follows the Windows dark mode, in the main window and the popup.
-- The accent colour stays readable on white (WCAG AA, at least 4.5:1).
+- Both windows follow the Windows light or dark setting, as before.
+- Text and accent colours stay readable on their background in both modes (WCAG AA, at least
+  4.5:1); the logo stands out in both.
 - The architecture rules of the main spec still apply; this change touches only the UI.
 
 ## Out of scope
 - The app, window, installer and tray icons. They stay as they are (owner, 2026-11-01).
-- A dark theme.
 - Any change to behaviour.
 
 ## Open questions

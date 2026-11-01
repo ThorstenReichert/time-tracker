@@ -172,7 +172,7 @@ function deleteEntry(entry: EntryDto) {
   justify-content: space-between;
 }
 .error {
-  color: var(--p-red-500);
+  color: var(--error-text);
 }
 table {
   width: 100%;

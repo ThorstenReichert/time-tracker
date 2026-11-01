@@ -219,7 +219,9 @@ onMounted(async () => {
 </template>
 
 <style>
-/* Light only (R25). The popup doesn't use PrimeVue; --primary mirrors brand[500] in lib/brand.ts. */
+/* Light or dark, following Windows (R25). The popup doesn't use PrimeVue, so it mirrors the main
+   window's theme from lib/brand.ts: light = brand 500 on white and slate, dark = brand 300 on
+   `night` (pinned by brand.test.ts). */
 :root {
   --primary: #436088;
   --text: #334155;
@@ -227,7 +229,17 @@ onMounted(async () => {
   --border: #cbd5e1;
   --surface: #ffffff;
   --danger: #dc2626;
-  color-scheme: light;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #9fb2cd;
+    --text: #ffffff;
+    --muted: #8291aa;
+    --border: #344259;
+    --surface: #17233a;
+    --danger: #f87171;
+  }
 }
 html,
 body,

@@ -20,6 +20,6 @@ import BrandLogo from "./BrandLogo.vue";
 }
 .wordmark {
   font-weight: 600;
-  color: var(--p-primary-800);
+  color: var(--brand-text);
 }
 </style>

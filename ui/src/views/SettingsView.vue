@@ -218,7 +218,7 @@ async function setAutostart(enabled: boolean) {
 .product {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--p-primary-800);
+  color: var(--brand-text);
 }
 .autostart {
   display: flex;

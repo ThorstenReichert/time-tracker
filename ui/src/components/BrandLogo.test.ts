@@ -11,6 +11,12 @@ describe("BrandLogo", () => {
     expect(img.attributes("height")).toBe("64");
   });
 
+  it("switches to the light variant in dark mode, by the theme's media query", () => {
+    const source = mount(BrandLogo).get("picture source");
+    expect(source.attributes("media")).toBe("(prefers-color-scheme: dark)");
+    expect(source.attributes("srcset")).toMatch(/thorsoft-logo-dark\.svg$/);
+  });
+
   it("is 24 px by default", () => {
     expect(mount(BrandLogo).get("img").attributes("width")).toBe("24");
   });
