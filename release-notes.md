@@ -1,5 +1,30 @@
 # Release notes
 
+## 0.3.0 (2026-11-01)
+
+ThorSoft branding: the logo and a matching colour theme, light and dark, from
+[changes/2026-11-01-branding](changes/2026-11-01-branding/plan.md).
+
+- **Source:** tag `v0.3.0` on `master`, which is the merge commit `f9cbf9c` of branch
+  `feat/branding`. Approved to merge by Thorsten Reichert (owner), 2026-11-01, after the
+  stage 5 review against [REVIEW.md](REVIEW.md).
+- **Installer:** `ThorSoft TimeTracker_0.3.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `266E18E5EE389E2D1A7B281541D976F3A0DFBBADC4F3235BC4FB22A72B231071`.
+- **Database:** no migration. 0.3.0 and 0.2.0 read the same database file.
+
+### What's in it
+- The ThorSoft logo in the navigation bar (with the word "TimeTracker"), in a new "About"
+  section at the end of Settings with the version, and in the quick-switch popup (R25).
+- A colour theme from the logo. Light mode stays white, with the brand blue as accent instead
+  of green. Dark mode follows Windows and uses navy backgrounds, a light blue accent and a
+  lighter logo.
+- Error text in light mode is a darker red, so it is easier to read.
+- The app, installer and tray icons are unchanged.
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.2.0 installer (or build tag
+  `v0.2.0`). No data step is needed, because 0.3.0 doesn't change the database.
+
 ## 0.2.0 (2026-11-01)
 
 Abbreviations for clients, projects and tasks, from

@@ -1,6 +1,7 @@
 # Plan: ThorSoft branding (logo and colour theme)
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-01); step 6 added the same day (owner). Branch: `feat/branding`.
+Status: approved (owner, 2026-11-01); step 6 added the same day (owner); released as 0.3.0 on
+2026-11-01 (tag `v0.3.0`, see [release-notes.md](../../release-notes.md)). Branch: `feat/branding`.
 Scope: R25 and the amendment to spec §2 "Frontend".
 
 ## Context
