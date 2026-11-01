@@ -13,7 +13,8 @@ This spec adds R25 and amends spec §2 "Frontend". Everything else in the main s
     quick-switch popup's header row, whether a timer runs or not.
   - **Colours.** The accent ("primary") colour of both windows comes from the logo: a scale
     whose steps 500, 800 and 950 are the logo's `#436088`, `#1f3453` and `#0d1d37`. Error
-    colours stay red. Backgrounds stay white, borders and muted text a cool grey.
+    colours stay red. In light mode backgrounds stay white, borders and muted text a cool grey;
+    dark mode is described below.
   - **Light and dark.** Both windows follow Windows' light or dark mode. Dark mode uses navy
     surfaces from the logo's hue, the lighter brand step 300 as accent, and a lighter logo
     (`thorsoft-logo-dark.svg`: the same drawing, colours swapped, shading kept).
@@ -40,14 +41,14 @@ popup doesn't use PrimeVue and mirrors the accent colour in its own CSS.
 | Intent constraint | How it is met |
 |---|---|
 | Follow Windows light/dark | `darkModeSelector: "system"`, `color-scheme: light dark` and a dark block in both windows; the popup mirrors the dark values |
-| Readable in both modes | unit tests: light accent on white; dark accent, text, muted, brand and error text on the dark surfaces ≥ 4.5:1; dark logo colours ≥ 3:1 |
+| Readable in both modes | unit tests on the resolved theme: accent, text, muted, brand and error text on the content and field backgrounds ≥ 4.5:1 in both modes; button text on the accent states ≥ 4.5:1; dark logo colours ≥ 3:1 |
 | UI only | no change outside `ui/` except a version consistency test in `src-tauri` |
 
 ## 4. Open questions
 None.
 
 ## 5. Areas of concern
-- **AC-1 Contrast.** Pinned by `brand.test.ts` (500 on white and white on 500, both ≥ 4.5:1).
+- **AC-1 Contrast.** Pinned by `brand.test.ts` on the resolved theme, in both modes (see §3).
 - **AC-2 Version drift.** The About version must match the installed app; pinned by the Rust
   version test.
 - **AC-3 Unseen visual regressions.** No browser tests (owner, 2026-10-18); checked with dev app

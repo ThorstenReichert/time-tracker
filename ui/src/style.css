@@ -3,7 +3,7 @@
 :root {
   color-scheme: light dark;
   --brand-text: var(--p-primary-800);
-  --error-text: var(--p-red-500);
+  --error-text: var(--p-red-600);
 }
 @media (prefers-color-scheme: dark) {
   :root {

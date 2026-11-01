@@ -3,7 +3,7 @@
 // the other active combos A–Z; typing filters them). Enter starts or switches and hides, Tab
 // picks a task of the highlighted project (R3), Ctrl+S stops, Esc hides. The matching is a
 // tt-core read model; this page only renders it and handles the keys. The header carries the
-// ThorSoft logo; the popup is light only (R25).
+// ThorSoft logo; the popup follows Windows' light or dark mode (R25).
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -236,7 +236,7 @@ onMounted(async () => {
     --primary: #9fb2cd;
     --text: #ffffff;
     --muted: #8291aa;
-    --border: #344259;
+    --border: #48566f;
     --surface: #17233a;
     --danger: #f87171;
   }

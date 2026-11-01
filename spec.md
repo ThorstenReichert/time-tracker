@@ -12,7 +12,7 @@ the other active combos, so a new catalog is offered before anything is tracked.
 Amended 2026-11-01 by [changes/2026-11-01-abbreviations/spec.md](changes/2026-11-01-abbreviations/spec.md):
 R24 (abbreviations) and amendments to R1, R3 and R6.
 Amended 2026-11-01 by [changes/2026-11-01-branding/spec.md](changes/2026-11-01-branding/spec.md):
-R25 (ThorSoft logo and a light colour theme) and an amendment to §2 "Frontend".
+R25 (ThorSoft logo and a matching colour theme, light and dark) and an amendment to §2 "Frontend".
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.

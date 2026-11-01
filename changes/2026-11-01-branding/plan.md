@@ -5,15 +5,16 @@ Scope: R25 and the amendment to spec §2 "Frontend".
 
 ## Context
 The app shows no ThorSoft logo and uses PrimeVue's stock emerald colours. The owner decided:
-light only, no icon changes, the logo in the nav bar, a Settings "About" section and the
+light only (reversed the same day, see step 6), no icon changes, the logo in the nav bar, a Settings "About" section and the
 quick-switch popup, and a compact change chain.
 
 ## Risks
-- **`darkModeSelector: false`** must really suppress the dark scheme in PrimeVue 4.5; fallback
-  is a selector that never matches.
-- **Contrast** of the accent on white; pinned by a unit test.
+- **Following Windows** in both windows the same way: PrimeVue `darkModeSelector: "system"`,
+  the media queries in `style.css` and the popup, and the logo `<picture>` all use
+  `prefers-color-scheme`. (Superseded: `darkModeSelector: false` for light only.)
+- **Contrast** of accent and text in both modes; pinned by unit tests on the resolved theme.
 - **Visual regressions** no test sees; covered by dev app screenshots, also in Windows dark mode.
-- Rejected: replacing the app and tray icons (owner), a branded dark theme (owner), reading the
+- Rejected: replacing the app and tray icons (owner), reading the
   version over IPC (needs a capability; the build-time value is simpler and pinned by a test).
 
 ## Steps
@@ -45,13 +46,22 @@ quick-switch popup, and a compact change chain.
   the dark mode replaces steps 1 and 4's light-only parts.
 - Step 2: only the SVG is in the repo; the owner removed the PNG and ICO exports, which nothing used.
 - Step 3: the version test also checks `ui/package-lock.json`, which a version bump changes too.
-- Step 4: `brand.test.ts` also pins that the popup's `--primary` equals brand 500 and that the
-  popup has no dark variant, so the mirrored colour can't drift.
+- Step 4: `brand.test.ts` also pins the popup's mirrored colours (since step 6 for both modes),
+  so they can't drift from the main window's theme.
+- Stage 5 review fixes (2026-11-01):
+  - Light `--error-text` is red 600 instead of 500 (3.8:1 on white failed AA). It now matches
+    the popup's `--danger`.
+  - `brand.test.ts` checks the theme PrimeVue actually uses: it resolves `ThorSoftPreset`'s
+    tokens and the `style.css` variables, so a changed accent, surface or text colour fails a
+    test. The popup's mirror is compared with the resolved theme in both modes.
+  - That comparison showed the popup's dark border used the content border (night 700) while
+    its light border uses the form-field border; dark now uses the form-field border (night 600).
+  - Stale light-only wording fixed in the root and change spec, `plan.md` and a popup comment.
 - Proof: the owner checked the dev app by hand instead of screenshots; no migration dry run
   (no database change).
 
 ## Coverage
-R25: steps 1–4. §2 amendment: step 1 (+ step 5 docs).
+R25: steps 1–4 and 6 (dark mode). §2 amendment: steps 1 and 6 (+ step 5 docs).
 
 ## Proof
 - `gatekeeper` runs the full `pwsh scripts/check.ps1` after the steps (`ALL CHECKS PASSED`).
