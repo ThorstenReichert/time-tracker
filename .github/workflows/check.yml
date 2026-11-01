@@ -1,0 +1,44 @@
+# The same gate as locally: scripts/check.ps1 (fmt, clippy, Rust tests, UI typecheck, UI tests).
+# Windows only: src-tauri links a Windows manifest and the toolchain targets MSVC.
+# Debug builds don't embed ui/dist, so no frontend build is needed.
+name: check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main] # also fills the caches that PR runs restore
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the Rust toolchain from rust-toolchain.toml
+        run: rustup toolchain install
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: npm ci
+        run: npm --prefix ui ci
+
+      - name: Checks
+        run: pwsh scripts/check.ps1
