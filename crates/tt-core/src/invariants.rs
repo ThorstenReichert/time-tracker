@@ -106,7 +106,8 @@ fn check_entries(state: &State) -> Result<(), InvariantViolation> {
     if entries.running_count() > 1 {
         return violation(format!("{} running entries", entries.running_count()));
     }
-    // R2a: the running entry's combo is active (archiving its project is rejected).
+    // R2a, R2g: the running entry's combo is active (archiving its project or client is
+    // rejected).
     if let Some(running) = entries.running()
         && let Some(item) = c.archived_in(running.project, running.task)
     {

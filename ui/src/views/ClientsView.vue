@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Clients with their rounding rule, their projects and tasks: create, rename, abbreviate
-// and archive projects (R1, R2a, R17, R24). Archived projects are hidden here and listed in
-// the Archive view (R2e). New project offers to unarchive a matching archived project (R2c).
+// and archive clients and projects (R1, R2a, R2g, R17, R24). Archived clients and projects
+// are hidden here and listed in the Archive view (R2e, R2j). New client and New project
+// offer to unarchive a matching archived client or project (R2c, R2i).
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
@@ -16,14 +17,17 @@ import { useCatalogStore, type ClientNode, type ProjectNode } from "../stores/ca
 const { tree } = storeToRefs(useCatalogStore());
 const attempt = useAttempt();
 
-/** The tree without archived projects (the store keeps them for the other views). */
+/** The tree without archived clients and projects (the store keeps them for the other views). */
 const clients = computed(() =>
-  tree.value.map((client) => ({
-    ...client,
-    projects: client.projects.filter((p) => !p.archived),
-    hasArchived: client.projects.some((p) => p.archived),
-  })),
+  tree.value
+    .filter((client) => !client.archived)
+    .map((client) => ({
+      ...client,
+      projects: client.projects.filter((p) => !p.archived),
+      hasArchived: client.projects.some((p) => p.archived),
+    })),
 );
+const hasArchivedClients = computed(() => tree.value.some((client) => client.archived));
 
 // One client dialog and one name dialog, configured by whatever opened them.
 const clientDialog = ref({
@@ -31,6 +35,8 @@ const clientDialog = ref({
   header: "",
   initial: undefined as (Naming & { rule: RuleDto }) | undefined,
   save: async (_name: string, _abbreviation: string | null, _rule: RuleDto) => {},
+  check: undefined as ((name: string, abbreviation: string | null) => Promise<NameCheckDto>) | undefined,
+  unarchive: undefined as ((client: number) => Promise<void>) | undefined,
 });
 const nameDialog = ref({
   visible: false,
@@ -50,6 +56,10 @@ function newClient() {
     save: async (name, abbreviation, rule) => {
       await call(commands.createClient(name, abbreviation, rule));
     },
+    check: (name, abbreviation) => call(commands.checkClientName(name, abbreviation)),
+    unarchive: async (client) => {
+      await call(commands.unarchiveClient(client));
+    },
   };
 }
 
@@ -61,7 +71,18 @@ function editClient(client: ClientNode) {
     save: async (name, abbreviation, rule) => {
       await call(commands.updateClient(client.id, name, abbreviation, rule));
     },
+    check: undefined,
+    unarchive: undefined,
   };
+}
+
+/**
+ * Archives at once, without a confirmation: the Archive view unarchives with one click. Its
+ * projects keep their own archive state (R2g). A rejection (the timer runs on one of its
+ * projects) is a toast.
+ */
+function archiveClient(client: ClientNode) {
+  void attempt(() => call(commands.archiveClient(client.id)));
 }
 
 function askName(
@@ -127,10 +148,12 @@ const withAbbreviation = (item: Naming) =>
       <h2>Clients &amp; projects</h2>
       <Button label="New client" @click="newClient" />
     </div>
-    <p v-if="clients.length === 0" class="muted">No clients yet. Create one to start tracking.</p>
+    <p v-if="clients.length === 0" class="muted">
+      {{ hasArchivedClients ? "No active clients." : "No clients yet. Create one to start tracking." }}
+    </p>
 
     <section v-for="client in clients" :key="client.id" class="client">
-      <div class="row">
+      <div class="row client-row">
         <strong class="client-name">{{ client.name }}</strong>
         <span v-if="client.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
           client.abbreviation
@@ -139,6 +162,7 @@ const withAbbreviation = (item: Naming) =>
         <span class="spacer"></span>
         <Button label="Edit" text size="small" @click="editClient(client)" />
         <Button label="New project" text size="small" @click="newProject(client)" />
+        <Button label="Archive" text size="small" severity="secondary" @click="archiveClient(client)" />
       </div>
       <p v-if="client.projects.length === 0" class="muted indent">
         {{ client.hasArchived ? "No active projects." : "No projects yet." }}
@@ -174,6 +198,8 @@ const withAbbreviation = (item: Naming) =>
       :header="clientDialog.header"
       :initial="clientDialog.initial"
       :save="clientDialog.save"
+      :check="clientDialog.check"
+      :unarchive="clientDialog.unarchive"
     />
     <NameDialog
       v-model:visible="nameDialog.visible"

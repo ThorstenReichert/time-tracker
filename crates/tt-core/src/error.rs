@@ -24,6 +24,10 @@ pub enum DomainError {
     /// The running entry is on this project; stop the timer before archiving it (R2a).
     #[error("the timer is running on project {project}; stop it first")]
     ProjectRunning { project: ProjectId },
+    /// The running entry is on a project of this client; stop the timer before archiving the
+    /// client (R2g).
+    #[error("the timer is running on a project of client {client}; stop it first")]
+    ClientRunning { client: ClientId },
     #[error("unknown client {0}")]
     UnknownClient(ClientId),
     #[error("unknown project {0}")]

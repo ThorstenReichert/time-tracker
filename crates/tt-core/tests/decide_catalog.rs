@@ -806,3 +806,170 @@ fn an_archived_project_keeps_its_name_and_unarchives_as_it_was() {
         acme_and_beta().catalog().project(WEB)
     );
 }
+
+// R2g, R2h: archive and unarchive a client (changes/2026-11-05-archive-clients).
+
+const ACME: ClientId = ClientId::new(1);
+
+#[test]
+fn archive_and_unarchive_a_client() {
+    let (events, state) = when(
+        &acme_and_beta(),
+        &ctx(),
+        Command::ArchiveClient { id: ACME },
+    )
+    .unwrap();
+    assert_eq!(
+        events,
+        [Event::ClientArchived {
+            id: ACME,
+            at: ctx().now
+        }]
+    );
+    assert_eq!(
+        state.catalog().client(ACME).unwrap().archived_at,
+        Some(ctx().now)
+    );
+    // Its projects and tasks are inactive through the client; the other client's aren't.
+    assert!(!state.catalog().is_client_active(ACME));
+    assert!(!state.catalog().is_project_active(WEB));
+    assert!(!state.catalog().is_task_active(TaskId::new(1)));
+    assert!(state.catalog().is_project_active(ProjectId::new(2)));
+    // The project's own flag is untouched.
+    assert_eq!(state.catalog().project(WEB).unwrap().archived_at, None);
+
+    // Archiving again changes nothing.
+    assert_eq!(
+        when(&state, &ctx(), Command::ArchiveClient { id: ACME })
+            .unwrap()
+            .0,
+        []
+    );
+
+    let (events, state) = when(&state, &ctx(), Command::UnarchiveClient { id: ACME }).unwrap();
+    assert_eq!(events, [Event::ClientUnarchived { id: ACME }]);
+    assert!(state.catalog().is_project_active(WEB));
+    assert!(state.catalog().is_task_active(TaskId::new(1)));
+
+    // Unarchiving an active client changes nothing.
+    assert_eq!(
+        when(&state, &ctx(), Command::UnarchiveClient { id: ACME })
+            .unwrap()
+            .0,
+        []
+    );
+}
+
+#[test]
+fn archive_and_unarchive_an_unknown_client_are_rejected() {
+    let missing = ClientId::new(99);
+    for cmd in [
+        Command::ArchiveClient { id: missing },
+        Command::UnarchiveClient { id: missing },
+    ] {
+        assert_eq!(
+            when(&acme_and_beta(), &ctx(), cmd).unwrap_err(),
+            DomainError::UnknownClient(missing)
+        );
+    }
+}
+
+#[test]
+fn a_client_can_not_be_archived_while_the_timer_runs_on_its_project() {
+    let running = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::Start {
+            project: WEB,
+            task: tt_core::TaskChoice::NoTask,
+        }],
+    );
+    assert_eq!(
+        when(&running, &ctx(), Command::ArchiveClient { id: ACME }).unwrap_err(),
+        DomainError::ClientRunning { client: ACME }
+    );
+    // Another client can be archived while the timer runs.
+    assert!(
+        when(
+            &running,
+            &ctx(),
+            Command::ArchiveClient {
+                id: ClientId::new(2)
+            }
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn unarchiving_a_client_keeps_its_separately_archived_projects_archived() {
+    // R2g: the client's archive state and the projects' own are independent.
+    let state = run(
+        acme_and_beta(),
+        &ctx(),
+        [
+            create_project(1, "Portal"),
+            Command::ArchiveProject {
+                id: ProjectId::new(3),
+            },
+            Command::ArchiveClient { id: ACME },
+            Command::UnarchiveClient { id: ACME },
+        ],
+    );
+    assert!(state.catalog().is_project_active(WEB));
+    assert!(!state.catalog().is_project_active(ProjectId::new(3)));
+    assert_eq!(
+        state
+            .catalog()
+            .project(ProjectId::new(3))
+            .unwrap()
+            .archived_at,
+        Some(ctx().now)
+    );
+}
+
+#[test]
+fn an_archived_client_gets_no_new_projects_or_tasks_but_can_be_edited() {
+    // R2h.
+    let state = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::ArchiveClient { id: ACME }],
+    );
+    let archived = DomainError::Archived {
+        item: ItemRef::Client(ACME),
+    };
+    assert_eq!(
+        when(&state, &ctx(), create_project(1, "Portal")).unwrap_err(),
+        archived
+    );
+    assert_eq!(
+        when(&state, &ctx(), create_task(1, "Docs")).unwrap_err(),
+        archived
+    );
+    let edit = Command::UpdateClient {
+        id: ACME,
+        name: "Acme Old".into(),
+        abbreviation: Some("AO".into()),
+        rule: RoundingRule::default(),
+    };
+    assert!(when(&state, &ctx(), edit).is_ok());
+}
+
+#[test]
+fn an_archived_client_keeps_its_name_and_unarchives_as_it_was() {
+    // OQ-7: the name stays taken while archived, so unarchiving can't clash.
+    let state = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::ArchiveClient { id: ACME }],
+    );
+    assert_eq!(
+        when(&state, &ctx(), create_client("ACME")).unwrap_err(),
+        DomainError::DuplicateName {
+            existing: ItemRef::Client(ACME)
+        }
+    );
+    let (_, after) = when(&state, &ctx(), Command::UnarchiveClient { id: ACME }).unwrap();
+    assert_eq!(after.catalog(), acme_and_beta().catalog());
+}

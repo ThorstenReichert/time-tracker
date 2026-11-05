@@ -80,6 +80,20 @@ The owner approved intent, spec and plan in one go.
    - A fresh-context review.
    - The owner's "approved to merge", then the merge.
 
+## Deviations
+- Step 1: the model generator weights client archive 1 and client unarchive 6. With lower
+  unarchive weights, the deterministic `generator_reaches_the_interesting_cases` run no longer
+  reached `NonexistentLocalTime`, which is rare by nature (a DST gap). This repeats the 0.4.0
+  lesson.
+- Step 1: `decide_tracking.rs`'s `an_archived_client_makes_its_projects_inactive` built its
+  archived client from events, since there was no command. It is replaced by a test driven by
+  commands: start, add and move are rejected with `Archived { Client }`, and keeping the combo
+  or moving away is allowed.
+- Step 6: `CheckedProjectDto` is now `CheckedItemDto`. `NameCheckDto::new` takes the `ItemRef`
+  constructor (`ItemRef::Project` or `ItemRef::Client`) for the labels.
+- Step 7: in the Archive view the client row is a subgrid too, so "Unarchive client" sits in the
+  action column with the projects' Unarchive buttons.
+
 ## Coverage
 | Requirement | Steps |
 |---|---|

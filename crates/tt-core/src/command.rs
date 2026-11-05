@@ -23,6 +23,17 @@ pub enum Command {
         abbreviation: Option<String>,
         rule: RoundingRule,
     },
+    /// Archives a client: its projects are inactive through it and its entries stay (R2g).
+    /// The projects' own archive state is untouched. Rejected while the timer runs on one of
+    /// its projects. Already archived: nothing happens.
+    ArchiveClient {
+        id: ClientId,
+    },
+    /// Makes an archived client active again (R2g, R2i). Its projects come back as they were:
+    /// those archived on their own stay archived. Active: nothing happens.
+    UnarchiveClient {
+        id: ClientId,
+    },
     CreateProject {
         client: ClientId,
         name: String,

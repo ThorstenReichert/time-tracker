@@ -481,3 +481,50 @@ fn the_archive_lists_archived_projects_by_period() {
     assert_eq!(projects.len(), 1);
     assert_eq!(projects[0]["project"], 2);
 }
+
+#[test]
+fn an_archived_client_is_not_bookable_and_unarchives_as_it_was() {
+    // R2g-R2j (changes/2026-11-05-archive-clients).
+    let s = Scenario::new();
+    catalog(&s);
+    s.ok("2026-10-17T09:00", &["start", "--project", "3"]);
+    // Beta's Ops (3) runs, so Beta (2) can't be archived.
+    let out = s.run("2026-10-17T09:30", &["client", "archive", "2"]);
+    assert_eq!(out.status.code(), Some(3));
+    assert_eq!(
+        stderr_json(&out)["message"],
+        "the timer is running on a project of client 2; stop it first"
+    );
+    s.ok("2026-10-17T10:00", &["stop"]);
+    s.ok("2026-10-17T10:05", &["project", "archive", "2"]);
+    s.ok("2026-10-17T10:05", &["client", "archive", "2"]);
+
+    let out = s.run("2026-10-17T10:10", &["start", "--project", "3"]);
+    assert_eq!(out.status.code(), Some(3));
+    assert_eq!(stderr_json(&out)["message"], "client 2 is archived");
+    let matches = s.ok("2026-10-17T10:10", &["quick-switch", "ops"]);
+    assert!(matches.as_array().unwrap().is_empty());
+
+    // The archive lists Beta with both projects: API (no entries) first and archived itself,
+    // then Ops.
+    let archive = s.ok("2026-10-17T10:10", &["archive"]);
+    assert_eq!(archive.as_array().unwrap().len(), 1);
+    assert_eq!(archive[0]["client"], 2);
+    assert_eq!(archive[0]["archived"], true);
+    let projects = archive[0]["projects"].as_array().unwrap();
+    let flags: Vec<_> = projects
+        .iter()
+        .map(|p| {
+            (
+                p["project"].as_u64().unwrap(),
+                p["archived"].as_bool().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(flags, [(2, true), (3, false)]);
+
+    s.ok("2026-10-17T10:15", &["client", "unarchive", "2"]);
+    s.ok("2026-10-17T10:20", &["start", "--project", "3"]);
+    let out = s.run("2026-10-17T10:25", &["start", "--project", "2"]);
+    assert_eq!(stderr_json(&out)["message"], "project 2 is archived");
+}

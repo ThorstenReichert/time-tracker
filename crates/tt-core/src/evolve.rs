@@ -40,6 +40,17 @@ fn apply(state: &mut State, event: &Event) {
             client.abbreviation = abbreviation.clone();
             client.rule = *rule;
         }
+        Event::ClientArchived { id, at } => {
+            let client = catalog.clients.get_mut(id).expect("archived client exists");
+            client.archived_at = Some(*at);
+        }
+        Event::ClientUnarchived { id } => {
+            let client = catalog
+                .clients
+                .get_mut(id)
+                .expect("unarchived client exists");
+            client.archived_at = None;
+        }
         Event::ProjectCreated { project } => {
             counters.next_project = counters.next_project.max(project.id.get() + 1);
             catalog.projects.insert(project.id, project.clone());

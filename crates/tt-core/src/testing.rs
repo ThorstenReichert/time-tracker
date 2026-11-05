@@ -83,6 +83,13 @@ pub enum Op {
         abbreviation: Option<u8>,
         rule: RoundingRule,
     },
+    /// Archive (R2g); sometimes the running entry's client, to exercise the rejection.
+    ArchiveClient {
+        client: u8,
+    },
+    UnarchiveClient {
+        client: u8,
+    },
     CreateProject {
         client: u8,
         name: u8,
@@ -203,6 +210,8 @@ fn arb_op() -> impl Strategy<Value = Op> {
             .prop_map(|(task, name, abbreviation)| Op::UpdateTask { task, name, abbreviation }),
         1 => any::<u8>().prop_map(|project| Op::ArchiveProject { project }),
         2 => any::<u8>().prop_map(|project| Op::UnarchiveProject { project }),
+        1 => any::<u8>().prop_map(|client| Op::ArchiveClient { client }),
+        6 => any::<u8>().prop_map(|client| Op::UnarchiveClient { client }),
         8 => (any::<u8>(), arb_task_pick()).prop_map(|(project, task)| Op::Start { project, task }),
         4 => proptest::option::of(minutes_back.clone())
             .prop_map(|minutes_back| Op::Stop { minutes_back }),
@@ -343,6 +352,12 @@ pub fn materialize(op: &Op, state: &State, ctx: &Ctx) -> Command {
             id: project_of(*project),
             name: name(*n),
             abbreviation: abbreviation_of(*a),
+        },
+        Op::ArchiveClient { client } => Command::ArchiveClient {
+            id: pick(*client, &clients, ClientId::new(999)),
+        },
+        Op::UnarchiveClient { client } => Command::UnarchiveClient {
+            id: pick(*client, &clients, ClientId::new(999)),
         },
         Op::ArchiveProject { project } => Command::ArchiveProject {
             id: project_of(*project),

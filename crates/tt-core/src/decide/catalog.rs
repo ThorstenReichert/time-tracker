@@ -70,15 +70,51 @@ pub(super) fn update_client(
     }])
 }
 
+pub(super) fn archive_client(
+    state: &State,
+    ctx: &Ctx,
+    id: ClientId,
+) -> Result<Vec<Event>, DomainError> {
+    let catalog = &state.catalog;
+    let client = catalog.client(id).ok_or(DomainError::UnknownClient(id))?;
+    if client.archived_at.is_some() {
+        return Ok(vec![]);
+    }
+    if state
+        .entries
+        .running()
+        .is_some_and(|e| catalog.project(e.project).is_some_and(|p| p.client == id))
+    {
+        return Err(DomainError::ClientRunning { client: id });
+    }
+    // Only the client's flag: its projects keep their own (R2g).
+    Ok(vec![Event::ClientArchived { id, at: ctx.now }])
+}
+
+pub(super) fn unarchive_client(catalog: &Catalog, id: ClientId) -> Result<Vec<Event>, DomainError> {
+    let client = catalog.client(id).ok_or(DomainError::UnknownClient(id))?;
+    if client.archived_at.is_none() {
+        return Ok(vec![]);
+    }
+    // Archived names keep counting (OQ-7), so the client can't clash with another one now.
+    Ok(vec![Event::ClientUnarchived { id }])
+}
+
 pub(super) fn create_project(
     catalog: &Catalog,
     ctx: &Ctx,
     client: ClientId,
     typed: Typed<'_>,
 ) -> Result<Vec<Event>, DomainError> {
-    catalog
+    let owner = catalog
         .client(client)
         .ok_or(DomainError::UnknownClient(client))?;
+    // An archived client gets no new projects (R2h).
+    if owner.archived_at.is_some() {
+        return Err(DomainError::Archived {
+            item: ItemRef::Client(client),
+        });
+    }
     let Naming { name, abbreviation } = Naming::parse(typed)?;
     ensure_free(&name, abbreviation.as_ref(), |key| {
         catalog

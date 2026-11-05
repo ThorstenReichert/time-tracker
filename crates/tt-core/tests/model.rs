@@ -128,6 +128,9 @@ fn generator_reaches_the_interesting_cases() {
         "ok UnarchiveProject",
         "err Archived",
         "err ProjectRunning",
+        "ok ArchiveClient",
+        "ok UnarchiveClient",
+        "err ClientRunning",
     ] {
         assert!(
             seen.contains_key(expected),
@@ -140,6 +143,8 @@ fn command_name(cmd: &Command) -> &'static str {
     match cmd {
         Command::CreateClient { .. } => "CreateClient",
         Command::UpdateClient { .. } => "UpdateClient",
+        Command::ArchiveClient { .. } => "ArchiveClient",
+        Command::UnarchiveClient { .. } => "UnarchiveClient",
         Command::CreateProject { .. } => "CreateProject",
         Command::UpdateProject { .. } => "UpdateProject",
         Command::ArchiveProject { .. } => "ArchiveProject",

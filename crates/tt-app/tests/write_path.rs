@@ -227,7 +227,7 @@ fn an_archived_project_survives_a_reload_and_is_not_bookable() {
     assert_eq!(
         app.project_name_check(tt_core::ClientId::new(1), "web", None)
             .unwrap(),
-        tt_core::read::NameCheck::Unarchive { project: WEB }
+        tt_core::read::NameCheck::Unarchive { item: WEB }
     );
     // The Archive view lists Web with its active period (R2e).
     let archive = app.archived_projects(&ctx("2026-10-17T10:10")).unwrap();
@@ -236,8 +236,10 @@ fn an_archived_project_survives_a_reload_and_is_not_bookable() {
         archive,
         [tt_core::read::ArchivedClient {
             client: tt_core::ClientId::new(1),
+            archived: false,
             projects: vec![tt_core::read::ArchivedProject {
                 project: WEB,
+                archived: true,
                 period: Some(tt_core::read::ActivePeriod {
                     first: day,
                     last: day
@@ -245,4 +247,63 @@ fn an_archived_project_survives_a_reload_and_is_not_bookable() {
             }],
         }]
     );
+}
+
+#[test]
+fn an_archived_client_survives_a_reload_and_is_not_bookable() {
+    // R2g-R2j (changes/2026-11-05-archive-clients).
+    let acme = tt_core::ClientId::new(1);
+    let scratch = Scratch::new();
+    let app = scratch.open("2026-10-17T08:00");
+    setup_catalog(&app);
+    app.execute(&ctx("2026-10-17T09:00"), start(WEB)).unwrap();
+    // The timer runs on Web, so Acme can't be archived; nothing is written.
+    let before = loaded(&scratch);
+    assert!(matches!(
+        app.execute(
+            &ctx("2026-10-17T09:30"),
+            Command::ArchiveClient { id: acme }
+        ),
+        Err(AppError::Domain(DomainError::ClientRunning { .. }))
+    ));
+    assert_eq!(loaded(&scratch), before);
+    app.execute(&ctx("2026-10-17T10:00"), start(API)).unwrap();
+    app.execute(
+        &ctx("2026-10-17T10:05"),
+        Command::ArchiveClient { id: acme },
+    )
+    .unwrap();
+    drop(app);
+
+    let app = scratch.open("2026-10-17T10:10");
+    assert_eq!(app.snapshot().unwrap(), loaded(&scratch));
+    assert!(matches!(
+        app.execute(&ctx("2026-10-17T10:10"), start(WEB)),
+        Err(AppError::Domain(DomainError::Archived {
+            item: tt_core::ItemRef::Client(_)
+        }))
+    ));
+    assert!(app.quick_switch("web").unwrap().is_empty());
+    assert_eq!(
+        app.client_name_check("acme", None).unwrap(),
+        tt_core::read::NameCheck::Unarchive { item: acme }
+    );
+    // The Archive view lists Acme with Web, which isn't archived itself (R2j).
+    let archive = app.archived_projects(&ctx("2026-10-17T10:10")).unwrap();
+    assert_eq!(archive.len(), 1);
+    assert!(archive[0].archived);
+    assert_eq!(archive[0].projects.len(), 1);
+    assert!(!archive[0].projects[0].archived);
+
+    app.execute(
+        &ctx("2026-10-17T10:15"),
+        Command::UnarchiveClient { id: acme },
+    )
+    .unwrap();
+    assert!(
+        app.archived_projects(&ctx("2026-10-17T10:15"))
+            .unwrap()
+            .is_empty()
+    );
+    assert!(!app.quick_switch("web").unwrap().is_empty());
 }

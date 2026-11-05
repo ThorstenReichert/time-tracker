@@ -2,6 +2,9 @@
 // Creates or edits a client: its name, optional abbreviation (R24) and rounding rule (R1,
 // R17). The units and the default
 // rule come from the backend, so the UI keeps no copy of the core's rules.
+// With `check` (New client, R2i) the typed text is checked while typing (lib/nameCheck.ts):
+// a match with one archived client turns the button into "Unarchive client", which ignores
+// the typed abbreviation and rule; a clash blocks the button.
 import { computed, ref, useId, watch } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
@@ -12,6 +15,7 @@ import Select from "primevue/select";
 import SelectButton from "primevue/selectbutton";
 import type { Direction, Level, RuleDto } from "../bindings";
 import { errorMessage } from "../lib/api";
+import { useNameCheck, type NameChecker } from "../lib/nameCheck";
 import { useCatalogStore } from "../stores/catalog";
 
 const visible = defineModel<boolean>("visible", { required: true });
@@ -21,6 +25,10 @@ const props = defineProps<{
   initial?: { name: string; abbreviation: string | null; rule: RuleDto };
   /** Gets the abbreviation as typed; the core reads blank text as none (R24). */
   save: (name: string, abbreviation: string | null, rule: RuleDto) => Promise<void>;
+  /** The tt-core name check for a new client (R2i). */
+  check?: NameChecker;
+  /** Unarchives the client the check pointed at, its projects as they were (R2g). */
+  unarchive?: (client: number) => Promise<void>;
 }>();
 
 const { catalog } = storeToRefs(useCatalogStore());
@@ -44,6 +52,13 @@ const direction = ref<Direction>("nearest");
 const level = ref<Level>("project");
 const error = ref<string | null>(null);
 const busy = ref(false);
+const { toUnarchive, taken } = useNameCheck(
+  visible,
+  name,
+  abbreviation,
+  () => props.check,
+  () => props.unarchive !== undefined,
+);
 
 watch(visible, (open) => {
   if (!open) return;
@@ -59,13 +74,17 @@ watch(visible, (open) => {
 });
 
 async function submit() {
+  if (taken.value.length > 0) return;
   busy.value = true;
   try {
-    await props.save(name.value, abbreviation.value, {
-      unit: unit.value,
-      direction: direction.value,
-      level: level.value,
-    });
+    const client = toUnarchive.value;
+    if (client !== null) await props.unarchive!(client.id);
+    else
+      await props.save(name.value, abbreviation.value, {
+        unit: unit.value,
+        direction: direction.value,
+        level: level.value,
+      });
     visible.value = false;
   } catch (e) {
     error.value = errorMessage(e);
@@ -88,10 +107,21 @@ async function submit() {
       <SelectButton v-model="direction" :options="directions" option-label="label" option-value="value" :allow-empty="false" />
       <span>Round</span>
       <SelectButton v-model="level" :options="levels" option-label="label" option-value="value" :allow-empty="false" />
+      <Message v-if="toUnarchive" severity="info">
+        {{ `The ${toUnarchive.label} exists. Unarchive it to use it again, or choose another name.` }}
+      </Message>
+      <Message v-else-if="taken.length > 0" severity="error">
+        Already used by {{ taken.map((c) => c.label).join(", ") }}
+      </Message>
       <Message v-if="error" severity="error">{{ error }}</Message>
       <div class="dialog-actions">
         <Button type="button" label="Cancel" severity="secondary" text @click="visible = false" />
-        <Button type="submit" label="Save" :loading="busy" />
+        <Button
+          type="submit"
+          :label="toUnarchive ? 'Unarchive client' : 'Save'"
+          :loading="busy"
+          :disabled="taken.length > 0"
+        />
       </div>
     </form>
   </Dialog>

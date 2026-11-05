@@ -86,6 +86,20 @@ fn apply_one(tx: &Transaction<'_>, event: &Event) -> Result<(), StoreError> {
             )?;
             expect_one(changed, "client", id.get())
         }
+        Event::ClientArchived { id, at } => {
+            let changed = tx.execute(
+                "UPDATE client SET archived_at = ?2 WHERE id = ?1",
+                params![i(id.get()), at.unix_seconds()],
+            )?;
+            expect_one(changed, "client", id.get())
+        }
+        Event::ClientUnarchived { id } => {
+            let changed = tx.execute(
+                "UPDATE client SET archived_at = NULL WHERE id = ?1",
+                params![i(id.get())],
+            )?;
+            expect_one(changed, "client", id.get())
+        }
         Event::ProjectCreated { project } => {
             tx.execute(
                 "INSERT INTO project (id, client_id, name, abbreviation, archived_at, created_at)

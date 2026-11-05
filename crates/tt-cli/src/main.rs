@@ -71,7 +71,8 @@ enum Cmd {
     Recents,
     /// Quick-switch matches for a query.
     QuickSwitch { query: String },
-    /// The archived projects by client, with their active periods (R2e).
+    /// The archived clients and projects by client, with the projects' active periods (R2e,
+    /// R2j).
     Archive,
     #[command(subcommand)]
     Settings(SettingsCmd),
@@ -100,6 +101,10 @@ enum ClientCmd {
         #[command(flatten)]
         rule: RuleArgs,
     },
+    /// Archive a client: its projects are no longer offered or bookable (R2g).
+    Archive { id: u64 },
+    /// Make an archived client active again, its projects as they were (R2g).
+    Unarchive { id: u64 },
 }
 
 #[derive(Args)]
@@ -338,6 +343,12 @@ fn run(cli: Cli) -> Result<Value, Failure> {
                 rule: rule.apply(current.rule)?,
             }
         }
+        Cmd::Client(ClientCmd::Archive { id }) => Command::ArchiveClient {
+            id: ClientId::new(id),
+        },
+        Cmd::Client(ClientCmd::Unarchive { id }) => Command::UnarchiveClient {
+            id: ClientId::new(id),
+        },
         Cmd::Project(ProjectCmd::Add { client, name, abbr }) => Command::CreateProject {
             client: ClientId::new(client),
             name,

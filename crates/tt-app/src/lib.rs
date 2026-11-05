@@ -204,11 +204,21 @@ impl App {
         client: ClientId,
         name: &str,
         abbreviation: Option<&str>,
-    ) -> Result<NameCheck, AppError> {
+    ) -> Result<NameCheck<ProjectId>, AppError> {
         self.read(|state| read::project_name_check(state.catalog(), client, name, abbreviation))
     }
 
-    /// The archived projects by client, with their active periods (R2e).
+    /// The New client dialog's check while typing (R2i).
+    pub fn client_name_check(
+        &self,
+        name: &str,
+        abbreviation: Option<&str>,
+    ) -> Result<NameCheck<ClientId>, AppError> {
+        self.read(|state| read::client_name_check(state.catalog(), name, abbreviation))
+    }
+
+    /// The Archive view: archived clients and archived projects by client, with the projects'
+    /// active periods (R2e, R2j).
     pub fn archived_projects(&self, ctx: &Ctx) -> Result<Vec<ArchivedClient>, AppError> {
         self.read(|state| read::archived_projects(state.catalog(), state.entries(), &ctx.tz))
     }
