@@ -1,10 +1,12 @@
 # Release notes
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-11-05, untagged)
 
 The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-archive-view/plan.md).
 
-- **Source:** branch `feat/archive-view`, not merged yet.
+- **Source:** merge commit `f69a50f` of branch `feat/archive-view` on `master`, not tagged
+  yet. Approved to merge by Thorsten Reichert (owner), 2026-11-05, after the stage 5 review
+  against [REVIEW.md](REVIEW.md) and a manual test.
 - **Database:** no migration. 0.5.0 and 0.4.0 read the same database file.
 
 ### What's in it

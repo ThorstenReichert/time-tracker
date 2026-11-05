@@ -1,6 +1,7 @@
 # Plan: Archive view
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-05). Branch: `feat/archive-view`.
+Status: approved (owner, 2026-11-05); merged into `master` as `f69a50f` on 2026-11-05
+(untagged, see [release-notes.md](../../release-notes.md)). Branch: `feat/archive-view` (deleted).
 Scope: R2e, R2f and the R2a amendment. Deferred: archiving clients and tasks, totals, search, deleting unused items.
 
 ## Context
