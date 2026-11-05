@@ -1,9 +1,9 @@
-//! Catalog commands: clients, projects, tasks (R1, R3, R17, R24) and settings.
+//! Catalog commands: clients, projects, tasks (R1, R2a, R3, R17, R24) and settings.
 
 use crate::error::{ItemRef, SettingProblem};
 use crate::{
     Abbreviation, Catalog, Client, ClientId, Ctx, DomainError, Event, Name, Project, ProjectId,
-    RoundingRule, Settings, Task, TaskId,
+    RoundingRule, Settings, State, Task, TaskId,
 };
 
 /// A name and an optional abbreviation as typed (R24).
@@ -119,6 +119,36 @@ pub(super) fn update_project(
     }])
 }
 
+pub(super) fn archive_project(
+    state: &State,
+    ctx: &Ctx,
+    id: ProjectId,
+) -> Result<Vec<Event>, DomainError> {
+    let project = state
+        .catalog
+        .project(id)
+        .ok_or(DomainError::UnknownProject(id))?;
+    if project.archived_at.is_some() {
+        return Ok(vec![]);
+    }
+    if state.entries.running().is_some_and(|e| e.project == id) {
+        return Err(DomainError::ProjectRunning { project: id });
+    }
+    Ok(vec![Event::ProjectArchived { id, at: ctx.now }])
+}
+
+pub(super) fn unarchive_project(
+    catalog: &Catalog,
+    id: ProjectId,
+) -> Result<Vec<Event>, DomainError> {
+    let project = catalog.project(id).ok_or(DomainError::UnknownProject(id))?;
+    if project.archived_at.is_none() {
+        return Ok(vec![]);
+    }
+    // Archived names keep counting (OQ-7), so the project can't clash with a sibling now.
+    Ok(vec![Event::ProjectUnarchived { id }])
+}
+
 pub(super) fn create_task(
     catalog: &Catalog,
     ctx: &Ctx,
@@ -130,7 +160,8 @@ pub(super) fn create_task(
 }
 
 /// A new task for `project`, with the next task ID. Also used when an entry command creates
-/// its task on the fly (R3), without an abbreviation.
+/// its task on the fly (R3), without an abbreviation. An inactive project gets no new tasks
+/// (R2b).
 pub(crate) fn new_task(
     catalog: &Catalog,
     ctx: &Ctx,
@@ -140,6 +171,9 @@ pub(crate) fn new_task(
     catalog
         .project(project)
         .ok_or(DomainError::UnknownProject(project))?;
+    if let Some(item) = catalog.archived_in(project, None) {
+        return Err(DomainError::Archived { item });
+    }
     let Naming { name, abbreviation } = Naming::parse(typed)?;
     ensure_free(&name, abbreviation.as_ref(), |key| {
         catalog

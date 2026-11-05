@@ -406,3 +406,32 @@ fn abbreviations_are_set_matched_and_removed() {
         Value::Null
     );
 }
+
+#[test]
+fn an_archived_project_is_not_bookable_until_unarchived() {
+    // R2a, R2b (changes/2026-11-05-archive-projects).
+    let s = Scenario::new();
+    catalog(&s);
+    s.ok("2026-10-17T09:00", &["start", "--project", "1"]);
+    s.ok("2026-10-17T10:00", &["start", "--project", "3"]);
+    // Ops (3) runs, so it can't be archived; Web (1) can.
+    let out = s.run("2026-10-17T10:05", &["project", "archive", "3"]);
+    assert_eq!(out.status.code(), Some(3));
+    assert_eq!(
+        stderr_json(&out)["message"],
+        "the timer is running on project 3; stop it first"
+    );
+    s.ok("2026-10-17T10:05", &["project", "archive", "1"]);
+
+    let out = s.run("2026-10-17T10:10", &["start", "--project", "1"]);
+    assert_eq!(out.status.code(), Some(3));
+    assert_eq!(stderr_json(&out)["message"], "project 1 is archived");
+    let recents = s.ok("2026-10-17T10:10", &["recents"]);
+    assert_eq!(recents.as_array().unwrap().len(), 1);
+    assert_eq!(recents[0]["label"], "Beta / Ops");
+    let matches = s.ok("2026-10-17T10:10", &["quick-switch", "web"]);
+    assert!(matches.as_array().unwrap().is_empty());
+
+    s.ok("2026-10-17T10:15", &["project", "unarchive", "1"]);
+    s.ok("2026-10-17T10:20", &["start", "--project", "1"]);
+}

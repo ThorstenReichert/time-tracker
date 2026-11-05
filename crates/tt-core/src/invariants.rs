@@ -1,4 +1,4 @@
-//! The invariants the core guarantees (R1, R2, R4, R12, R24). They run after every `evolve` in
+//! The invariants the core guarantees (R1, R2a, R4, R12, R24). They run after every `evolve` in
 //! debug builds and tests, and on every load in all builds.
 
 use std::collections::BTreeSet;
@@ -105,6 +105,15 @@ fn check_entries(state: &State) -> Result<(), InvariantViolation> {
     // R4: at most one running entry.
     if entries.running_count() > 1 {
         return violation(format!("{} running entries", entries.running_count()));
+    }
+    // R2a: the running entry's combo is active (archiving its project is rejected).
+    if let Some(running) = entries.running()
+        && let Some(item) = c.archived_in(running.project, running.task)
+    {
+        return violation(format!(
+            "the running entry {} is on archived {item}",
+            running.id
+        ));
     }
     let mut previous: Option<&crate::Entry> = None;
     for entry in entries.all() {

@@ -112,6 +112,20 @@ fn apply_one(tx: &Transaction<'_>, event: &Event) -> Result<(), StoreError> {
             )?;
             expect_one(changed, "project", id.get())
         }
+        Event::ProjectArchived { id, at } => {
+            let changed = tx.execute(
+                "UPDATE project SET archived_at = ?2 WHERE id = ?1",
+                params![i(id.get()), at.unix_seconds()],
+            )?;
+            expect_one(changed, "project", id.get())
+        }
+        Event::ProjectUnarchived { id } => {
+            let changed = tx.execute(
+                "UPDATE project SET archived_at = NULL WHERE id = ?1",
+                params![i(id.get())],
+            )?;
+            expect_one(changed, "project", id.get())
+        }
         Event::TaskCreated { task } => {
             tx.execute(
                 "INSERT INTO task (id, project_id, name, abbreviation, archived_at, created_at)

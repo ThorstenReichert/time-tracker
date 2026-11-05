@@ -14,6 +14,12 @@ export const commands = {
 	createProject: (client: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("create_project", { client, name, abbreviation })),
 	/**  Renames a project and/or sets its abbreviation (R24). */
 	updateProject: (id: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("update_project", { id, name, abbreviation })),
+	/**  Archives a project (R2a): no new entries, not offered any more. */
+	archiveProject: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("archive_project", { id })),
+	/**  Makes an archived project active again, as it was (R2a, R2c). */
+	unarchiveProject: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("unarchive_project", { id })),
+	/**  The New project dialog's check while typing (R2c). */
+	checkProjectName: (client: number, name: string, abbreviation: string | null) => typedError<NameCheckDto, UiError>(__TAURI_INVOKE("check_project_name", { client, name, abbreviation })),
 	createTask: (project: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("create_task", { project, name, abbreviation })),
 	/**  Renames a task and/or sets its abbreviation (R24). */
 	updateTask: (id: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("update_task", { id, name, abbreviation })),
@@ -147,6 +153,17 @@ export type FigureDto = {
 };
 
 export type Level = "project" | "client";
+
+/**
+ *  The New project dialog's check (R2c). `projects` is the archived project to unarchive
+ *  (`unarchive`), the clashing projects (`taken`), or empty (`free`).
+ */
+export type NameCheckDto = {
+	kind: NameCheckKind,
+	projects: ProjectDto[],
+};
+
+export type NameCheckKind = "free" | "unarchive" | "taken";
 
 export type OverviewDto = {
 	/**  YYYY-MM-DD */

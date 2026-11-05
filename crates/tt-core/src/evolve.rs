@@ -56,6 +56,20 @@ fn apply(state: &mut State, event: &Event) {
             project.name = name.clone();
             project.abbreviation = abbreviation.clone();
         }
+        Event::ProjectArchived { id, at } => {
+            let project = catalog
+                .projects
+                .get_mut(id)
+                .expect("archived project exists");
+            project.archived_at = Some(*at);
+        }
+        Event::ProjectUnarchived { id } => {
+            let project = catalog
+                .projects
+                .get_mut(id)
+                .expect("unarchived project exists");
+            project.archived_at = None;
+        }
         Event::TaskCreated { task } => {
             counters.next_task = counters.next_task.max(task.id.get() + 1);
             catalog.tasks.insert(task.id, task.clone());

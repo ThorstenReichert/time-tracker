@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::ItemRef;
 use crate::{Abbreviation, ClientId, EntryId, Instant, Name, ProjectId, RoundingRule, TaskId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -260,6 +261,25 @@ impl Catalog {
     pub fn is_task_active(&self, id: TaskId) -> bool {
         self.task(id)
             .is_some_and(|t| t.archived_at.is_none() && self.is_project_active(t.project))
+    }
+
+    /// The archived item that makes this combo inactive, looked up from the top: the client,
+    /// then the project, then the task (R2b). `None` if the combo is active or unknown. Agrees
+    /// with `is_project_active` and `is_task_active`.
+    pub fn archived_in(&self, project: ProjectId, task: Option<TaskId>) -> Option<ItemRef> {
+        let p = self.project(project)?;
+        if self
+            .client(p.client)
+            .is_some_and(|c| c.archived_at.is_some())
+        {
+            return Some(ItemRef::Client(p.client));
+        }
+        if p.archived_at.is_some() {
+            return Some(ItemRef::Project(project));
+        }
+        task.and_then(|t| self.task(t))
+            .filter(|t| t.archived_at.is_some())
+            .map(|t| ItemRef::Task(t.id))
     }
 
     /// The client whose name or abbreviation has this key, ignoring case (archived ones

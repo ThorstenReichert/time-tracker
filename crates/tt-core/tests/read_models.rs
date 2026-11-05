@@ -2,7 +2,9 @@
 //! recents (R7), quick-switch matching (R6) and quick task creation (R3).
 
 use jiff::civil;
-use tt_core::read::{self, ClientBlock, Figure, Overview, ProjectRow, day_bounds, local_date};
+use tt_core::read::{
+    self, ClientBlock, Figure, NameCheck, Overview, ProjectRow, day_bounds, local_date,
+};
 use tt_core::testing::{at, berlin, ctx_berlin, run};
 use tt_core::{
     Catalog, ClientId, Combo, Command, Counters, Ctx, Entries, Entry, EntryId, Instant, Name,
@@ -327,11 +329,10 @@ fn day_entries_are_listed_by_start_with_names_and_notes() {
 fn recents_are_distinct_newest_first_and_capped() {
     let s = worked_day();
     let s = start_at(s, "2026-10-17T12:00", WEB);
-    let combos = s.entries().recent_combos(8);
-    let rows = read::recents(s.catalog(), &combos, 8);
+    let rows = read::recents(s.catalog(), s.entries(), 8);
     let labels: Vec<_> = rows.iter().map(|r| r.label.as_str()).collect();
     assert_eq!(labels, ["Acme / Web", "Beta / Ops", "Beta / API"]);
-    assert_eq!(read::recents(s.catalog(), &combos, 2).len(), 2);
+    assert_eq!(read::recents(s.catalog(), s.entries(), 2).len(), 2);
 }
 
 #[test]
@@ -436,7 +437,7 @@ fn quick_switch_prefers_recent_combos_on_equal_scores() {
 
 #[test]
 fn archived_items_are_not_offered() {
-    // Archiving commands come with R2 (slice 2); the read models already filter.
+    // An archived client (no command yet) or task hides its combos, like an archived project.
     let now = t("2026-10-17T08:00");
     let name = |s: &str| Name::parse(s).unwrap();
     let catalog = Catalog::from_parts(
@@ -505,11 +506,17 @@ fn archived_items_are_not_offered() {
         .map(|r| r.label)
         .collect();
     assert_eq!(blank, ["Acme / Web"]);
-    let recents = [Combo {
+    let on_api = Entries::from_parts([Entry {
+        id: EntryId::new(1),
         project: API,
         task: None,
-    }];
-    assert!(read::recents(&catalog, &recents, 8).is_empty());
+        start: now,
+        end: Some(t("2026-10-17T09:00")),
+        note: None,
+        created_at: now,
+        updated_at: now,
+    }]);
+    assert!(read::recents(&catalog, &on_api, 8).is_empty());
     assert!(read::task_matches(&catalog, WEB, "rev").tasks.is_empty());
     // An archived name still counts, so it isn't offered for creation (OQ-7).
     assert_eq!(
@@ -705,4 +712,166 @@ fn task_matches_rank_an_exact_abbreviation_first() {
         .map(|t| t.name.to_string())
         .collect();
     assert_eq!(names, ["Bug triage", "BTW notes"]);
+}
+
+// R2c, R7: changes/2026-11-05-archive-projects.
+
+/// Acme (1): Web (1, "W", active), Old web (2, "OW", archived), Legacy (3, "LG", archived).
+/// Beta (2): Portal (4, archived).
+fn archive_catalog() -> State {
+    let project =
+        |client: ClientId, name: &str, abbreviation: Option<&str>| Command::CreateProject {
+            client,
+            name: name.into(),
+            abbreviation: abbreviation.map(Into::into),
+        };
+    run(
+        State::default(),
+        &ctx("2026-10-17T08:00"),
+        [
+            Command::CreateClient {
+                name: "Acme".into(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+            },
+            Command::CreateClient {
+                name: "Beta".into(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+            },
+            project(ACME, "Web", Some("W")),
+            project(ACME, "Old web", Some("OW")),
+            project(ACME, "Legacy", Some("LG")),
+            project(BETA, "Portal", None),
+            Command::ArchiveProject {
+                id: ProjectId::new(2),
+            },
+            Command::ArchiveProject {
+                id: ProjectId::new(3),
+            },
+            Command::ArchiveProject {
+                id: ProjectId::new(4),
+            },
+        ],
+    )
+}
+
+#[test]
+fn name_check_is_free_for_a_new_name() {
+    let s = archive_catalog();
+    let check = |name: &str, abbreviation: Option<&str>| {
+        read::project_name_check(s.catalog(), ACME, name, abbreviation)
+    };
+    assert_eq!(check("Mobile", None), NameCheck::Free);
+    assert_eq!(check("Mobile", Some("MOB")), NameCheck::Free);
+    assert_eq!(check("Mobile", Some("  ")), NameCheck::Free);
+    assert_eq!(check("", None), NameCheck::Free);
+    // Another client's archived project doesn't count.
+    assert_eq!(check("Portal", None), NameCheck::Free);
+}
+
+#[test]
+fn name_check_offers_to_unarchive_on_a_direct_hit() {
+    let s = archive_catalog();
+    let check = |name: &str, abbreviation: Option<&str>| {
+        read::project_name_check(s.catalog(), ACME, name, abbreviation)
+    };
+    let old_web = NameCheck::Unarchive {
+        project: ProjectId::new(2),
+    };
+    // Name to name, ignoring case and surrounding whitespace.
+    assert_eq!(check("old web", None), old_web);
+    assert_eq!(check("  OLD WEB ", Some("")), old_web);
+    // Abbreviation to abbreviation, with a new name.
+    assert_eq!(check("Webshop", Some("ow")), old_web);
+    // Both point at the same project, also with its name as the abbreviation.
+    assert_eq!(check("Old web", Some("OW")), old_web);
+    assert_eq!(check("Old web", Some("old web")), old_web);
+    // Another client: Beta's archived Portal.
+    assert_eq!(
+        read::project_name_check(s.catalog(), BETA, "portal", None),
+        NameCheck::Unarchive {
+            project: ProjectId::new(4)
+        }
+    );
+}
+
+#[test]
+fn name_check_blocks_active_cross_and_multiple_hits() {
+    let s = archive_catalog();
+    let check = |name: &str, abbreviation: Option<&str>| {
+        read::project_name_check(s.catalog(), ACME, name, abbreviation)
+    };
+    let taken = |ids: &[u64]| NameCheck::Taken {
+        by: ids.iter().map(|id| ProjectId::new(*id)).collect(),
+    };
+    // An active project, by name or abbreviation, in either field.
+    assert_eq!(check("web", None), taken(&[1]));
+    assert_eq!(check("Mobile", Some("w")), taken(&[1]));
+    assert_eq!(check("W", None), taken(&[1]));
+    // A cross match with an archived project: its abbreviation typed as the name, or its
+    // name typed as the abbreviation.
+    assert_eq!(check("ow", None), taken(&[2]));
+    assert_eq!(check("Mobile", Some("Legacy")), taken(&[3]));
+    // Two archived projects, or an archived and an active one.
+    assert_eq!(check("Old web", Some("LG")), taken(&[2, 3]));
+    assert_eq!(check("Old web", Some("W")), taken(&[1, 2]));
+}
+
+#[test]
+fn archived_combos_do_not_use_up_the_recents() {
+    // R7: two older active combos, then three newer ones on a project that gets archived.
+    let c = ctx("2026-10-17T18:00");
+    let add = |project: ProjectId, start: &str, end: &str| Command::AddEntry {
+        project,
+        task: TaskChoice::NoTask,
+        start: start.parse().unwrap(),
+        end: end.parse().unwrap(),
+        note: None,
+    };
+    let s = run(
+        catalog(),
+        &c,
+        [
+            add(OPS, "2026-10-17T08:00", "2026-10-17T09:00"),
+            add(API, "2026-10-17T09:00", "2026-10-17T10:00"),
+            Command::AddEntry {
+                project: WEB,
+                task: TaskChoice::Existing(TaskId::new(1)),
+                start: "2026-10-17T10:00".parse().unwrap(),
+                end: "2026-10-17T11:00".parse().unwrap(),
+                note: None,
+            },
+            add(WEB, "2026-10-17T11:00", "2026-10-17T12:00"),
+            Command::ArchiveProject { id: WEB },
+        ],
+    );
+    let labels = |n| -> Vec<String> {
+        read::recents(s.catalog(), s.entries(), n)
+            .into_iter()
+            .map(|r| r.label)
+            .collect()
+    };
+    assert_eq!(labels(2), ["Beta / API", "Beta / Ops"]);
+    assert_eq!(
+        read::recent_combos(s.catalog(), s.entries(), 8),
+        [
+            Combo {
+                project: API,
+                task: None
+            },
+            Combo {
+                project: OPS,
+                task: None
+            },
+        ]
+    );
+    // The quick-switch's blank list and its matches skip the archived project too.
+    let recents = read::recent_combos(s.catalog(), s.entries(), read::QUICK_SWITCH_RECENCY);
+    let blank: Vec<_> = read::quick_switch(s.catalog(), &recents, "")
+        .into_iter()
+        .map(|r| r.label)
+        .collect();
+    assert_eq!(blank, ["Beta / API", "Beta / Ops"]);
+    assert!(read::quick_switch(s.catalog(), &recents, "web").is_empty());
 }
