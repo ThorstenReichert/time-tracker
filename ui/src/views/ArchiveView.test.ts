@@ -14,16 +14,16 @@ const archive: ArchiveClientDto[] = [
     name: "Acme",
     abbreviation: "AC",
     projects: [
-      { id: 6, name: "Unused", abbreviation: null, first: null, last: null },
-      { id: 4, name: "Portal", abbreviation: "PT", first: "2026-06-01", last: "2026-07-01" },
-      { id: 2, name: "Legacy", abbreviation: null, first: "2026-03-02", last: "2026-03-02" },
+      { id: 6, name: "Unused", abbreviation: null, period: null },
+      { id: 4, name: "Portal", abbreviation: "PT", period: { first: "2026-06-01", last: "2026-07-01" } },
+      { id: 2, name: "Legacy", abbreviation: null, period: { first: "2026-03-02", last: "2026-03-02" } },
     ],
   },
   {
     id: 2,
     name: "Beta",
     abbreviation: null,
-    projects: [{ id: 8, name: "Ops", abbreviation: null, first: "2026-09-01", last: "2026-09-14" }],
+    projects: [{ id: 8, name: "Ops", abbreviation: null, period: { first: "2026-09-01", last: "2026-09-14" } }],
   },
 ];
 const confirmation = () => document.querySelector("[role=alertdialog]");
@@ -82,10 +82,25 @@ describe("ArchiveView", () => {
     expect(document.body.textContent).toContain("Something went wrong");
   });
 
-  it("reloads on data-changed", async () => {
-    const { backend } = await view();
+  it("says why the archive can't be loaded", async () => {
+    fakeBackend({
+      get_archive: () => {
+        throw uiError("The database can't be read");
+      },
+    });
+    const wrapper = mountInApp(ArchiveView);
+    await flushPromises();
+    expect(wrapper.get(".error").text()).toBe("The database can't be read");
+    expect(wrapper.text()).not.toContain("No archived projects.");
+  });
+
+  it("reloads on data-changed, so an unarchived project leaves the view (R2f)", async () => {
+    const { backend, projects } = await view();
+    const [acme, beta] = archive;
+    backend.handlers.get_archive = () => [{ ...acme!, projects: acme!.projects.filter((p) => p.id !== 4) }, beta!];
     await emit("data-changed");
     await flushPromises();
     expect(backend.called("get_archive")).toHaveLength(2);
+    expect(projects().map((p) => p.get(".project-name").text())).toEqual(["Unused", "Legacy", "Ops"]);
   });
 });

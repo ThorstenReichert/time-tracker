@@ -125,7 +125,6 @@ pub enum NameCheckKind {
     Taken,
 }
 
-/// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
 /// A client of the Archive view with its archived projects, in the order of R2e.
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -136,16 +135,22 @@ pub struct ArchiveClientDto {
     pub projects: Vec<ArchivedProjectDto>,
 }
 
-/// An archived project with its active period as `YYYY-MM-DD` days (R2e). `first` and
-/// `last` are both `null` if it has no entries.
+/// An archived project with its active period; `period` is `null` if it has no entries (R2e).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ArchivedProjectDto {
     pub id: u64,
     pub name: String,
     pub abbreviation: Option<String>,
-    pub first: Option<String>,
-    pub last: Option<String>,
+    pub period: Option<ActivePeriodDto>,
+}
+
+/// The first and last day of an active period, as `YYYY-MM-DD` (R2e).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivePeriodDto {
+    pub first: String,
+    pub last: String,
 }
 
 impl ArchiveClientDto {
@@ -168,8 +173,10 @@ impl ArchiveClientDto {
                                 id: p.id.get(),
                                 name: p.name.to_string(),
                                 abbreviation: p.abbreviation.as_ref().map(ToString::to_string),
-                                first: ap.period.map(|d| d.first.to_string()),
-                                last: ap.period.map(|d| d.last.to_string()),
+                                period: ap.period.map(|d| ActivePeriodDto {
+                                    first: d.first.to_string(),
+                                    last: d.last.to_string(),
+                                }),
                             })
                         })
                         .collect(),
@@ -179,6 +186,7 @@ impl ArchiveClientDto {
     }
 }
 
+/// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckedProjectDto {

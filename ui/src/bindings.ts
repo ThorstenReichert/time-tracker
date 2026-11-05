@@ -65,10 +65,13 @@ export const commands = {
 };
 
 /* Types */
-/**
- *  A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
- *  A client of the Archive view with its archived projects, in the order of R2e.
- */
+/**  The first and last day of an active period, as `YYYY-MM-DD` (R2e). */
+export type ActivePeriodDto = {
+	first: string,
+	last: string,
+};
+
+/**  A client of the Archive view with its archived projects, in the order of R2e. */
 export type ArchiveClientDto = {
 	id: number,
 	name: string,
@@ -76,16 +79,12 @@ export type ArchiveClientDto = {
 	projects: ArchivedProjectDto[],
 };
 
-/**
- *  An archived project with its active period as `YYYY-MM-DD` days (R2e). `first` and
- *  `last` are both `null` if it has no entries.
- */
+/**  An archived project with its active period; `period` is `null` if it has no entries (R2e). */
 export type ArchivedProjectDto = {
 	id: number,
 	name: string,
 	abbreviation: string | null,
-	first: string | null,
-	last: string | null,
+	period: ActivePeriodDto | null,
 };
 
 /**  The autostart entry (R9). Windows holds it; the app keeps no copy (spec §2). */
@@ -106,6 +105,7 @@ export type CatalogDto = {
 	roundingUnits: number[],
 };
 
+/**  A project named by a name check, e.g. `archived project "Web" (W)` (R2d). */
 export type CheckedProjectDto = {
 	id: number,
 	label: string,

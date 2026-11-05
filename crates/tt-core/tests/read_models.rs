@@ -988,7 +988,8 @@ fn start_span_counts_the_running_entry() {
 
 /// Clients "Zeta" (1), "acme" (2), "Gamma" (3, nothing archived). Projects, in ID order:
 /// acme: Old (1), Mid (2), Twin (3), Same start long (4), Unused b (5), unused A (6),
-/// Active (7, not archived); Zeta: Portal (8); Gamma: Kept (9, not archived).
+/// Active (7, not archived); Zeta: Portal (8); Gamma: Kept (9, not archived); acme: Late short
+/// (10), whose first day is newer and last day older than those of Same start long, Mid, Twin.
 fn archive_view_state() -> State {
     let client = |name: &str| Command::CreateClient {
         name: name.into(),
@@ -1015,6 +1016,7 @@ fn archive_view_state() -> State {
     }
     cmds.push(project(1, "Portal"));
     cmds.push(project(3, "Kept"));
+    cmds.push(project(2, "Late short"));
     cmds.extend([
         add_entry(p(1), "2026-03-02T09:00", "2026-03-02T10:00"),
         add_entry(p(1), "2026-05-10T09:00", "2026-05-10T10:00"),
@@ -1027,8 +1029,10 @@ fn archive_view_state() -> State {
         add_entry(p(7), "2026-08-01T09:00", "2026-08-01T10:00"),
         add_entry(p(8), "2026-09-01T09:00", "2026-09-01T10:00"),
         add_entry(p(9), "2026-09-02T09:00", "2026-09-02T10:00"),
+        add_entry(p(10), "2026-06-15T09:00", "2026-06-15T10:00"),
+        add_entry(p(10), "2026-06-16T09:00", "2026-06-16T10:00"),
     ]);
-    cmds.extend([1, 2, 3, 4, 5, 6, 8].map(|id| Command::ArchiveProject { id: p(id) }));
+    cmds.extend([1, 2, 3, 4, 5, 6, 8, 10].map(|id| Command::ArchiveProject { id: p(id) }));
     run(State::default(), &ctx("2026-10-20T18:00"), cmds)
 }
 
@@ -1053,12 +1057,14 @@ fn archive_view_groups_and_orders_archived_projects() {
     let clients: Vec<_> = view.iter().map(|c| c.client.get()).collect();
     assert_eq!(clients, [2, 1]);
     // No entries first (by name, ignoring case), then the first day newest first, then the
-    // last day newest first, then the name. Active is left out.
+    // last day newest first, then the name. Late short starts last, so its older last day
+    // doesn't matter. Active is left out.
     assert_eq!(
         rows(&view[0]),
         [
             (6, None),
             (5, None),
+            (10, period("2026-06-15", "2026-06-16")),
             (4, period("2026-06-01", "2026-07-01")),
             (2, period("2026-06-01", "2026-06-20")),
             (3, period("2026-06-01", "2026-06-20")),

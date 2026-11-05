@@ -1,6 +1,6 @@
-//! Read models (R2c, R2e, R3, R6, R7, R10, R14): pure functions over the `Catalog`, the entries they
-//! need, `now`, the zone and the date or query. They take entries as input, never the whole
-//! `State` (OQ-9), don't go through `decide` and are never stored.
+//! Read models (R2c, R2e, R3, R6, R7, R10, R14): pure functions over the `Catalog`, the
+//! entries they need, `now`, the zone and the date or query. They take entries as input, never
+//! the whole `State` (OQ-9), don't go through `decide` and are never stored.
 
 mod archive;
 mod combo;

@@ -63,6 +63,16 @@ only named queries. The owner decided to approve intent, spec and plan in one go
   like `check_project_name`. An item missing from the catalog is left out.
 - Step 6: `formatPeriod` lives in `lib/day.ts` next to `formatDay`, because it formats
   `YYYY-MM-DD` days. It uses a short date ("2 Mar 2026"), and its tests are in `day.test.ts`.
+- Stage 5 review fixes (2026-11-05):
+  - The order test couldn't tell "first day newest first" from "last day newest first". A
+    project with a newer first day and an older last day (Late short) now pins that the first
+    day decides.
+  - `ArchivedProjectDto` carries one `period: ActivePeriodDto | null` instead of two optional
+    days, so a period with one end can't be represented.
+  - The view styles its load error like the other views. New tests cover a failed load and
+    the re-render after `data-changed`.
+  - Small fixes: a doc comment that had slipped onto the wrong DTO, `sort_by_cached_key`, and a
+    long doc line.
 
 ## Coverage
 | Requirement | Steps |

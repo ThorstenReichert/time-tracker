@@ -51,7 +51,7 @@ pub fn archived_projects(
                 return None;
             }
             // `false < true`: projects without entries come first.
-            projects.sort_by_key(|(p, period)| {
+            projects.sort_by_cached_key(|(p, period)| {
                 (
                     period.is_some(),
                     period.map(|d| Reverse(d.first)),

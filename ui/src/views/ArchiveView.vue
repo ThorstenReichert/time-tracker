@@ -32,7 +32,7 @@ onUnmounted(() => void unlisten.then((stop) => stop()));
 
 /** The active period, or "No entries" for a project without any. */
 function period(project: ArchivedProjectDto): string {
-  return project.first === null || project.last === null ? "No entries" : formatPeriod(project.first, project.last);
+  return project.period === null ? "No entries" : formatPeriod(project.period.first, project.period.last);
 }
 
 /** Unarchives after a confirmation; a rejection is a toast (R2f). */
@@ -76,6 +76,9 @@ function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
 </template>
 
 <style scoped>
+.error {
+  color: var(--error-text);
+}
 .client {
   border: 1px solid var(--p-content-border-color);
   border-radius: var(--p-content-border-radius, 6px);
