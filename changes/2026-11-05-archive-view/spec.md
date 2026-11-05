@@ -2,7 +2,8 @@
 Source: [intent.md](intent.md). Amends: [../../spec.md](../../spec.md). Author: Thorsten Reichert.
 Status: approved (owner, 2026-11-05). Skills applied: none.
 
-This spec adds the list of archived projects to R2 of the main spec (R2e, R2f). It builds on
+This spec adds the list of archived projects to R2 of the main spec (R2e, R2f) and amends R2a.
+It builds on
 R2a–R2d of [../2026-11-05-archive-projects/spec.md](../2026-11-05-archive-projects/spec.md).
 Archiving clients and tasks and deleting unused items stay deferred.
 
@@ -28,6 +29,11 @@ Archiving clients and tasks and deleting unused items stay deferred.
   `UnarchiveProject` (R2a) at once, without a confirmation: archiving it again is as easy.
   The project leaves the view and shows in Clients & projects again. A failure is shown as a
   toast.
+
+Amendment:
+- **R2a (archive action).** The Archive action in Clients & projects runs `ArchiveProject` at
+  once, without a confirmation. The Archive view undoes it with one click (R2f). A rejection,
+  such as archiving the running project, is still shown as a toast.
 
 ## 2. Design
 
@@ -59,6 +65,7 @@ Archiving clients and tasks and deleting unused items stay deferred.
 | Grouped by client, active period, order | R2e |
 | No entries at the top | R2e order, step 1 |
 | Unarchive from the view, one click | R2f |
+| Archive with one click (owner, 2026-11-05) | R2a amendment |
 
 ## 4. Open questions
 None.

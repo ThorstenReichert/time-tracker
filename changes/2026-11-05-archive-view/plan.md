@@ -1,7 +1,7 @@
 # Plan: Archive view
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
 Status: approved (owner, 2026-11-05). Branch: `feat/archive-view`.
-Scope: R2e, R2f. Deferred: archiving clients and tasks, totals, search, deleting unused items.
+Scope: R2e, R2f and the R2a amendment. Deferred: archiving clients and tasks, totals, search, deleting unused items.
 
 ## Context
 0.4.0 hid archived projects from Clients & projects and left a view of them for later. The
@@ -16,6 +16,7 @@ only named queries. The owner decided to approve intent, spec and plan in one go
 | Placement | Own Archive view | A section in Clients & projects (keeps that view about active work) |
 | No entries | At the top, "No entries" | At the bottom (an unused project is the likeliest to be acted on) |
 | Action | Unarchive with one click (owner, after trying the first version) | A confirmation (too much friction); a read-only list |
+| Archive action | One click too (R2a amendment), since unarchiving is one click | Keeping the 0.4.0 confirmation (no longer warranted) |
 | Day of an entry | Its start date (R18 step 1) | The end date (would differ from every other view) |
 | Period source | Named query `start_span` over a new in-memory index | Scanning all entries (breaks OQ-9) |
 
@@ -63,6 +64,9 @@ only named queries. The owner decided to approve intent, spec and plan in one go
   like `check_project_name`. An item missing from the catalog is left out.
 - Step 6: Unarchive runs at once. The first version asked for a confirmation, which the owner
   found too much friction; intent, spec (R2f) and the decisions above were changed with it.
+- Step 6: Archive in Clients & projects runs at once too (owner). The confirmation of 0.4.0
+  guarded an action that had no easy undo; the Archive view is that undo. Spec: the R2a
+  amendment.
 - Step 6: no `formatPeriod`. The view lays out all clients as one CSS grid (subgrids per
   client and project), so the first days start at one edge and the dashes share a centre
   (owner, after a look at the first version). Each day is formatted by `formatShortDay`
@@ -83,6 +87,7 @@ only named queries. The owner decided to approve intent, spec and plan in one go
 |---|---|
 | R2e | 1, 2, 3, 4, 5, 6 |
 | R2f | 6 |
+| R2a amendment | 6 |
 
 ## Proof
 - `gatekeeper` runs the full `pwsh scripts/check.ps1` after each step and must report

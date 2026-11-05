@@ -5,7 +5,6 @@
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
-import { useConfirm } from "primevue/useconfirm";
 import { commands, type NameCheckDto, type RuleDto, type TaskDto } from "../bindings";
 import ClientDialog from "../components/ClientDialog.vue";
 import NameDialog, { type Naming } from "../components/NameDialog.vue";
@@ -16,7 +15,6 @@ import { useCatalogStore, type ClientNode, type ProjectNode } from "../stores/ca
 
 const { tree } = storeToRefs(useCatalogStore());
 const attempt = useAttempt();
-const confirm = useConfirm();
 
 /** The tree without archived projects (the store keeps them for the other views). */
 const clients = computed(() =>
@@ -98,15 +96,12 @@ const newProject = (client: ClientNode) =>
     (name, abbreviation) => call(commands.checkProjectName(client.id, name, abbreviation)),
   );
 
-/** Archives after a confirmation; a rejection (e.g. the timer runs on it) is a toast (R2a). */
-function archiveProject(client: ClientNode, project: ProjectNode) {
-  confirm.require({
-    header: "Archive the project?",
-    message: `${client.name} / ${project.name} can no longer be booked and isn't offered any more. Its entries stay.`,
-    rejectProps: { label: "Cancel", severity: "secondary", text: true },
-    acceptProps: { label: "Archive" },
-    accept: () => void attempt(() => call(commands.archiveProject(project.id))),
-  });
+/**
+ * Archives at once, without a confirmation: the Archive view unarchives with one click
+ * (R2a as amended by R2f). A rejection (e.g. the timer runs on it) is a toast.
+ */
+function archiveProject(project: ProjectNode) {
+  void attempt(() => call(commands.archiveProject(project.id)));
 }
 const editProject = (project: ProjectNode) =>
   askName(`Edit project ${project.name}`, project, (name, abbreviation) =>
@@ -157,7 +152,7 @@ const withAbbreviation = (item: Naming) =>
           <span class="spacer"></span>
           <Button label="Edit" text size="small" @click="editProject(project)" />
           <Button label="New task" text size="small" @click="newTask(project)" />
-          <Button label="Archive" text size="small" severity="secondary" @click="archiveProject(client, project)" />
+          <Button label="Archive" text size="small" severity="secondary" @click="archiveProject(project)" />
         </div>
         <div v-if="project.tasks.length" class="tasks">
           <Button

@@ -16,7 +16,8 @@ R25 (ThorSoft logo and a matching colour theme, light and dark) and an amendment
 Amended 2026-11-05 by [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md):
 R2 for projects (R2a–R2d) and an amendment to R7 (recents). OQ-7 is unchanged.
 Amended 2026-11-05 by [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md):
-R2e (Archive view of archived projects with their active period) and R2f (unarchive from it).
+R2e (Archive view of archived projects with their active period), R2f (unarchive from it) and
+an amendment to R2a (archive without a confirmation).
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.

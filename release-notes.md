@@ -14,6 +14,8 @@ The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-arch
   "No entries". The others are ordered newest period first, by its first day, then its last
   day, then the name.
 - **Unarchive** on each archived project, with one click (R2f).
+- **Archive** in Clients & projects needs no confirmation any more, because the Archive view
+  undoes it with one click (R2a).
 - tt-cli: `archive` prints the same list as JSON.
 
 ### Rollback

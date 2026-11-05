@@ -18,6 +18,8 @@ into the New project dialog.
   stands at the top of its client.
 - Each archived project can be unarchived from the view with one click, without a
   confirmation (owner, after trying it: a confirmation is too much friction).
+- Archiving a project in Clients & projects needs no confirmation any more either. Unarchiving
+  is now one click away, so archiving needs no warning.
 
 ## Constraints
 - The architecture rules of the main spec still apply: the rules (which projects, the period,
