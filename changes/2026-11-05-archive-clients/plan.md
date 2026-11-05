@@ -104,9 +104,10 @@ The owner approved intent, spec and plan in one go.
     (R2g).
   - Small fixes: the Archive view test asserts the tag itself, and `ClientsView` uses the
     `NameChecker` type.
-  - Not changed, left to the owner:
-    - the rule controls of New client stay enabled while the button reads "Unarchive client"
-      (R2i ignores them);
+  - Owner decision after the review: New client disables the rounding controls (unit,
+    direction, level) while the button reads "Unarchive client", because R2i ignores them. Name
+    and abbreviation stay editable. Covered in `ClientDialog.test.ts`. Spec R2i is updated.
+  - Not changed:
     - `read::archived_projects` keeps its name although it now lists clients too;
     - the Archive buttons have no client- or project-specific `aria-label` (as before).
 

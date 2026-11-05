@@ -34,7 +34,8 @@ clients.
   - one archived client *A* hit name to name or abbreviation to abbreviation → **unarchive**:
     the dialog shows inline that *A* is archived, with its name and abbreviation, and its button
     reads **Unarchive client**. Clicking it unarchives *A* as it was. The typed abbreviation and
-    rounding rule are ignored;
+    rounding rule are ignored, so the rounding controls are disabled while the hint shows (owner,
+    2026-11-05). Name and abbreviation stay editable;
   - anything else → **taken**: the dialog names the clashing clients and disables its button.
 
   `CreateClient` still enforces uniqueness on save.

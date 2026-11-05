@@ -98,6 +98,13 @@ describe("ClientDialog", () => {
     }
 
     const submitButton = () => dialog().findAll("button").find((b) => b.attributes("type") === "submit")!;
+    /** Whether each rule control is disabled: the unit select, then the five toggle buttons. */
+    const ruleDisabled = () => [
+      dialog().get("[role=combobox]").attributes("aria-disabled") === "true",
+      ...["Up", "Nearest", "Down", "Per project", "Per client"].map(
+        (label) => dialog().findAll("button").find((b) => b.text() === label)!.attributes("disabled") !== undefined,
+      ),
+    ];
 
     it("offers to unarchive a matching archived client, ignoring the typed rule", async () => {
       const save = vi.fn<Save>(async () => {});
@@ -108,7 +115,9 @@ describe("ClientDialog", () => {
       expect(check).toHaveBeenLastCalledWith("Old Corp", "");
       expect(dialog().text()).toContain('The archived client "Old Corp" (OC) exists.');
       expect(submitButton().text()).toBe("Unarchive client");
-      await clickButton("Up", dialog());
+      // The rule is ignored, so its controls are off; name and abbreviation stay editable.
+      expect(ruleDisabled()).toEqual([true, true, true, true, true, true]);
+      expect(dialog().findAll("input").map((i) => i.attributes("disabled"))).toEqual([undefined, undefined]);
       await clickButton("Unarchive client", dialog());
       expect(unarchive).toHaveBeenCalledWith(3);
       expect(save).not.toHaveBeenCalled();
@@ -122,9 +131,11 @@ describe("ClientDialog", () => {
       const input = dialog().get("input");
       await input.setValue("Old Corp");
       await flushPromises();
+      expect(ruleDisabled().every(Boolean)).toBe(true);
       await input.setValue("Old Corporation");
       await flushPromises();
       expect(dialog().text()).not.toContain("archived");
+      expect(ruleDisabled().some(Boolean)).toBe(false);
       await clickButton("Save", dialog());
       expect(save).toHaveBeenCalledWith("Old Corporation", "", { unit: 15, direction: "nearest", level: "project" });
       expect(unarchive).not.toHaveBeenCalled();

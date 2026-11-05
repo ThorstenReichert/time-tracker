@@ -4,7 +4,8 @@
 // rule come from the backend, so the UI keeps no copy of the core's rules.
 // With `check` (New client, R2i) the typed text is checked while typing (lib/nameCheck.ts):
 // a match with one archived client turns the button into "Unarchive client", which ignores
-// the typed abbreviation and rule; a clash blocks the button.
+// the typed abbreviation and rule (the rule controls are disabled meanwhile); a clash blocks
+// the button.
 import { computed, ref, useId, watch } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
@@ -102,11 +103,34 @@ async function submit() {
       <label :for="ids.abbreviation">Abbreviation (optional)</label>
       <InputText :id="ids.abbreviation" v-model="abbreviation" fluid />
       <label :for="ids.unit">Round to</label>
-      <Select :input-id="ids.unit" v-model="unit" :options="units" option-label="label" option-value="value" fluid />
+      <!-- Unarchiving keeps the client's own rule, so the rule controls are off meanwhile (R2i). -->
+      <Select
+        :input-id="ids.unit"
+        v-model="unit"
+        :options="units"
+        option-label="label"
+        option-value="value"
+        :disabled="toUnarchive !== null"
+        fluid
+      />
       <span>Direction</span>
-      <SelectButton v-model="direction" :options="directions" option-label="label" option-value="value" :allow-empty="false" />
+      <SelectButton
+        v-model="direction"
+        :options="directions"
+        option-label="label"
+        option-value="value"
+        :allow-empty="false"
+        :disabled="toUnarchive !== null"
+      />
       <span>Round</span>
-      <SelectButton v-model="level" :options="levels" option-label="label" option-value="value" :allow-empty="false" />
+      <SelectButton
+        v-model="level"
+        :options="levels"
+        option-label="label"
+        option-value="value"
+        :allow-empty="false"
+        :disabled="toUnarchive !== null"
+      />
       <Message v-if="toUnarchive" severity="info">
         {{ `The ${toUnarchive.label} exists. Unarchive it to use it again, or choose another name.` }}
       </Message>
