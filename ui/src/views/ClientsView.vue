@@ -9,6 +9,7 @@ import Button from "primevue/button";
 import { commands, type NameCheckDto, type RuleDto, type TaskDto } from "../bindings";
 import ClientDialog from "../components/ClientDialog.vue";
 import NameDialog, { type Naming } from "../components/NameDialog.vue";
+import type { NameChecker } from "../lib/nameCheck";
 import { call } from "../lib/api";
 import { useAttempt } from "../lib/attempt";
 import { formatRule } from "../lib/format";
@@ -35,7 +36,7 @@ const clientDialog = ref({
   header: "",
   initial: undefined as (Naming & { rule: RuleDto }) | undefined,
   save: async (_name: string, _abbreviation: string | null, _rule: RuleDto) => {},
-  check: undefined as ((name: string, abbreviation: string | null) => Promise<NameCheckDto>) | undefined,
+  check: undefined as NameChecker | undefined,
   unarchive: undefined as ((client: number) => Promise<void>) | undefined,
 });
 const nameDialog = ref({
@@ -44,7 +45,7 @@ const nameDialog = ref({
   label: "Name",
   initial: undefined as Naming | undefined,
   save: async (_name: string, _abbreviation: string | null) => {},
-  check: undefined as ((name: string, abbreviation: string | null) => Promise<NameCheckDto>) | undefined,
+  check: undefined as NameChecker | undefined,
   unarchive: undefined as ((project: number) => Promise<void>) | undefined,
 });
 
@@ -89,7 +90,7 @@ function askName(
   header: string,
   initial: Naming | undefined,
   save: (name: string, abbreviation: string | null) => Promise<unknown>,
-  check?: (name: string, abbreviation: string | null) => Promise<NameCheckDto>,
+  check?: NameChecker,
 ) {
   nameDialog.value = {
     visible: true,

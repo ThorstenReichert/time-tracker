@@ -284,6 +284,10 @@ fn an_archived_client_survives_a_reload_and_is_not_bookable() {
         }))
     ));
     assert!(app.quick_switch("web").unwrap().is_empty());
+    // Its entries still count in the daily overview (R2g).
+    let day = "2026-10-17".parse().unwrap();
+    let overview = app.daily_overview(&ctx("2026-10-17T10:10"), day).unwrap();
+    assert!(overview.clients.iter().any(|b| b.name.as_str() == "Acme"));
     assert_eq!(
         app.client_name_check("acme", None).unwrap(),
         tt_core::read::NameCheck::Unarchive { item: acme }

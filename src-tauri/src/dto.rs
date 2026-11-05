@@ -229,12 +229,10 @@ impl NameCheckDto {
                 .filter_map(|id| {
                     let item = item(*id);
                     let label = crate::errors::item_label(catalog, item)?;
-                    let id = match item {
-                        ItemRef::Client(id) => id.get(),
-                        ItemRef::Project(id) => id.get(),
-                        ItemRef::Task(id) => id.get(),
-                    };
-                    Some(CheckedItemDto { id, label })
+                    Some(CheckedItemDto {
+                        id: item.id(),
+                        label,
+                    })
                 })
                 .collect(),
         }

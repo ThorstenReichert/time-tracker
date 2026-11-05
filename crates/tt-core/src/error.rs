@@ -103,6 +103,17 @@ pub enum ItemRef {
     Task(TaskId),
 }
 
+impl ItemRef {
+    /// The raw ID, whatever the kind of item.
+    pub const fn id(self) -> u64 {
+        match self {
+            Self::Client(id) => id.get(),
+            Self::Project(id) => id.get(),
+            Self::Task(id) => id.get(),
+        }
+    }
+}
+
 impl std::fmt::Display for ItemRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

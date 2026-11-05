@@ -365,5 +365,10 @@ mod tests {
             }),
             "The name is already used by archived client \"Acme\" (AC)"
         );
+        // The New client check names it as a client (R2i, R2k).
+        let check = app.client_name_check("acme", None).unwrap();
+        let dto = crate::dto::NameCheckDto::new(&check, &app.catalog().unwrap(), ItemRef::Client);
+        let items: Vec<_> = dto.items.iter().map(|i| (i.id, i.label.as_str())).collect();
+        assert_eq!(items, [(1, "archived client \"Acme\" (AC)")]);
     }
 }

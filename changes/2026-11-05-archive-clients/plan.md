@@ -93,6 +93,22 @@ The owner approved intent, spec and plan in one go.
   constructor (`ItemRef::Project` or `ItemRef::Client`) for the labels.
 - Step 7: in the Archive view the client row is a subgrid too, so "Unarchive client" sits in the
   action column with the projects' Unarchive buttons.
+- Stage 5 review fixes (2026-11-05). Rust: nothing Important. UI: one Important.
+  - AC-11: `ClientDialog.test.ts` was missing two of the R2c cases ("goes back to creating",
+    "keeps only the newest answer"). Both are ported now. A new case reopens a New dialog with
+    the same check and pins the reset on open and close, which the edit-reuse tests couldn't
+    prove.
+  - `ItemRef::id()` replaces a re-match in `NameCheckDto::new`. A src-tauri test checks that
+    the client check labels its item as a client.
+  - The tt-app test asserts that an archived client's entries still show in the daily overview
+    (R2g).
+  - Small fixes: the Archive view test asserts the tag itself, and `ClientsView` uses the
+    `NameChecker` type.
+  - Not changed, left to the owner:
+    - the rule controls of New client stay enabled while the button reads "Unarchive client"
+      (R2i ignores them);
+    - `read::archived_projects` keeps its name although it now lists clients too;
+    - the Archive buttons have no client- or project-specific `aria-label` (as before).
 
 ## Coverage
 | Requirement | Steps |

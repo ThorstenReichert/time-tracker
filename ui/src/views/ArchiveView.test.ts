@@ -127,7 +127,7 @@ describe("ArchiveView", () => {
     it("marks an archived client and lists all its projects without their own buttons", async () => {
       const { wrapper } = await view(withClients);
       const northwind = section(wrapper, "Northwind Instruments");
-      expect(northwind.get(".client-row").text()).toContain("archived");
+      expect(northwind.get(".client-row .tag").text()).toBe("archived");
       expect(northwind.findAll(".project-name").map((p) => p.text())).toEqual(["Old portal", "ASCP"]);
       const [oldPortal, ascp] = northwind.findAll(".project");
       expect(oldPortal!.text()).toContain("archived separately");

@@ -115,6 +115,59 @@ describe("ClientDialog", () => {
       expect(wrapper.emitted("update:visible")).toEqual([[false]]);
     });
 
+    it("goes back to creating once the name is changed", async () => {
+      const save = vi.fn<Save>(async () => {});
+      const unarchive = vi.fn<Unarchive>(async () => {});
+      await openNew(save, unarchive);
+      const input = dialog().get("input");
+      await input.setValue("Old Corp");
+      await flushPromises();
+      await input.setValue("Old Corporation");
+      await flushPromises();
+      expect(dialog().text()).not.toContain("archived");
+      await clickButton("Save", dialog());
+      expect(save).toHaveBeenCalledWith("Old Corporation", "", { unit: 15, direction: "nearest", level: "project" });
+      expect(unarchive).not.toHaveBeenCalled();
+    });
+
+    it("keeps only the answer to the newest text", async () => {
+      let answerFirst!: (r: NameCheckDto) => void;
+      const slow = vi.fn<Check>((name) =>
+        name === "Old Corp"
+          ? new Promise((resolve) => (answerFirst = resolve))
+          : Promise.resolve({ kind: "free", items: [] }),
+      );
+      await openNew(async () => {}, async () => {}, slow);
+      const input = dialog().get("input");
+      await input.setValue("Old Corp");
+      await input.setValue("Mobile Corp");
+      await flushPromises();
+      answerFirst({ kind: "unarchive", items: [oldCorp] });
+      await flushPromises();
+      expect(dialog().text()).not.toContain("archived");
+      expect(submitButton().text()).toBe("Save");
+    });
+
+    it("drops an answer that arrives after the dialog is closed and opened again", async () => {
+      // Same check before and after, so only the reset on open and close drops the answer.
+      let answerFirst!: (r: NameCheckDto) => void;
+      // Only the first question is ever answered.
+      let asked = 0;
+      const slow = vi.fn<Check>(() =>
+        ++asked === 1 ? new Promise((resolve) => (answerFirst = resolve)) : new Promise(() => {}),
+      );
+      const wrapper = await openNew(async () => {}, async () => {}, slow);
+      await dialog().get("input").setValue("acme");
+      await wrapper.setProps({ visible: false });
+      await wrapper.setProps({ visible: true });
+      await flushPromises();
+      await dialog().get("input").setValue("acme");
+      answerFirst({ kind: "taken", items: [acme] });
+      await flushPromises();
+      expect(dialog().text()).not.toContain("Already used");
+      expect(submitButton().attributes("disabled")).toBeUndefined();
+    });
+
     it("blocks a clash and names the client", async () => {
       const save = vi.fn<Save>(async () => {});
       await openNew(save, vi.fn<Unarchive>(async () => {}));
