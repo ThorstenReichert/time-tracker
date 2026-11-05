@@ -1,14 +1,16 @@
 # Release notes
 
-## 0.6.0 (2026-11-05, untagged)
+## 0.6.0 (2026-11-05)
 
 Longer abbreviations (R24 revised) and the Today view listing newest first (R10 revised), both
 small revisions of the spec in place (owner, 2026-11-05), without a change folder.
 
-- **Source:** merge commit `eef78a7` of branch `feat/abbreviation-limit-50` on `master`, not
-  tagged yet. Approved to merge by Thorsten Reichert (owner), 2026-11-05, without stage 5
+- **Source:** tag `v0.6.0` on `master`, which is the merge commit `eef78a7` of branch
+  `feat/abbreviation-limit-50`. Approved to merge by Thorsten Reichert (owner), 2026-11-05, without stage 5
   reviewer subagents (one-constant change). The R10 fix is the merge commit `d552f31` of
   branch `fix/today-newest-first`, after `v0.5.0`.
+- **Installer:** `ThorSoft TimeTracker_0.6.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `D4E19E836C1A0ED6E029A01B17B50FF8C20517C6E0D9A36DA02F23301317C9B6`.
 - **Database:** no migration. 0.6.0 reads a 0.5.0 database file. **Not reversible once used:**
   as soon as an abbreviation longer than 20 characters is saved, 0.5.0 and earlier refuse to
   open the database (they reject it as corrupt on load, because they still check the old
