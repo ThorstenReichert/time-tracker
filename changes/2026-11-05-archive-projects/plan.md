@@ -1,7 +1,7 @@
 # Plan: Archive projects
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-05); merged into `master` as `7f5ce1f` on 2026-11-05.
-Branch: `feat/archive-projects` (deleted). Version: 0.4.0 (not yet tagged).
+Status: approved (owner, 2026-11-05); released as 0.4.0 on 2026-11-05 (tag `v0.4.0` on merge
+`7f5ce1f`, see [release-notes.md](../../release-notes.md)). Branch: `feat/archive-projects` (deleted).
 Scope: R2a–R2d and the R7 amendment. Deferred: archiving clients and tasks, deleting unused
 items, the archive view, favorites.
 

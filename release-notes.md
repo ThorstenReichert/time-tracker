@@ -1,12 +1,14 @@
 # Release notes
 
-## 0.4.0 (unreleased)
+## 0.4.0 (2026-11-05)
 
 Archiving projects, from [changes/2026-11-05-archive-projects](changes/2026-11-05-archive-projects/plan.md).
 
-- **Source:** `master`, merge commit `7f5ce1f` of branch `feat/archive-projects`. Approved to
-  merge by Thorsten Reichert (owner), 2026-11-05, after the stage 5 review against
-  [REVIEW.md](REVIEW.md) and a manual test. Not yet tagged, and no installer has been built.
+- **Source:** tag `v0.4.0` on `master`, which is the merge commit `7f5ce1f` of branch
+  `feat/archive-projects`. Approved to merge by Thorsten Reichert (owner), 2026-11-05, after
+  the stage 5 review against [REVIEW.md](REVIEW.md) and a manual test.
+- **Installer:** `ThorSoft TimeTracker_0.4.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `CDD71D77C0FAC343AD1283EBD7D2D8F19FBC59982A1DB4B5C369D4724945EB05`.
 - **Database:** no migration. 0.4.0 and 0.3.0 read the same database file. 0.3.0 already hides
   archived projects from its pickers, but it doesn't reject booking onto them.
 
