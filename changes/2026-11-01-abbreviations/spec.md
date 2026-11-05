@@ -1,6 +1,8 @@
 # Spec: Abbreviations for clients, projects and tasks
 Source: [intent.md](intent.md). Amends: [../../spec.md](../../spec.md). Author: Thorsten Reichert.
 Status: approved (owner, 2026-11-01).
+Revised 2026-11-05 (owner): R24, an abbreviation can have up to 50 characters (was 20, too
+short in practice).
 
 This spec adds R24 and amends R1, R3 and R6 and spec §2. Everything else in the main spec
 stays as it is.
@@ -8,7 +10,7 @@ stays as it is.
 ## 1. Requirements
 
 - **R24 Abbreviations.** Clients, projects and tasks have an optional abbreviation. It follows
-  the name rules (trimmed, no control characters) with at most 20 characters. Blank input means
+  the name rules (trimmed, no control characters) with at most 50 characters. Blank input means
   "no abbreviation". It can be set when an item is created and changed or removed when the item
   is edited (in the UI and in tt-cli). A task created on the fly from a task input (R3) has none.
   - The **short label** of a combo is, per level, the abbreviation or else the name, joined like
@@ -35,7 +37,7 @@ Notes for later slices:
 
 ## 2. Design
 
-- **tt-core.** An `Abbreviation` newtype (like `Name`, max 20 characters, lowercase key).
+- **tt-core.** An `Abbreviation` newtype (like `Name`, max 50 characters, lowercase key).
   `Client`, `Project` and `Task` get `abbreviation: Option<Abbreviation>`. The `*_named`
   lookups match a name or an abbreviation, so the uniqueness checks and the R3 Create offer
   cover both. `check_invariants` checks the shared namespace.

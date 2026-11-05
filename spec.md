@@ -19,6 +19,7 @@ Amended 2026-11-05 by [changes/2026-11-05-archive-view/spec.md](changes/2026-11-
 R2e (Archive view of archived projects with their active period), R2f (unarchive from it) and
 an amendment to R2a (archive without a confirmation).
 Revised 2026-11-05 (owner): R10, the day's entries are listed newest first.
+Revised 2026-11-05 (owner): R24, an abbreviation can have up to 50 characters (was 20).
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
