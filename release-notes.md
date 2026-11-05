@@ -4,8 +4,9 @@
 
 Archiving projects, from [changes/2026-11-05-archive-projects](changes/2026-11-05-archive-projects/plan.md).
 
-- **Source:** branch `feat/archive-projects`. The merge commit, tag and approval are added at
-  the release.
+- **Source:** `master`, merge commit `7f5ce1f` of branch `feat/archive-projects`. Approved to
+  merge by Thorsten Reichert (owner), 2026-11-05, after the stage 5 review against
+  [REVIEW.md](REVIEW.md) and a manual test. Not yet tagged, and no installer has been built.
 - **Database:** no migration. 0.4.0 and 0.3.0 read the same database file. 0.3.0 already hides
   archived projects from its pickers, but it doesn't reject booking onto them.
 
