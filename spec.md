@@ -18,6 +18,9 @@ R2 for projects (R2a–R2d) and an amendment to R7 (recents). OQ-7 is unchanged.
 Amended 2026-11-05 by [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md):
 R2e (Archive view of archived projects with their active period), R2f (unarchive from it) and
 an amendment to R2a (archive without a confirmation).
+Amended 2026-11-05 by [changes/2026-11-05-archive-clients/spec.md](changes/2026-11-05-archive-clients/spec.md):
+R2 for clients (R2g–R2k) and amendments to R2e/R2f (archived clients in the Archive view).
+OQ-7 confirmed for clients.
 Revised 2026-11-05 (owner): R10, the day's entries are listed newest first.
 Revised 2026-11-05 (owner): R24, an abbreviation can have up to 50 characters (was 20).
 
@@ -56,6 +59,7 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
   sibling isn't created; the UI offers to unarchive the existing item instead.
   *Projects: detailed as R2a–R2d in [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md).*
   *The Archive view: R2e–R2f in [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md).*
+  *Clients: R2g–R2k in [changes/2026-11-05-archive-clients/spec.md](changes/2026-11-05-archive-clients/spec.md).*
 - **R3 Quick task creation.** Wherever a task is chosen, a free-text input matches the
   project's active tasks as you type (case-insensitive substring/fuzzy). If no existing task
   matches exactly, it offers **Create "<text>"**, which creates the task and selects it in one
@@ -420,7 +424,8 @@ Architecture decisions from the stage 2 review (2026-10-17):
   rejected with a message (R12). No silent choice of reading.
 - **OQ-7 Archived names.** Decided: archived names still count for uniqueness (R1), and
   creating a clashing name offers to unarchive the existing item (R2). Confirmed for projects
-  on 2026-11-05 (changes/2026-11-05-archive-projects, R2c).
+  on 2026-11-05 (changes/2026-11-05-archive-projects, R2c), and for clients the same day
+  (changes/2026-11-05-archive-clients, R2i).
 - **OQ-8 Live database location.** Decided: `%LOCALAPPDATA%`, which isn't roamed or synced.
   The backup default follows (R22).
 - **OQ-9 Storage seam.** Decided: whole `State` in memory with a pure Decider (as above).
