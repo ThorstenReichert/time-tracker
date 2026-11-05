@@ -52,6 +52,18 @@ only named queries. The owner decided to approve intent, spec and plan in one go
    fresh-context review against `REVIEW.md`, this spec and this plan; the owner's "approved to
    merge", then the merge.
 
+## Deviations
+- Step 1: the index is a `BTreeMap<ProjectId, BTreeSet<(Instant, EntryId)>>` instead of one
+  flat set, so `start_span` is the first and last element of the project's set. A project's set
+  goes with its last entry. The load benchmark: load and check 62 ms, 38 MB (AC-10).
+- Steps 2-5 were gated together (the Rust part of `check.ps1`), not one by one.
+- Step 3: the tt-app test extends `an_archived_project_survives_a_reload_and_is_not_bookable`
+  in `tests/write_path.rs`, so the view is also checked after a reload.
+- Step 5: `get_archive` reads the archive, then the catalog for the names, under two locks,
+  like `check_project_name`. An item missing from the catalog is left out.
+- Step 6: `formatPeriod` lives in `lib/day.ts` next to `formatDay`, because it formats
+  `YYYY-MM-DD` days. It uses a short date ("2 Mar 2026"), and its tests are in `day.test.ts`.
+
 ## Coverage
 | Requirement | Steps |
 |---|---|

@@ -1,5 +1,25 @@
 # Release notes
 
+## 0.5.0 (unreleased)
+
+The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-archive-view/plan.md).
+
+- **Source:** branch `feat/archive-view`, not merged yet.
+- **Database:** no migration. 0.5.0 and 0.4.0 read the same database file.
+
+### What's in it
+- An **Archive** view in the main window lists the archived projects, grouped by client
+  (R2e). Each project shows its active period, from the day of its first entry to the day of
+  its last (by start date, like the other views). Projects with no entries come first and show
+  "No entries". The others are ordered newest period first, by its first day, then its last
+  day, then the name.
+- **Unarchive** on each archived project, with a confirmation (R2f).
+- tt-cli: `archive` prints the same list as JSON.
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.4.0 installer (or build tag
+  `v0.4.0`). No data step is needed, because 0.5.0 doesn't change the database schema.
+
 ## 0.4.0 (2026-11-05)
 
 Archiving projects, from [changes/2026-11-05-archive-projects](changes/2026-11-05-archive-projects/plan.md).
