@@ -1,6 +1,6 @@
 # Review policy
 
-Owner: Thorsten Reichert (tech lead). Applies to every PR merged into `main`. The
+Owner: Thorsten Reichert (tech lead). Applies to every change merged into `master`. The
 reviewer runs in a fresh context: never the session that wrote the code. Findings never
 approve or block on their own; the owner gives the explicit "approved to merge".
 

@@ -59,7 +59,7 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub and pull requests" below).
+**Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub remote, local workflow" below).
 
 ## Agent Context Profiles
 
@@ -77,8 +77,8 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Handle git by active profile**: report `git status` and the proposed commit; wait for
-   approval unless the current request authorizes the commit. Push a branch and open its PR
-   only on the owner's explicit request (see "GitHub and pull requests" below).
+   approval unless the current request authorizes the commit. Push only on the owner's
+   explicit request (see "GitHub remote, local workflow" below).
 5. **Hand off** - Summarize changes, validation, issue status, and any blocked commit
 
 **Critical rules:**
@@ -96,41 +96,37 @@ how to tell which stage a change is in). Then use the stage skills: `ai-sdlc-1-i
 `ai-sdlc-5-deploy` and `ai-sdlc-6-maintain`. When the user names a stage, load its skill and
 follow it.
 
-### GitHub and pull requests
+### GitHub remote, local workflow
 
 `origin` is the public repository https://github.com/ThorstenReichert/time-tracker. The local
-`master` tracks `origin/main`. Since 2026-11-01 (owner), rulesets on `main` require a pull
-request with one approval and signed commits, and forbid force pushes and deleting `main`.
-Every change reaches `main` through a PR. Nothing is pushed to `main` directly. CI (since
-2026-11-01, owner): the GitHub Actions workflow `.github/workflows/check.yml` runs the local
-gate `pwsh scripts/check.ps1` on every PR against `main` and every push to `main`. Its status
-check is `check`, which the owner makes required in the `main` ruleset. The local checks stay
-the feedback loop and CI is the backstop. Where the stage skills mention CI, they mean this
-workflow.
-- **Branch.** Start each change from an up-to-date `master` (`git pull --ff-only`) on a branch
-  `feat/<slug>`, `fix/<slug>` or `docs/<slug>`. Don't commit on `master`. It only
-  fast-forwards to `origin/main`.
+`master` tracks `origin/main`. No pull requests: changes are merged locally into `master` and pushed to `main`.
+Don't propose PRs or record their absence as a gap. Rulesets on `main` require signed commits
+and forbid force pushes and deleting `main`. CI: the GitHub Actions
+workflow `.github/workflows/check.yml` runs the local gate `pwsh scripts/check.ps1` on every
+push to `main`. Its status check is `check`. The local checks stay the feedback loop and CI
+is the backstop. Where the stage skills mention a PR, CI or branch protection, use the
+equivalents below.
+- **Branch.** Start each change from an up-to-date `master` (`git pull --ff-only`) on a local
+  branch `feat/<slug>`, `fix/<slug>` or `docs/<slug>`. Small docs-only changes may be
+  committed on `master` directly.
 - **Signed commits.** The repository's git config signs every commit (`commit.gpgsign`, GnuPG)
   as `ThorstenReichert@users.noreply.github.com`. Never bypass signing or change that
-  identity: an unsigned commit on the branch blocks the merge.
+  identity: `main` rejects a push with an unsigned commit.
 - **The checks:** `pwsh scripts/check.ps1` (through the `gatekeeper` subagent) before every
-  push. CI then runs the same script on the PR from a clean checkout. If `check` is red, fix
-  it on the branch with a new commit; don't re-run a failed job just to get green.
-- **Push and open the PR** only with the owner's go-ahead, because it is outward-facing:
-  `git push -u origin <branch>`, then a PR against `main`. The description follows stage 5:
-  links to intent, spec and plan, the `R<n>` covered, deviations, and the check evidence (the
-  `gatekeeper` report; the PR's `check` run adds the CI result).
+  merge and every push.
 - **Stage 5 review:** fresh-context reviewer subagents against `REVIEW.md`, `spec.md` and
-  `plan.md`. Fixes go on the same branch as new commits. Docs-only PRs need no reviewer
+  `plan.md`. Fixes go on the same branch as new commits. Docs-only changes need no reviewer
   subagents.
-- **Approval and merge.** The owner gives the explicit "approved to merge" and merges the PR on
-  GitHub with a merge commit (no squash or rebase, like the earlier `--no-ff` merges). GitHub
-  doesn't count an approval from the PR's author, so the owner merges through the ruleset
-  bypass. Agents never approve, merge or bypass a ruleset.
-- **After the merge:** `git switch master`, `git pull --ff-only`, delete the merged branch
-  locally (`git branch -d`) and on GitHub. A release tag goes on the PR's merge commit:
-  `git tag -a v<x.y.z>`, pushed with `git push origin v<x.y.z>` on the owner's request. The
-  release record (release notes, installer SHA-256) follows in a docs PR.
+- **Approval and merge.** The owner gives the explicit "approved to merge", then a local
+  `git merge --no-ff` of the branch into `master`. The merge commit message serves as the PR
+  description: links to intent, spec and plan, the `R<n>` covered, deviations, and the check
+  evidence. Then delete the merged branch (`git branch -d`).
+- **Publishing.** Push only on the owner's explicit request, never as part of a merge or
+  session close, because it is outward-facing: `git push origin master:main` (the branch
+  names differ, so a bare `git push` fails). If CI's `check` turns red, fix it on `master`
+  with a new commit; don't re-run a failed job just to get green. A release tag goes on the
+  merge commit: `git tag -a v<x.y.z>`, pushed with `git push origin v<x.y.z>` on the owner's
+  request. The release record (release notes, installer SHA-256) follows as a docs commit.
 - Never force-push or rewrite pushed history. If `origin/main` has commits that `master`
   lacks, `git pull --ff-only` them in.
 - The repository is public: commit no secrets, tokens, databases, exports or personal data.

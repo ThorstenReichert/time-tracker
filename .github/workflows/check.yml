@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main] # also fills the caches that PR runs restore
+    branches: [main]
 
 permissions:
   contents: read
