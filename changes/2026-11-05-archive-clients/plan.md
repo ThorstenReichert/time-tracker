@@ -1,6 +1,7 @@
 # Plan: Archive clients
 Source: [spec.md](spec.md), [intent.md](intent.md). Author: Thorsten Reichert (with Claude).
-Status: approved (owner, 2026-11-05). Branch: `feat/archive-clients`.
+Status: approved (owner, 2026-11-05); released as 0.7.0 on 2026-11-05 (tag `v0.7.0` on merge
+`5f4282e`, see [release-notes.md](../../release-notes.md)). Branch: `feat/archive-clients` (deleted).
 Scope: R2g–R2k (amending R2e, R2f). Deferred: archiving tasks, deleting unused items.
 
 ## Context

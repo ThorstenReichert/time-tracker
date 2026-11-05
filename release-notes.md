@@ -1,10 +1,14 @@
 # Release notes
 
-## 0.7.0 (unreleased)
+## 0.7.0 (2026-11-05)
 
 Archiving clients, from [changes/2026-11-05-archive-clients](changes/2026-11-05-archive-clients/plan.md).
 
-- **Source:** branch `feat/archive-clients`, not merged yet.
+- **Source:** tag `v0.7.0` on `master`, which is the merge commit `5f4282e` of branch
+  `feat/archive-clients`. Approved to merge by Thorsten Reichert (owner), 2026-11-05, after the
+  stage 5 review against [REVIEW.md](REVIEW.md) and a manual test.
+- **Installer:** `ThorSoft TimeTracker_0.7.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `F58CECDD578DFA51FDC14FBDC6544FFDAD6712893C4D502A0E0A3831C25F32E4`.
 - **Database:** no migration. 0.7.0 reads a 0.6.0 database file, and 0.6.0 reads a 0.7.0 one.
   0.6.0 already refuses to book under an archived client and hides its projects from the
   pickers. It still lists the archived client in Clients & projects, and its Archive view
@@ -19,7 +23,10 @@ Archiving clients, from [changes/2026-11-05-archive-clients](changes/2026-11-05-
   Archive view brings everything back as it was. Projects that were archived on their own stay
   archived and are tagged "archived separately" (R2j).
 - **New client** checks the typed name while typing. If it matches an archived client, the
-  dialog offers **Unarchive client** instead of creating a duplicate (R2i).
+  dialog offers **Unarchive client** instead of creating a duplicate. The rounding controls are
+  disabled meanwhile, because unarchiving keeps the client's own rule (R2i).
+- The row buttons in Clients & projects and the Archive view tell screen readers which client,
+  project or task they act on, e.g. "Archive client Acme" or "Edit task Review".
 - tt-cli: `client archive <id>`, `client unarchive <id>`. `archive` includes archived clients.
 
 ### Rollback
