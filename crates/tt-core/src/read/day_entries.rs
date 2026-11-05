@@ -17,8 +17,9 @@ pub struct EntryRow {
     pub note: Option<Note>,
 }
 
-/// The entries that start on `date`, ordered by start. `entries` are the day's entries
-/// (callers pass `Entries::started_between(day_bounds(date))`); others are ignored.
+/// The entries that start on `date`, newest first, so the running entry is on top (R10).
+/// `entries` are the day's entries (callers pass `Entries::started_between(day_bounds(date))`);
+/// others are ignored.
 pub fn day_entries(
     catalog: &Catalog,
     entries: &[&Entry],
@@ -31,7 +32,7 @@ pub fn day_entries(
         .filter(|e| local_date(e.start, tz) == date)
         .filter_map(|e| entry_row(catalog, e, now))
         .collect();
-    rows.sort_by_key(|r| (r.start, r.id));
+    rows.sort_by_key(|r| std::cmp::Reverse((r.start, r.id)));
     rows
 }
 
