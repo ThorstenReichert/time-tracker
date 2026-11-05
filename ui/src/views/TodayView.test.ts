@@ -11,11 +11,12 @@ import TodayView from "./TodayView.vue";
 
 const TODAY = "2026-10-18";
 
-// The worked day on the 17th, with a note; on the 18th, Beta / Ops is running.
+// The worked day on the 17th, newest first as the backend lists it (R10), with a note; on the
+// 18th, Beta / Ops is running.
 const workedDay: EntryDto[] = [
-  finishedEntry(1, acmeWeb, "2026-10-17T09:00:00", "2026-10-17T10:22:00", "Kickoff\nwith the team"),
-  finishedEntry(2, betaApi, "2026-10-17T10:22:00", "2026-10-17T11:07:00"),
   finishedEntry(3, betaOps, "2026-10-17T11:07:00", "2026-10-17T11:20:00"),
+  finishedEntry(2, betaApi, "2026-10-17T10:22:00", "2026-10-17T11:07:00"),
+  finishedEntry(1, acmeWeb, "2026-10-17T09:00:00", "2026-10-17T10:22:00", "Kickoff\nwith the team"),
 ];
 const running = { ...runningEntry(betaOps, 600), id: 4 };
 
@@ -92,9 +93,9 @@ describe("TodayView", () => {
 
     await clickButton("Previous day");
     expect(rows(wrapper)).toEqual([
-      ["09:00–10:22", "Acme / WebKickoff\nwith the team", "1:22"],
-      ["10:22–11:07", "Beta / API", "0:45"],
       ["11:07–11:20", "Beta / Ops", "0:13"],
+      ["10:22–11:07", "Beta / API", "0:45"],
+      ["09:00–10:22", "Acme / WebKickoff\nwith the team", "1:22"],
     ]);
 
     await clickButton("Previous day");

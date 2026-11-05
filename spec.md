@@ -18,6 +18,7 @@ R2 for projects (R2a–R2d) and an amendment to R7 (recents). OQ-7 is unchanged.
 Amended 2026-11-05 by [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md):
 R2e (Archive view of archived projects with their active period), R2f (unarchive from it) and
 an amendment to R2a (archive without a confirmation).
+Revised 2026-11-05 (owner): R10, the day's entries are listed newest first.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -94,7 +95,8 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 ### Manual corrections
 - **R10 Entry management.** Entries can be added after the fact (combo, start, end, note).
   Start, end, combo and note can be edited, and entries can be deleted (with a confirmation
-  or undo). The main window lists the entries for a selected day.
+  or undo). The main window lists the entries for a selected day, newest first, so the
+  running entry is on top.
 - **R11 Forgotten stop.** The running entry's start can be edited, and it can be stopped at
   a chosen past time instead of "now".
 - **R12 Validation.** End must be after start. Entries can't start or end in the future. No

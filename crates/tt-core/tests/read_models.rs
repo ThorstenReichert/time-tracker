@@ -280,7 +280,7 @@ fn day_bounds_follow_dst() {
 }
 
 #[test]
-fn day_entries_are_listed_by_start_with_names_and_notes() {
+fn day_entries_are_listed_newest_first_with_names_and_notes() {
     let s = run(
         worked_day(),
         &ctx("2026-10-17T13:00"),
@@ -315,14 +315,14 @@ fn day_entries_are_listed_by_start_with_names_and_notes() {
     assert_eq!(
         summary,
         [
-            ("Acme / Web / Review", 30 * MIN, false),
-            ("Acme / Web", 82 * MIN, false),
-            ("Beta / API", 45 * MIN, false),
-            ("Beta / Ops", 13 * MIN, false),
             ("Beta / API", 10 * MIN, true),
+            ("Beta / Ops", 13 * MIN, false),
+            ("Beta / API", 45 * MIN, false),
+            ("Acme / Web", 82 * MIN, false),
+            ("Acme / Web / Review", 30 * MIN, false),
         ]
     );
-    assert_eq!(rows[0].note.as_ref().map(|n| n.as_str()), Some("standup"));
+    assert_eq!(rows[4].note.as_ref().map(|n| n.as_str()), Some("standup"));
 }
 
 #[test]
