@@ -71,6 +71,8 @@ enum Cmd {
     Recents,
     /// Quick-switch matches for a query.
     QuickSwitch { query: String },
+    /// The archived projects by client, with their active periods (R2e).
+    Archive,
     #[command(subcommand)]
     Settings(SettingsCmd),
     /// The whole state as JSON.
@@ -455,6 +457,7 @@ fn run(cli: Cli) -> Result<Value, Failure> {
         }
         Cmd::Recents => return Ok(to_json(&app.recents()?)),
         Cmd::QuickSwitch { query } => return Ok(to_json(&app.quick_switch(&query)?)),
+        Cmd::Archive => return Ok(to_json(&app.archived_projects(&ctx)?)),
         Cmd::State => return Ok(to_json(&app.snapshot()?)),
     };
     let events = app.execute(&ctx, command)?;

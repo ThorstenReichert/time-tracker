@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, formatDay, fromPickerDate, toPickerDate } from "./day";
+import { addDays, formatDay, formatShortDay, fromPickerDate, toPickerDate } from "./day";
 
 describe("addDays", () => {
   it("steps over month and year ends", () => {
@@ -30,5 +30,13 @@ describe("formatDay", () => {
   it("names the weekday, day, month and year", () => {
     expect(formatDay("2026-10-18", "en-GB").split(/[ ,.]+/)).toEqual(["Sunday", "18", "October", "2026"]);
     expect(formatDay("2026-10-19", "de-DE").split(/[ ,.]+/)).toEqual(["Montag", "19", "Oktober", "2026"]);
+  });
+});
+
+describe("formatShortDay", () => {
+  // Punctuation differs between ICU versions, so only the parts are checked.
+  it("names the day, the short month and the year (R2e)", () => {
+    expect(formatShortDay("2026-03-02", "en-GB").split(/[ ,.]+/)).toEqual(["2", "Mar", "2026"]);
+    expect(formatShortDay("2026-10-18", "de-DE").split(/[ ,.]+/)).toEqual(["18", "Okt", "2026"]);
   });
 });

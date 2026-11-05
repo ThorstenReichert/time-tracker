@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use jiff::civil;
-use tt_core::read::{self, ComboRow, EntryRow, NameCheck, Overview, TaskMatches};
+use tt_core::read::{self, ArchivedClient, ComboRow, EntryRow, NameCheck, Overview, TaskMatches};
 use tt_core::{
     Catalog, ClientId, Command, Ctx, EntryId, Event, ProjectId, State, decide, evolve_all,
 };
@@ -206,6 +206,11 @@ impl App {
         abbreviation: Option<&str>,
     ) -> Result<NameCheck, AppError> {
         self.read(|state| read::project_name_check(state.catalog(), client, name, abbreviation))
+    }
+
+    /// The archived projects by client, with their active periods (R2e).
+    pub fn archived_projects(&self, ctx: &Ctx) -> Result<Vec<ArchivedClient>, AppError> {
+        self.read(|state| read::archived_projects(state.catalog(), state.entries(), &ctx.tz))
     }
 
     pub fn task_matches(&self, project: ProjectId, text: &str) -> Result<TaskMatches, AppError> {

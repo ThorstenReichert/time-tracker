@@ -37,6 +37,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::get_running,
             commands::get_day_entries,
             commands::get_overview,
+            commands::get_archive,
             commands::get_recents,
             commands::quick_switch,
             commands::task_matches,

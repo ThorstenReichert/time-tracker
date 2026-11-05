@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DOMWrapper, flushPromises } from "@vue/test-utils";
+import { flushPromises } from "@vue/test-utils";
 import { useCatalogStore } from "../stores/catalog";
 import { fakeBackend, uiError } from "../test/backend";
 import { catalog } from "../test/fixtures";
@@ -131,16 +131,11 @@ describe("ClientsView", () => {
     expect(client("Beta").text()).toContain("No active projects.");
   });
 
-  it("archives a project after a confirmation (R2a)", async () => {
+  it("archives a project with one click, without a confirmation (R2a)", async () => {
     const { backend, client } = await view();
-    const web = client("Acme").findAll(".project")[1]!;
-    await clickButton("Archive", web);
-    expect(confirmation()?.textContent).toContain("Acme / Web can no longer be booked");
-    await clickButton("Cancel", new DOMWrapper(confirmation()!));
-    expect(backend.called("archive_project")).toEqual([]);
-
-    await clickButton("Archive", web);
-    await clickButton("Archive", new DOMWrapper(confirmation()!));
+    await clickButton("Archive", client("Acme").findAll(".project")[1]!);
+    await flushPromises();
+    expect(confirmation()).toBeNull();
     expect(backend.called("archive_project")).toEqual([{ id: 1 }]);
   });
 
@@ -150,7 +145,7 @@ describe("ClientsView", () => {
       throw uiError("The timer is running on this project; stop it first");
     };
     await clickButton("Archive", client("Acme").findAll(".project")[1]!);
-    await clickButton("Archive", new DOMWrapper(confirmation()!));
+    await flushPromises();
     expect(document.body.textContent).toContain("The timer is running on this project; stop it first");
     expect(wrapper.exists()).toBe(true);
   });

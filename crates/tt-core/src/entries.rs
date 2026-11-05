@@ -54,6 +54,9 @@ pub struct Combo {
 pub struct Entries {
     by_id: BTreeMap<EntryId, Entry>,
     by_start: BTreeSet<(Instant, EntryId)>,
+    /// The starts per project, for `start_span` (R2e). A project's set goes when its last
+    /// entry does, so there are no empty sets.
+    by_project: BTreeMap<ProjectId, BTreeSet<(Instant, EntryId)>>,
     running: Option<EntryId>,
 }
 
@@ -139,6 +142,14 @@ impl Entries {
             .collect()
     }
 
+    /// The first and the last start of the project's entries, or `None` if it has none
+    /// (R2e). A named query: SQL answers it as `MIN/MAX(start_utc) WHERE project_id = ?`
+    /// from an index on `(project_id, start_utc)` (OQ-9).
+    pub fn start_span(&self, project: ProjectId) -> Option<(Instant, Instant)> {
+        let starts = self.by_project.get(&project)?;
+        Some((starts.first()?.0, starts.last()?.0))
+    }
+
     /// All entries ordered by start. Only for invariant checks, never for `decide`.
     pub(crate) fn all(&self) -> impl Iterator<Item = &Entry> {
         self.by_start.iter().map(|(_, id)| &self.by_id[id])
@@ -147,8 +158,16 @@ impl Entries {
     /// Whether the indexes agree with the entries (always, unless there's a bug here).
     pub(crate) fn indexes_consistent(&self) -> bool {
         let starts: BTreeSet<_> = self.by_id.values().map(|e| (e.start, e.id)).collect();
+        let mut by_project = BTreeMap::<_, BTreeSet<_>>::new();
+        for e in self.by_id.values() {
+            by_project
+                .entry(e.project)
+                .or_default()
+                .insert((e.start, e.id));
+        }
         let running: Vec<_> = self.by_id.values().filter(|e| e.is_running()).collect();
         starts == self.by_start
+            && by_project == self.by_project
             && match running.as_slice() {
                 [] => self.running.is_none(),
                 [one] => self.running == Some(one.id),
@@ -162,6 +181,10 @@ impl Entries {
 
     pub(crate) fn insert(&mut self, entry: Entry) {
         self.by_start.insert((entry.start, entry.id));
+        self.by_project
+            .entry(entry.project)
+            .or_default()
+            .insert((entry.start, entry.id));
         if entry.is_running() && self.running.is_none() {
             self.running = Some(entry.id);
         }
@@ -178,6 +201,12 @@ impl Entries {
     pub(crate) fn remove(&mut self, id: EntryId) -> Entry {
         let entry = self.by_id.remove(&id).expect("removed entry exists");
         self.by_start.remove(&(entry.start, id));
+        if let Some(starts) = self.by_project.get_mut(&entry.project) {
+            starts.remove(&(entry.start, id));
+            if starts.is_empty() {
+                self.by_project.remove(&entry.project);
+            }
+        }
         if self.running == Some(id) {
             self.running = None;
         }

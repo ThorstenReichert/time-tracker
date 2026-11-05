@@ -5,7 +5,8 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tt_core::read::{
-    ClientBlock, ComboRow, EntryRow, Figure, NameCheck, Overview, ProjectRow, TaskMatches,
+    ArchivedClient, ClientBlock, ComboRow, EntryRow, Figure, NameCheck, Overview, ProjectRow,
+    TaskMatches,
 };
 use tt_core::{
     Catalog, Client, DecimalSeparator, ItemRef, Project, RoundingDirection, RoundingLevel,
@@ -122,6 +123,67 @@ pub enum NameCheckKind {
     Free,
     Unarchive,
     Taken,
+}
+
+/// A client of the Archive view with its archived projects, in the order of R2e.
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchiveClientDto {
+    pub id: u64,
+    pub name: String,
+    pub abbreviation: Option<String>,
+    pub projects: Vec<ArchivedProjectDto>,
+}
+
+/// An archived project with its active period; `period` is `null` if it has no entries (R2e).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ArchivedProjectDto {
+    pub id: u64,
+    pub name: String,
+    pub abbreviation: Option<String>,
+    pub period: Option<ActivePeriodDto>,
+}
+
+/// The first and last day of an active period, as `YYYY-MM-DD` (R2e).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivePeriodDto {
+    pub first: String,
+    pub last: String,
+}
+
+impl ArchiveClientDto {
+    /// Adds the names from the catalog. An item missing from it is left out.
+    pub fn list(archive: &[ArchivedClient], catalog: &Catalog) -> Vec<Self> {
+        archive
+            .iter()
+            .filter_map(|a| {
+                let client = catalog.client(a.client)?;
+                Some(Self {
+                    id: client.id.get(),
+                    name: client.name.to_string(),
+                    abbreviation: client.abbreviation.as_ref().map(ToString::to_string),
+                    projects: a
+                        .projects
+                        .iter()
+                        .filter_map(|ap| {
+                            let p = catalog.project(ap.project)?;
+                            Some(ArchivedProjectDto {
+                                id: p.id.get(),
+                                name: p.name.to_string(),
+                                abbreviation: p.abbreviation.as_ref().map(ToString::to_string),
+                                period: ap.period.map(|d| ActivePeriodDto {
+                                    first: d.first.to_string(),
+                                    last: d.last.to_string(),
+                                }),
+                            })
+                        })
+                        .collect(),
+                })
+            })
+            .collect()
+    }
 }
 
 /// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).

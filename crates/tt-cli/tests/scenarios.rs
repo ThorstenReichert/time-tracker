@@ -435,3 +435,49 @@ fn an_archived_project_is_not_bookable_until_unarchived() {
     s.ok("2026-10-17T10:15", &["project", "unarchive", "1"]);
     s.ok("2026-10-17T10:20", &["start", "--project", "1"]);
 }
+
+#[test]
+fn the_archive_lists_archived_projects_by_period() {
+    // R2e (changes/2026-11-05-archive-view).
+    let s = Scenario::new();
+    catalog(&s);
+    let now = "2026-10-20T18:00";
+    let add = |project: &str, start: &str, end: &str| {
+        s.ok(
+            now,
+            &[
+                "entry",
+                "add",
+                "--project",
+                project,
+                "--start",
+                start,
+                "--end",
+                end,
+            ],
+        );
+    };
+    add("2", "2026-10-12T09:00", "2026-10-12T10:00");
+    add("3", "2026-10-15T09:00", "2026-10-15T10:00");
+    add("3", "2026-10-16T23:30", "2026-10-17T00:30");
+    s.ok(now, &["project", "archive", "2"]);
+    s.ok(now, &["project", "archive", "3"]);
+
+    // Beta's Ops started later than API, so it comes first; Acme has nothing archived.
+    let archive = s.ok(now, &["archive"]);
+    let clients = archive.as_array().unwrap();
+    assert_eq!(clients.len(), 1);
+    assert_eq!(clients[0]["client"], 2);
+    let projects = &clients[0]["projects"];
+    assert_eq!(projects[0]["project"], 3);
+    assert_eq!(projects[0]["period"]["first"], "2026-10-15");
+    assert_eq!(projects[0]["period"]["last"], "2026-10-16");
+    assert_eq!(projects[1]["project"], 2);
+    assert_eq!(projects[1]["period"]["first"], "2026-10-12");
+
+    s.ok(now, &["project", "unarchive", "3"]);
+    let archive = s.ok(now, &["archive"]);
+    let projects = archive[0]["projects"].as_array().unwrap();
+    assert_eq!(projects.len(), 1);
+    assert_eq!(projects[0]["project"], 2);
+}

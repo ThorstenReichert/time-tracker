@@ -894,3 +894,210 @@ fn the_task_input_offers_nothing_for_an_archived_project() {
             .is_some()
     );
 }
+
+// R2e, R2f: changes/2026-11-05-archive-view.
+
+fn add_entry(project: ProjectId, start: &str, end: &str) -> Command {
+    Command::AddEntry {
+        project,
+        task: TaskChoice::NoTask,
+        start: start.parse().unwrap(),
+        end: end.parse().unwrap(),
+        note: None,
+    }
+}
+
+#[test]
+fn start_span_follows_adds_edits_moves_and_deletes() {
+    let now = ctx("2026-10-20T18:00");
+    let s = run(
+        catalog(),
+        &now,
+        [
+            add_entry(WEB, "2026-10-15T09:00", "2026-10-15T10:00"),
+            add_entry(WEB, "2026-10-12T09:00", "2026-10-12T10:00"),
+            add_entry(API, "2026-10-19T09:00", "2026-10-19T10:00"),
+        ],
+    );
+    let span = |s: &State, p| s.entries().start_span(p);
+    assert_eq!(
+        span(&s, WEB),
+        Some((t("2026-10-12T09:00"), t("2026-10-15T09:00")))
+    );
+    // Another project's entries don't count, and a project without entries has no span.
+    assert_eq!(
+        span(&s, API),
+        Some((t("2026-10-19T09:00"), t("2026-10-19T09:00")))
+    );
+    assert_eq!(span(&s, OPS), None);
+
+    // Editing the start moves the span.
+    let edit = |id, project, start: &str, end: &str| Command::EditEntry {
+        id: EntryId::new(id),
+        project,
+        task: TaskChoice::NoTask,
+        start: start.parse().unwrap(),
+        end: Some(end.parse().unwrap()),
+        note: None,
+    };
+    let s = run(
+        s,
+        &now,
+        [edit(2, WEB, "2026-10-13T09:00", "2026-10-13T10:00")],
+    );
+    assert_eq!(
+        span(&s, WEB),
+        Some((t("2026-10-13T09:00"), t("2026-10-15T09:00")))
+    );
+
+    // Moving the last Web entry to Ops takes it out of Web's span and into Ops'.
+    let s = run(
+        s,
+        &now,
+        [edit(1, OPS, "2026-10-15T09:00", "2026-10-15T10:00")],
+    );
+    assert_eq!(
+        span(&s, WEB),
+        Some((t("2026-10-13T09:00"), t("2026-10-13T09:00")))
+    );
+    assert_eq!(
+        span(&s, OPS),
+        Some((t("2026-10-15T09:00"), t("2026-10-15T09:00")))
+    );
+
+    // Deleting a project's only entry leaves it without a span.
+    let s = run(
+        s,
+        &now,
+        [Command::DeleteEntry {
+            id: EntryId::new(2),
+        }],
+    );
+    assert_eq!(span(&s, WEB), None);
+}
+
+#[test]
+fn start_span_counts_the_running_entry() {
+    let s = start_at(catalog(), "2026-10-17T09:00", WEB);
+    let s = start_at(s, "2026-10-17T10:00", API);
+    assert_eq!(
+        s.entries().start_span(API),
+        Some((t("2026-10-17T10:00"), t("2026-10-17T10:00")))
+    );
+}
+
+/// Clients "Zeta" (1), "acme" (2), "Gamma" (3, nothing archived). Projects, in ID order:
+/// acme: Old (1), Mid (2), Twin (3), Same start long (4), Unused b (5), unused A (6),
+/// Active (7, not archived); Zeta: Portal (8); Gamma: Kept (9, not archived); acme: Late short
+/// (10), whose first day is newer and last day older than those of Same start long, Mid, Twin.
+fn archive_view_state() -> State {
+    let client = |name: &str| Command::CreateClient {
+        name: name.into(),
+        abbreviation: None,
+        rule: RoundingRule::default(),
+    };
+    let project = |client: u64, name: &str| Command::CreateProject {
+        client: ClientId::new(client),
+        name: name.into(),
+        abbreviation: None,
+    };
+    let p = ProjectId::new;
+    let mut cmds = vec![client("Zeta"), client("acme"), client("Gamma")];
+    for name in [
+        "Old",
+        "Mid",
+        "Twin",
+        "Same start long",
+        "Unused b",
+        "unused A",
+        "Active",
+    ] {
+        cmds.push(project(2, name));
+    }
+    cmds.push(project(1, "Portal"));
+    cmds.push(project(3, "Kept"));
+    cmds.push(project(2, "Late short"));
+    cmds.extend([
+        add_entry(p(1), "2026-03-02T09:00", "2026-03-02T10:00"),
+        add_entry(p(1), "2026-05-10T09:00", "2026-05-10T10:00"),
+        add_entry(p(2), "2026-06-01T09:00", "2026-06-01T10:00"),
+        add_entry(p(2), "2026-06-20T09:00", "2026-06-20T10:00"),
+        add_entry(p(3), "2026-06-01T11:00", "2026-06-01T12:00"),
+        add_entry(p(3), "2026-06-20T11:00", "2026-06-20T12:00"),
+        add_entry(p(4), "2026-06-01T13:00", "2026-06-01T14:00"),
+        add_entry(p(4), "2026-07-01T13:00", "2026-07-01T14:00"),
+        add_entry(p(7), "2026-08-01T09:00", "2026-08-01T10:00"),
+        add_entry(p(8), "2026-09-01T09:00", "2026-09-01T10:00"),
+        add_entry(p(9), "2026-09-02T09:00", "2026-09-02T10:00"),
+        add_entry(p(10), "2026-06-15T09:00", "2026-06-15T10:00"),
+        add_entry(p(10), "2026-06-16T09:00", "2026-06-16T10:00"),
+    ]);
+    cmds.extend([1, 2, 3, 4, 5, 6, 8, 10].map(|id| Command::ArchiveProject { id: p(id) }));
+    run(State::default(), &ctx("2026-10-20T18:00"), cmds)
+}
+
+fn period(first: &str, last: &str) -> Option<read::ActivePeriod> {
+    Some(read::ActivePeriod {
+        first: date(first),
+        last: date(last),
+    })
+}
+
+#[test]
+fn archive_view_groups_and_orders_archived_projects() {
+    let s = archive_view_state();
+    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let rows = |c: &read::ArchivedClient| -> Vec<(u64, Option<read::ActivePeriod>)> {
+        c.projects
+            .iter()
+            .map(|p| (p.project.get(), p.period))
+            .collect()
+    };
+    // Clients by name, ignoring case; Gamma has nothing archived and is left out.
+    let clients: Vec<_> = view.iter().map(|c| c.client.get()).collect();
+    assert_eq!(clients, [2, 1]);
+    // No entries first (by name, ignoring case), then the first day newest first, then the
+    // last day newest first, then the name. Late short starts last, so its older last day
+    // doesn't matter. Active is left out.
+    assert_eq!(
+        rows(&view[0]),
+        [
+            (6, None),
+            (5, None),
+            (10, period("2026-06-15", "2026-06-16")),
+            (4, period("2026-06-01", "2026-07-01")),
+            (2, period("2026-06-01", "2026-06-20")),
+            (3, period("2026-06-01", "2026-06-20")),
+            (1, period("2026-03-02", "2026-05-10")),
+        ]
+    );
+    assert_eq!(rows(&view[1]), [(8, period("2026-09-01", "2026-09-01"))]);
+}
+
+#[test]
+fn archive_view_is_empty_without_archived_projects() {
+    let s = catalog();
+    assert!(read::archived_projects(s.catalog(), s.entries(), &berlin()).is_empty());
+}
+
+#[test]
+fn archive_view_days_are_local_start_dates() {
+    // 00:30 in Berlin is the previous day in UTC; an entry past midnight counts on its
+    // start day (R18 step 1).
+    let s = run(
+        catalog(),
+        &ctx("2026-10-20T18:00"),
+        [
+            add_entry(WEB, "2026-10-10T00:30", "2026-10-10T01:00"),
+            add_entry(WEB, "2026-10-17T23:30", "2026-10-18T00:30"),
+            Command::ArchiveProject { id: WEB },
+        ],
+    );
+    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    assert_eq!(view.len(), 1);
+    assert_eq!(view[0].client, ACME);
+    assert_eq!(
+        view[0].projects[0].period,
+        period("2026-10-10", "2026-10-17")
+    );
+}

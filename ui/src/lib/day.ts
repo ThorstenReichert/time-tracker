@@ -47,3 +47,8 @@ export function formatDay(day: string, locale?: string): string {
     year: "numeric",
   });
 }
+
+/** A date in short form, e.g. "18 Oct 2026" (in the OS locale). */
+export function formatShortDay(day: string, locale?: string): string {
+  return toUtc(day).toLocaleDateString(locale, { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
+}
