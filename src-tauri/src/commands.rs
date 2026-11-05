@@ -11,8 +11,8 @@ use tt_core::{ClientId, Command, Ctx, EntryId, ProjectId, TaskId};
 
 use crate::backend::{Backend, ctx};
 use crate::dto::{
-    AutostartDto, CatalogDto, ComboDto, EntryDto, NameCheckDto, OverviewDto, RuleDto,
-    SettingsDefaultsDto, SettingsDto, StatusDto, TaskChoiceDto, TaskMatchesDto,
+    ArchiveClientDto, AutostartDto, CatalogDto, ComboDto, EntryDto, NameCheckDto, OverviewDto,
+    RuleDto, SettingsDefaultsDto, SettingsDto, StatusDto, TaskChoiceDto, TaskMatchesDto,
 };
 use crate::errors::UiError;
 use crate::hotkey::{self, HotkeyStatus};
@@ -397,6 +397,16 @@ pub async fn get_overview(backend: State<'_, Backend>, day: String) -> Res<Overv
     let day = date(&day)?;
     read(&backend, |app, ctx| {
         Ok((&app.daily_overview(ctx, day)?).into())
+    })
+}
+
+/// The Archive view (R2e). Reads the archive, then the catalog for the names.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_archive(backend: State<'_, Backend>) -> Res<Vec<ArchiveClientDto>> {
+    read(&backend, |app, ctx| {
+        let archive = app.archived_projects(ctx)?;
+        Ok(ArchiveClientDto::list(&archive, &app.catalog()?))
     })
 }
 

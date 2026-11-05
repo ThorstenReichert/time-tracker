@@ -57,12 +57,37 @@ export const commands = {
 } | null, UiError>(__TAURI_INVOKE("get_running")),
 	getDayEntries: (day: string) => typedError<EntryDto[], UiError>(__TAURI_INVOKE("get_day_entries", { day })),
 	getOverview: (day: string) => typedError<OverviewDto, UiError>(__TAURI_INVOKE("get_overview", { day })),
+	/**  The Archive view (R2e). Reads the archive, then the catalog for the names. */
+	getArchive: () => typedError<ArchiveClientDto[], UiError>(__TAURI_INVOKE("get_archive")),
 	getRecents: () => typedError<ComboDto[], UiError>(__TAURI_INVOKE("get_recents")),
 	quickSwitch: (query: string) => typedError<ComboDto[], UiError>(__TAURI_INVOKE("quick_switch", { query })),
 	taskMatches: (project: number, text: string) => typedError<TaskMatchesDto, UiError>(__TAURI_INVOKE("task_matches", { project, text })),
 };
 
 /* Types */
+/**
+ *  A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
+ *  A client of the Archive view with its archived projects, in the order of R2e.
+ */
+export type ArchiveClientDto = {
+	id: number,
+	name: string,
+	abbreviation: string | null,
+	projects: ArchivedProjectDto[],
+};
+
+/**
+ *  An archived project with its active period as `YYYY-MM-DD` days (R2e). `first` and
+ *  `last` are both `null` if it has no entries.
+ */
+export type ArchivedProjectDto = {
+	id: number,
+	name: string,
+	abbreviation: string | null,
+	first: string | null,
+	last: string | null,
+};
+
 /**  The autostart entry (R9). Windows holds it; the app keeps no copy (spec §2). */
 export type AutostartDto = {
 	/**  `false` in debug builds, which never touch the entry. */
@@ -81,7 +106,6 @@ export type CatalogDto = {
 	roundingUnits: number[],
 };
 
-/**  A project named by a name check, e.g. `archived project "Web" (W)` (R2d). */
 export type CheckedProjectDto = {
 	id: number,
 	label: string,

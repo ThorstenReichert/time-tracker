@@ -229,4 +229,20 @@ fn an_archived_project_survives_a_reload_and_is_not_bookable() {
             .unwrap(),
         tt_core::read::NameCheck::Unarchive { project: WEB }
     );
+    // The Archive view lists Web with its active period (R2e).
+    let archive = app.archived_projects(&ctx("2026-10-17T10:10")).unwrap();
+    let day = "2026-10-17".parse().unwrap();
+    assert_eq!(
+        archive,
+        [tt_core::read::ArchivedClient {
+            client: tt_core::ClientId::new(1),
+            projects: vec![tt_core::read::ArchivedProject {
+                project: WEB,
+                period: Some(tt_core::read::ActivePeriod {
+                    first: day,
+                    last: day
+                }),
+            }],
+        }]
+    );
 }

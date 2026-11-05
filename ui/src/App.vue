@@ -18,6 +18,7 @@ const nav = [
   { to: "/", label: "Today" },
   { to: "/overview", label: "Daily overview" },
   { to: "/clients", label: "Clients & projects" },
+  { to: "/archive", label: "Archive" },
   { to: "/settings", label: "Settings" },
 ];
 </script>

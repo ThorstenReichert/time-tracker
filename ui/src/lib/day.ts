@@ -47,3 +47,14 @@ export function formatDay(day: string, locale?: string): string {
     year: "numeric",
   });
 }
+
+/** A date in short form, e.g. "18 Oct 2026" (in the OS locale). */
+export function formatShortDay(day: string, locale?: string): string {
+  return toUtc(day).toLocaleDateString(locale, { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" });
+}
+
+/** An active period (R2e), e.g. "12 Oct 2026 – 18 Oct 2026"; a single day shows once. */
+export function formatPeriod(first: string, last: string, locale?: string): string {
+  const from = formatShortDay(first, locale);
+  return first === last ? from : `${from} – ${formatShortDay(last, locale)}`;
+}

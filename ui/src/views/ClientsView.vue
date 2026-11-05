@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Clients with their rounding rule, their projects and tasks: create, rename, abbreviate
-// and archive projects (R1, R2a, R17, R24). Archived projects are hidden here; a view of
-// them comes later. New project offers to unarchive a matching archived project (R2c).
+// and archive projects (R1, R2a, R17, R24). Archived projects are hidden here and listed in
+// the Archive view (R2e). New project offers to unarchive a matching archived project (R2c).
 import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import Button from "primevue/button";
