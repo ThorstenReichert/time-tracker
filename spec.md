@@ -15,6 +15,8 @@ Amended 2026-11-01 by [changes/2026-11-01-branding/spec.md](changes/2026-11-01-b
 R25 (ThorSoft logo and a matching colour theme, light and dark) and an amendment to §2 "Frontend".
 Amended 2026-11-05 by [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md):
 R2 for projects (R2a–R2d) and an amendment to R7 (recents). OQ-7 is unchanged.
+Amended 2026-11-05 by [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md):
+R2e (Archive view of archived projects with their active period) and R2f (unarchive from it).
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -50,6 +52,7 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
   items can be deleted. Archived names still count: a new item whose name matches an archived
   sibling isn't created; the UI offers to unarchive the existing item instead.
   *Projects: detailed as R2a–R2d in [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md).*
+  *The Archive view: R2e–R2f in [changes/2026-11-05-archive-view/spec.md](changes/2026-11-05-archive-view/spec.md).*
 - **R3 Quick task creation.** Wherever a task is chosen, a free-text input matches the
   project's active tasks as you type (case-insensitive substring/fuzzy). If no existing task
   matches exactly, it offers **Create "<text>"**, which creates the task and selects it in one
@@ -269,7 +272,7 @@ ThorSoft.TimeTracker/
   setting table has no autostart key, so Windows' Startup apps screen can't drift from the app.
 - **Windows:**
   - `main`: normal window with Today/Entries, Daily overview, Statistics, Billing error,
-    Clients & projects and Settings views. Closing it hides it to the tray.
+    Clients & projects, Archive (R2e) and Settings views. Closing it hides it to the tray.
   - `quick-switch`: small, frameless, always-on-top, centred. The hotkey shows and focuses
     it; it hides when it loses focus. It is created hidden at startup so it opens instantly.
 - **State sync:** `src-tauri` turns the Events published by tt-app into `data-changed`
