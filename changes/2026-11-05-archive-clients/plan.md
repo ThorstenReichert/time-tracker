@@ -107,9 +107,12 @@ The owner approved intent, spec and plan in one go.
   - Owner decision after the review: New client disables the rounding controls (unit,
     direction, level) while the button reads "Unarchive client", because R2i ignores them. Name
     and abbreviation stay editable. Covered in `ClientDialog.test.ts`. Spec R2i is updated.
-  - Not changed:
-    - `read::archived_projects` keeps its name although it now lists clients too;
-    - the Archive buttons have no client- or project-specific `aria-label` (as before).
+  - Owner decision after the review: every row button in Clients & projects and the Archive
+    view gets an `aria-label` that names its item, after its visible text (WCAG 2.5.3 "Label
+    in Name"). Examples: "Archive client Acme", "New task for Web", "Edit task Review",
+    "Unarchive project Legacy". The visible text is unchanged. Tests in `ClientsView.test.ts`
+    and `ArchiveView.test.ts` pin the labels.
+  - Not changed: `read::archived_projects` keeps its name although it now lists clients too.
 
 ## Coverage
 | Requirement | Steps |

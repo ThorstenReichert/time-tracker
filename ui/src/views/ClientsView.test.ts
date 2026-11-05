@@ -230,4 +230,27 @@ describe("ClientsView", () => {
     expect(backend.called("check_client_name")).toEqual([]);
     expect(backend.called("update_client")).toHaveLength(1);
   });
+
+  it("names the item in each row button's accessible name, after its visible text (WCAG 2.5.3)", async () => {
+    const { backend, client } = await view();
+    const labels = client("Acme")
+      .findAll("button")
+      .map((b) => [b.text(), b.attributes("aria-label")]);
+    expect(labels).toEqual([
+      ["Edit", "Edit client Acme"],
+      ["New project", "New project for Acme"],
+      ["Archive", "Archive client Acme"],
+      ["Edit", "Edit project Intern"],
+      ["New task", "New task for Intern"],
+      ["Archive", "Archive project Intern"],
+      ["Edit", "Edit project Web"],
+      ["New task", "New task for Web"],
+      ["Archive", "Archive project Web"],
+      ["Docs", "Edit task Docs"],
+      ["Review", "Edit task Review"],
+    ]);
+    // A screen reader user can tell the buttons apart.
+    await clickButton("Archive project Web");
+    expect(backend.called("archive_project")).toEqual([{ id: 1 }]);
+  });
 });

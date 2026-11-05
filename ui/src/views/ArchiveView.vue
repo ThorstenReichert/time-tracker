@@ -63,6 +63,7 @@ function unarchiveClient(client: ArchiveClientDto) {
             v-if="client.archived"
             class="action"
             label="Unarchive client"
+            :aria-label="`Unarchive client ${client.name}`"
             text
             size="small"
             @click="unarchiveClient(client)"
@@ -93,6 +94,7 @@ function unarchiveClient(client: ArchiveClientDto) {
             v-if="!client.archived"
             class="action"
             label="Unarchive"
+            :aria-label="`Unarchive project ${project.name}`"
             text
             size="small"
             @click="unarchive(project)"

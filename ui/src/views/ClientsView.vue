@@ -161,9 +161,24 @@ const withAbbreviation = (item: Naming) =>
         }}</span>
         <span class="muted">{{ formatRule(client.rule) }}</span>
         <span class="spacer"></span>
-        <Button label="Edit" text size="small" @click="editClient(client)" />
-        <Button label="New project" text size="small" @click="newProject(client)" />
-        <Button label="Archive" text size="small" severity="secondary" @click="archiveClient(client)" />
+        <!-- Each row button names its item for screen readers; the name starts with the
+             visible text, so voice control finds it too (WCAG 2.5.3). -->
+        <Button label="Edit" :aria-label="`Edit client ${client.name}`" text size="small" @click="editClient(client)" />
+        <Button
+          label="New project"
+          :aria-label="`New project for ${client.name}`"
+          text
+          size="small"
+          @click="newProject(client)"
+        />
+        <Button
+          label="Archive"
+          :aria-label="`Archive client ${client.name}`"
+          text
+          size="small"
+          severity="secondary"
+          @click="archiveClient(client)"
+        />
       </div>
       <p v-if="client.projects.length === 0" class="muted indent">
         {{ client.hasArchived ? "No active projects." : "No projects yet." }}
@@ -175,15 +190,35 @@ const withAbbreviation = (item: Naming) =>
             project.abbreviation
           }}</span>
           <span class="spacer"></span>
-          <Button label="Edit" text size="small" @click="editProject(project)" />
-          <Button label="New task" text size="small" @click="newTask(project)" />
-          <Button label="Archive" text size="small" severity="secondary" @click="archiveProject(project)" />
+          <Button
+            label="Edit"
+            :aria-label="`Edit project ${project.name}`"
+            text
+            size="small"
+            @click="editProject(project)"
+          />
+          <Button
+            label="New task"
+            :aria-label="`New task for ${project.name}`"
+            text
+            size="small"
+            @click="newTask(project)"
+          />
+          <Button
+            label="Archive"
+            :aria-label="`Archive project ${project.name}`"
+            text
+            size="small"
+            severity="secondary"
+            @click="archiveProject(project)"
+          />
         </div>
         <div v-if="project.tasks.length" class="tasks">
           <Button
             v-for="task in project.tasks"
             :key="task.id"
             :label="withAbbreviation(task)"
+            :aria-label="`Edit task ${withAbbreviation(task)}`"
             title="Edit"
             severity="secondary"
             outlined

@@ -162,4 +162,19 @@ describe("ArchiveView", () => {
       expect(document.body.textContent).toContain("Something went wrong");
     });
   });
+
+  it("names the item in each Unarchive button's accessible name (WCAG 2.5.3)", async () => {
+    const { backend, wrapper } = await view(withClients);
+    const labels = wrapper.findAll("button").map((b) => [b.text(), b.attributes("aria-label")]);
+    expect(labels).toEqual([
+      ["Unarchive", "Unarchive project Unused"],
+      ["Unarchive", "Unarchive project Portal"],
+      ["Unarchive", "Unarchive project Legacy"],
+      ["Unarchive", "Unarchive project Ops"],
+      ["Unarchive client", "Unarchive client Northwind Instruments"],
+      ["Unarchive client", "Unarchive client Empty Ltd"],
+    ]);
+    await clickButton("Unarchive project Legacy");
+    expect(backend.called("unarchive_project")).toEqual([{ id: 2 }]);
+  });
 });
