@@ -1,5 +1,31 @@
 # Release notes
 
+## 0.6.0 (unreleased)
+
+Longer abbreviations (R24 revised) and the Today view listing newest first (R10 revised), both
+small revisions of the spec in place (owner, 2026-11-05), without a change folder.
+
+- **Source:** branch `feat/abbreviation-limit-50`, not merged yet. The R10 fix is the merge
+  commit `d552f31` of branch `fix/today-newest-first`, after `v0.5.0`.
+- **Database:** no migration. 0.6.0 reads a 0.5.0 database file. **Not reversible once used:**
+  as soon as an abbreviation longer than 20 characters is saved, 0.5.0 and earlier refuse to
+  open the database (they reject it as corrupt on load, because they still check the old
+  limit).
+
+### What's in it
+- Abbreviations of clients, projects and tasks can have up to **50 characters** (was 20),
+  because 20 turned out too short in practice (R24).
+- The Today view lists the day's entries **newest first**, so the running entry is on top
+  (R10). tt-cli `entries` lists newest first too.
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.5.0 installer (or build tag
+  `v0.5.0`).
+- **Data:** only needed if an abbreviation longer than 20 characters was saved. Before
+  uninstalling, shorten every such abbreviation to 20 characters or fewer in 0.6.0 (Clients &
+  projects → Edit; unarchive an archived project first). Otherwise restore a backup from before the first long abbreviation was
+  saved (R23); entries tracked after that backup are lost.
+
 ## 0.5.0 (2026-11-05)
 
 The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-archive-view/plan.md).

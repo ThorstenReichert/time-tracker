@@ -554,13 +554,26 @@ fn the_namespace_is_per_parent_and_an_item_may_reuse_its_own_name() {
 }
 
 #[test]
+fn abbreviations_take_up_to_50_characters() {
+    let state = acme_and_beta();
+    assert!(
+        when(
+            &state,
+            &ctx(),
+            update_project(1, "Web", abbr(&"x".repeat(50)))
+        )
+        .is_ok()
+    );
+}
+
+#[test]
 fn invalid_abbreviations_are_rejected() {
     let state = acme_and_beta();
     assert_eq!(
         when(
             &state,
             &ctx(),
-            update_project(1, "Web", abbr(&"x".repeat(21)))
+            update_project(1, "Web", abbr(&"x".repeat(51)))
         )
         .unwrap_err(),
         DomainError::InvalidAbbreviation(NameProblem::TooLong {

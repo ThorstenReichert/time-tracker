@@ -17,7 +17,7 @@ pub struct Abbreviation {
 }
 
 impl Abbreviation {
-    pub const MAX_CHARS: usize = 20;
+    pub const MAX_CHARS: usize = 50;
 
     pub fn parse(input: &str) -> Result<Self, DomainError> {
         let text = clean(input, Self::MAX_CHARS).map_err(DomainError::InvalidAbbreviation)?;
