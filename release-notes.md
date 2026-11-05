@@ -1,12 +1,14 @@
 # Release notes
 
-## 0.5.0 (2026-11-05, untagged)
+## 0.5.0 (2026-11-05)
 
 The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-archive-view/plan.md).
 
-- **Source:** merge commit `f69a50f` of branch `feat/archive-view` on `master`, not tagged
-  yet. Approved to merge by Thorsten Reichert (owner), 2026-11-05, after the stage 5 review
+- **Source:** tag `v0.5.0` on `master`, which is the merge commit `f69a50f` of branch
+  `feat/archive-view`. Approved to merge by Thorsten Reichert (owner), 2026-11-05, after the stage 5 review
   against [REVIEW.md](REVIEW.md) and a manual test.
+- **Installer:** `ThorSoft TimeTracker_0.5.0_x64-setup.exe` (NSIS, per user, unsigned),
+  SHA-256 `D88D8698DCB657F0BBB392B330021019B5722589A2416E586B5F7DF6A21021B7`.
 - **Database:** no migration. 0.5.0 and 0.4.0 read the same database file.
 
 ### What's in it
