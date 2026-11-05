@@ -13,6 +13,8 @@ Amended 2026-11-01 by [changes/2026-11-01-abbreviations/spec.md](changes/2026-11
 R24 (abbreviations) and amendments to R1, R3 and R6.
 Amended 2026-11-01 by [changes/2026-11-01-branding/spec.md](changes/2026-11-01-branding/spec.md):
 R25 (ThorSoft logo and a matching colour theme, light and dark) and an amendment to §2 "Frontend".
+Amended 2026-11-05 by [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md):
+R2 for projects (R2a–R2d) and an amendment to R7 (recents). OQ-7 is unchanged.
 
 Requirements and design in one document (SDLC stage 2). Requirements are numbered `R<n>`,
 open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews can cite them.
@@ -47,6 +49,7 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
   statistics and billing error. Items with entries can't be deleted, only archived. Unused
   items can be deleted. Archived names still count: a new item whose name matches an archived
   sibling isn't created; the UI offers to unarchive the existing item instead.
+  *Projects: detailed as R2a–R2d in [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md).*
 - **R3 Quick task creation.** Wherever a task is chosen, a free-text input matches the
   project's active tasks as you type (case-insensitive substring/fuzzy). If no existing task
   matches exactly, it offers **Create "<text>"**, which creates the task and selects it in one
@@ -408,7 +411,8 @@ Architecture decisions from the stage 2 review (2026-10-17):
 - **OQ-6 Local times at DST changes.** Decided: an ambiguous or nonexistent typed time is
   rejected with a message (R12). No silent choice of reading.
 - **OQ-7 Archived names.** Decided: archived names still count for uniqueness (R1), and
-  creating a clashing name offers to unarchive the existing item (R2).
+  creating a clashing name offers to unarchive the existing item (R2). Confirmed for projects
+  on 2026-11-05 (changes/2026-11-05-archive-projects, R2c).
 - **OQ-8 Live database location.** Decided: `%LOCALAPPDATA%`, which isn't roamed or synced.
   The backup default follows (R22).
 - **OQ-9 Storage seam.** Decided: whole `State` in memory with a pure Decider (as above).
