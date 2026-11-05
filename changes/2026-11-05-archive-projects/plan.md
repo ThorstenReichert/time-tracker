@@ -104,6 +104,24 @@ into step 2. The owner decided to approve intent, spec and plan in one go.
    - Fresh-context review against `REVIEW.md`, this spec and this plan.
    - The owner's "approved to merge", then the merge.
 
+## Deviations
+- Step 2: `read::recents` takes the `Entries` and uses the new named query
+  `read::recent_combos(catalog, entries, n)` (`Entries::recent_combos_where`).
+  `read::quick_switch` keeps its signature. tt-app passes it
+  `read::recent_combos(.., read::QUICK_SWITCH_RECENCY)`. The constant moved from tt-app into
+  tt-core, so the rule and the fetch size sit together (bead 8q9).
+- Step 5: the subcommands take the ID as a positional argument (`project archive 1`), like
+  the existing `project edit 1`, instead of `--id`.
+- Step 6: `bridge.rs` needs no change. Every batch already emits `data-changed` and nudges the
+  tray, and archiving never touches the running entry, so there is no `timer-changed`.
+- Step 6: the core's `ProjectRunning` text names the ID (`the timer is running on project 3; stop
+  it first`), so tt-cli's message reads well too.
+- Step 7: the New project dialog's button reads "Save" while the name is free, as in the other
+  name dialogs, and "Unarchive project" for an archived match.
+- Step 1: the model generator unarchives twice as often as it archives. With equal weights, the
+  `Archived` rejections pre-empted the typed-time checks, and the generator stopped reaching
+  `NonexistentLocalTime`.
+
 ## Coverage
 | Requirement | Steps |
 |---|---|

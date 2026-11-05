@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { flushPromises } from "@vue/test-utils";
+import { DOMWrapper, flushPromises } from "@vue/test-utils";
 import { useCatalogStore } from "../stores/catalog";
-import { fakeBackend } from "../test/backend";
+import { fakeBackend, uiError } from "../test/backend";
 import { catalog } from "../test/fixtures";
-import { mountInApp } from "../test/mount";
+import { mountInApp, withOverlays } from "../test/mount";
 import { clickButton, dialog, dialogOpen } from "../test/page";
 import ClientsView from "./ClientsView.vue";
+
+/** An archived project of Acme. */
+const legacy = { id: 5, client: 1, name: "Legacy", abbreviation: "LG", archived: true };
+const confirmation = () => document.querySelector("[role=alertdialog]");
 
 async function view() {
   const backend = fakeBackend({
@@ -15,8 +19,14 @@ async function view() {
     update_project: () => null,
     create_task: () => null,
     update_task: () => null,
+    archive_project: () => null,
+    unarchive_project: () => null,
+    check_project_name: ({ name }: { name: string }) =>
+      name.trim().toLowerCase() === "legacy"
+        ? { kind: "unarchive", projects: [legacy] }
+        : { kind: "free", projects: [] },
   });
-  const wrapper = mountInApp(ClientsView);
+  const wrapper = mountInApp(withOverlays(ClientsView));
   useCatalogStore().catalog = catalog;
   await flushPromises();
   /** The section of one client. */
@@ -105,5 +115,57 @@ describe("ClientsView", () => {
     expect((abbreviation!.element as HTMLInputElement).value).toBe("W");
     await saveAs("Web");
     expect(backend.called("update_project")).toEqual([{ id: 1, name: "Web", abbreviation: "W" }]);
+  });
+
+  it("hides archived projects (R2a)", async () => {
+    const { client } = await view();
+    useCatalogStore().catalog = { ...catalog, projects: [...catalog.projects, legacy] };
+    await flushPromises();
+    expect(client("Acme").findAll(".project-name").map((p) => p.text())).toEqual(["Intern", "Web"]);
+  });
+
+  it("archives a project after a confirmation (R2a)", async () => {
+    const { backend, client } = await view();
+    const web = client("Acme").findAll(".project")[1]!;
+    await clickButton("Archive", web);
+    expect(confirmation()?.textContent).toContain("Acme / Web can no longer be booked");
+    await clickButton("Cancel", new DOMWrapper(confirmation()!));
+    expect(backend.called("archive_project")).toEqual([]);
+
+    await clickButton("Archive", web);
+    await clickButton("Archive", new DOMWrapper(confirmation()!));
+    expect(backend.called("archive_project")).toEqual([{ id: 1 }]);
+  });
+
+  it("shows a rejected archive as a toast (R2d)", async () => {
+    const { backend, client, wrapper } = await view();
+    backend.handlers.archive_project = () => {
+      throw uiError("The timer is running on this project; stop it first");
+    };
+    await clickButton("Archive", client("Acme").findAll(".project")[1]!);
+    await clickButton("Archive", new DOMWrapper(confirmation()!));
+    expect(document.body.textContent).toContain("The timer is running on this project; stop it first");
+    expect(wrapper.exists()).toBe(true);
+  });
+
+  it("offers to unarchive when a new project matches an archived one (R2c)", async () => {
+    const { backend, client } = await view();
+    await clickButton("New project", client("Acme"));
+    await dialog().get("input").setValue("legacy");
+    await flushPromises();
+    expect(backend.called("check_project_name").at(-1)).toEqual({ client: 1, name: "legacy", abbreviation: "" });
+    expect(dialog().text()).toContain('The archived project "Legacy" (LG) exists.');
+    await clickButton("Unarchive project", dialog());
+    expect(backend.called("unarchive_project")).toEqual([{ id: 5 }]);
+    expect(backend.called("create_project")).toEqual([]);
+    expect(dialogOpen()).toBe(false);
+  });
+
+  it("checks names only for new projects", async () => {
+    const { backend, client, saveAs } = await view();
+    await clickButton("Edit", client("Acme").findAll(".project")[1]!);
+    await saveAs("Legacy");
+    expect(backend.called("check_project_name")).toEqual([]);
+    expect(backend.called("update_project")).toEqual([{ id: 1, name: "Legacy", abbreviation: "" }]);
   });
 });

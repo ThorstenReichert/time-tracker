@@ -1,5 +1,39 @@
 # Release notes
 
+## 0.4.0 (unreleased)
+
+Archiving projects, from [changes/2026-11-05-archive-projects](changes/2026-11-05-archive-projects/plan.md).
+
+- **Source:** branch `feat/archive-projects`. The merge commit, tag and approval are added at
+  the release.
+- **Database:** no migration. 0.4.0 and 0.3.0 read the same database file. 0.3.0 already hides
+  archived projects from its pickers, but it doesn't reject booking onto them.
+
+### What's in it
+- **Archive** on each project in Clients & projects, with a confirmation (R2a). An archived
+  project is hidden there and no longer offered by the quick-switch, the combo pickers, the
+  recents, the tray menu or the task input. Its entries stay in the entry lists, the daily
+  overview and the statistics.
+- An archived project can't be booked onto: starting or switching to it, adding an entry on it,
+  moving an entry onto it and creating a task under it are rejected. Entries already on it can
+  still have their times and note fixed, be moved to another project, or be deleted (R2b).
+- The project of the running timer can't be archived: stop the timer first.
+- **New project** checks the name and abbreviation while you type (R2c). If they match an
+  archived project, the dialog shows it, with its name and abbreviation, and the button becomes
+  **Unarchive project**, which brings it back as it was. A clash with an active project, or
+  with more than one project, is shown inline and blocks the button. Names stay unique across
+  archived and active projects.
+- Duplicate-name messages say when the clashing project is archived (R2d).
+- The recents always show N combos when there are N active ones, however many newer combos are
+  archived (R7).
+- tt-cli: `project archive <id>` and `project unarchive <id>`.
+- Not yet: a view that lists archived projects, archiving clients or tasks.
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.3.0 installer (or build tag
+  `v0.3.0`). No data step is needed, because 0.4.0 doesn't change the database schema.
+  Archived projects stay archived.
+
 ## 0.3.0 (2026-11-01)
 
 ThorSoft branding: the logo and a matching colour theme, light and dark, from
