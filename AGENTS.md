@@ -3,43 +3,11 @@
 This file provides instructions and context for AI coding agents working on this project. It is
 the single source: `CLAUDE.md` only imports it (`@AGENTS.md`), so edit this file, not that one.
 
-## Non-Interactive Shell Commands
-
-**ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.
-
-Shell commands like `cp`, `mv`, and `rm` may be aliased to include `-i` (interactive) mode on some systems, causing the agent to hang indefinitely waiting for y/n input.
-
-**Use these forms instead:**
-```bash
-# Force overwrite without prompting
-cp -f source dest           # NOT: cp source dest
-mv -f source dest           # NOT: mv source dest
-rm -f file                  # NOT: rm file
-
-# For recursive operations
-rm -rf directory            # NOT: rm -r directory
-cp -rf source dest          # NOT: cp -r source dest
-```
-
-**Other commands that may prompt:**
-- `scp` - use `-o BatchMode=yes` for non-interactive
-- `ssh` - use `-o BatchMode=yes` to fail instead of prompting
-- `apt-get` - use `-y` flag
-- `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
-
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
 ## Beads Issue Tracker
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands
+(the SessionStart hooks of Claude Code and Codex run it automatically).
 
 ### Rules
 
@@ -48,14 +16,6 @@ bd close <id>         # Complete work
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
 **Architecture in one line:** issues live in a local Dolt DB (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so beads issues and memories exist only on this machine, not on GitHub (see "GitHub remote, local workflow" below).
-
-## Agent Context Profiles
-
-The managed Beads block is task-tracking guidance, not permission to override repository, user, or orchestrator instructions.
-
-- **Conservative (default)**: Use `bd` for task tracking. Do not run git commits unless explicitly asked. At handoff, report changed files, validation, and suggested next commands.
-- **Minimal**: Keep tool instruction files as pointers to `bd prime`; use the same conservative git policy unless active instructions say otherwise.
-- **Team-maintainer**: Only when the repository explicitly opts in, agents may close beads, run quality gates and commit as part of session close. A current "do not commit" instruction still wins.
 
 ## Session Completion
 
@@ -168,7 +128,7 @@ the workflow, so local runs and CI stay the same. The actions are pinned to comm
 | Task | Command | Healthy result |
 |---|---|---|
 | Rust tests, one crate | `cargo test -p tt-core` (or `tt-store`, `tt-app`, `tt-cli`, `timetracker-app`) | `test result: ok. N passed; 0 failed` for every test binary |
-| Regenerate TS bindings | `UPDATE_BINDINGS=1 cargo test -p timetracker-app bindings` | rewrites `ui/src/bindings.ts`; commit it. A stale file fails `bindings_up_to_date` |
+| Regenerate TS bindings | PowerShell: `$env:UPDATE_BINDINGS=1; cargo test -p timetracker-app bindings`; Bash: `UPDATE_BINDINGS=1 cargo test -p timetracker-app bindings` | rewrites `ui/src/bindings.ts`; commit it. A stale file fails `bindings_up_to_date` |
 | Run the app (dev) | `cargo tauri dev --config src-tauri/tauri.dev.conf.json` | the window "ThorSoft TimeTracker" of the `target\debug` process (product name "ThorSoft TimeTracker (dev)"); hotkey `Ctrl+Alt+Shift+Space`; runs next to the installed app |
 | Installer | `cargo tauri build` | `Finished 1 bundle at: ...\target\release\bundle\nsis\ThorSoft TimeTracker_<version>_x64-setup.exe` |
 
@@ -263,6 +223,8 @@ No port traits: tests use a temporary SQLite database, not fakes.
 `src-tauri` and `tt-cli` only translate input → `Command` and result → output. Every feature
 must be reachable without the UI (through `tt-app`, and so from tests and `tt-cli`). Quick-switch
 matching is a tt-core read model, not UI code.
+
+### UI
 
 UI look (R25): follows Windows light/dark. The PrimeVue theme is `ThorSoftPreset` in
 `ui/src/lib/brand.ts` (Aura with the logo colours as `primary`, `night` navy surfaces in dark).
