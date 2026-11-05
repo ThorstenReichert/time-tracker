@@ -20,6 +20,12 @@ export const commands = {
 	unarchiveProject: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("unarchive_project", { id })),
 	/**  The New project dialog's check while typing (R2c). */
 	checkProjectName: (client: number, name: string, abbreviation: string | null) => typedError<NameCheckDto, UiError>(__TAURI_INVOKE("check_project_name", { client, name, abbreviation })),
+	/**  Archives a client (R2g): its projects are no longer offered or bookable. */
+	archiveClient: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("archive_client", { id })),
+	/**  Makes an archived client active again, its projects as they were (R2g, R2i). */
+	unarchiveClient: (id: number) => typedError<null, UiError>(__TAURI_INVOKE("unarchive_client", { id })),
+	/**  The New client dialog's check while typing (R2i). */
+	checkClientName: (name: string, abbreviation: string | null) => typedError<NameCheckDto, UiError>(__TAURI_INVOKE("check_client_name", { name, abbreviation })),
 	createTask: (project: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("create_task", { project, name, abbreviation })),
 	/**  Renames a task and/or sets its abbreviation (R24). */
 	updateTask: (id: number, name: string, abbreviation: string | null) => typedError<null, UiError>(__TAURI_INVOKE("update_task", { id, name, abbreviation })),
@@ -57,7 +63,7 @@ export const commands = {
 } | null, UiError>(__TAURI_INVOKE("get_running")),
 	getDayEntries: (day: string) => typedError<EntryDto[], UiError>(__TAURI_INVOKE("get_day_entries", { day })),
 	getOverview: (day: string) => typedError<OverviewDto, UiError>(__TAURI_INVOKE("get_overview", { day })),
-	/**  The Archive view (R2e). Reads the archive, then the catalog for the names. */
+	/**  The Archive view (R2e, R2j). Reads the archive, then the catalog for the names. */
 	getArchive: () => typedError<ArchiveClientDto[], UiError>(__TAURI_INVOKE("get_archive")),
 	getRecents: () => typedError<ComboDto[], UiError>(__TAURI_INVOKE("get_recents")),
 	quickSwitch: (query: string) => typedError<ComboDto[], UiError>(__TAURI_INVOKE("quick_switch", { query })),
@@ -71,19 +77,28 @@ export type ActivePeriodDto = {
 	last: string,
 };
 
-/**  A client of the Archive view with its archived projects, in the order of R2e. */
+/**
+ *  A client of the Archive view, in the order of R2e. `archived`: the client itself is
+ *  archived, and `projects` holds all its projects; otherwise only its archived ones (R2j).
+ */
 export type ArchiveClientDto = {
 	id: number,
 	name: string,
 	abbreviation: string | null,
+	archived: boolean,
 	projects: ArchivedProjectDto[],
 };
 
-/**  An archived project with its active period; `period` is `null` if it has no entries (R2e). */
+/**
+ *  A project of the Archive view with its active period; `period` is `null` if it has no
+ *  entries (R2e). `archived`: the project itself is archived; `false` only under an archived
+ *  client (R2j).
+ */
 export type ArchivedProjectDto = {
 	id: number,
 	name: string,
 	abbreviation: string | null,
+	archived: boolean,
 	period: ActivePeriodDto | null,
 };
 
@@ -105,8 +120,8 @@ export type CatalogDto = {
 	roundingUnits: number[],
 };
 
-/**  A project named by a name check, e.g. `archived project "Web" (W)` (R2d). */
-export type CheckedProjectDto = {
+/**  A project or client named by a name check, e.g. `archived project "Web" (W)` (R2d, R2k). */
+export type CheckedItemDto = {
 	id: number,
 	label: string,
 };
@@ -185,12 +200,12 @@ export type FigureDto = {
 export type Level = "project" | "client";
 
 /**
- *  The New project dialog's check (R2c). `projects` is the archived project to unarchive
- *  (`unarchive`), the clashing projects (`taken`), or empty (`free`).
+ *  The New project (R2c) or New client (R2i) dialog's check. `items` is the archived item to
+ *  unarchive (`unarchive`), the clashing items (`taken`), or empty (`free`).
  */
 export type NameCheckDto = {
 	kind: NameCheckKind,
-	projects: CheckedProjectDto[],
+	items: CheckedItemDto[],
 };
 
 export type NameCheckKind = "free" | "unarchive" | "taken";

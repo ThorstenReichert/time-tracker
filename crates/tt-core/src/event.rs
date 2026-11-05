@@ -20,6 +20,15 @@ pub enum Event {
         abbreviation: Option<Abbreviation>,
         rule: RoundingRule,
     },
+    /// The client got `archived_at = at` (R2g).
+    ClientArchived {
+        id: ClientId,
+        at: Instant,
+    },
+    /// The client's `archived_at` was cleared (R2g).
+    ClientUnarchived {
+        id: ClientId,
+    },
     ProjectCreated {
         project: Project,
     },

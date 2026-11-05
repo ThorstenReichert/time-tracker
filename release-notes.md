@@ -1,5 +1,32 @@
 # Release notes
 
+## 0.7.0 (unreleased)
+
+Archiving clients, from [changes/2026-11-05-archive-clients](changes/2026-11-05-archive-clients/plan.md).
+
+- **Source:** branch `feat/archive-clients`, not merged yet.
+- **Database:** no migration. 0.7.0 reads a 0.6.0 database file, and 0.6.0 reads a 0.7.0 one.
+  0.6.0 already refuses to book under an archived client and hides its projects from the
+  pickers. It still lists the archived client in Clients & projects, and its Archive view
+  doesn't show it.
+
+### What's in it
+- A client can be **archived** with one click in Clients & projects (R2g). It disappears from
+  that view, and its projects are no longer offered or bookable. Their entries stay in the
+  lists, the overview and the statistics. Archiving is rejected while the timer runs on one of
+  its projects.
+- Archiving a client leaves its projects' own archive state alone. **Unarchive client** in the
+  Archive view brings everything back as it was. Projects that were archived on their own stay
+  archived and are tagged "archived separately" (R2j).
+- **New client** checks the typed name while typing. If it matches an archived client, the
+  dialog offers **Unarchive client** instead of creating a duplicate (R2i).
+- tt-cli: `client archive <id>`, `client unarchive <id>`. `archive` includes archived clients.
+
+### Rollback
+- **App:** uninstall it in Settings → Apps, then install the 0.6.0 installer (or build tag
+  `v0.6.0`). The data stays readable. Unarchive archived clients first if 0.6.0 should list
+  them.
+
 ## 0.6.0 (2026-11-05)
 
 Longer abbreviations (R24 revised) and the Today view listing newest first (R10 revised), both

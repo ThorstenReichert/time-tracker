@@ -23,8 +23,14 @@ async function view() {
     unarchive_project: () => null,
     check_project_name: ({ name }: { name: string }) =>
       name.trim().toLowerCase() === "legacy"
-        ? { kind: "unarchive", projects: [{ id: 5, label: 'archived project "Legacy" (LG)' }] }
-        : { kind: "free", projects: [] },
+        ? { kind: "unarchive", items: [{ id: 5, label: 'archived project "Legacy" (LG)' }] }
+        : { kind: "free", items: [] },
+    archive_client: () => null,
+    unarchive_client: () => null,
+    check_client_name: ({ name }: { name: string }) =>
+      name.trim().toLowerCase() === "old corp"
+        ? { kind: "unarchive", items: [{ id: 3, label: 'archived client "Old Corp" (OC)' }] }
+        : { kind: "free", items: [] },
   });
   const wrapper = mountInApp(withOverlays(ClientsView));
   useCatalogStore().catalog = catalog;
@@ -169,5 +175,82 @@ describe("ClientsView", () => {
     await saveAs("Legacy");
     expect(backend.called("check_project_name")).toEqual([]);
     expect(backend.called("update_project")).toEqual([{ id: 1, name: "Legacy", abbreviation: "" }]);
+  });
+
+  it("hides archived clients and says so when no active client is left (R2g)", async () => {
+    const { wrapper } = await view();
+    useCatalogStore().catalog = {
+      ...catalog,
+      clients: catalog.clients.map((c) => (c.id === 2 ? { ...c, archived: true } : c)),
+    };
+    await flushPromises();
+    expect(wrapper.findAll(".client-name").map((c) => c.text())).toEqual(["Acme"]);
+    useCatalogStore().catalog = { ...catalog, clients: catalog.clients.map((c) => ({ ...c, archived: true })) };
+    await flushPromises();
+    expect(wrapper.findAll(".client-name")).toEqual([]);
+    expect(wrapper.text()).toContain("No active clients.");
+  });
+
+  it("archives a client with one click, without a confirmation (R2g)", async () => {
+    const { backend, client } = await view();
+    await clickButton("Archive", client("Beta").get(".client-row"));
+    await flushPromises();
+    expect(confirmation()).toBeNull();
+    expect(backend.called("archive_client")).toEqual([{ id: 2 }]);
+    expect(backend.called("archive_project")).toEqual([]);
+  });
+
+  it("shows a rejected client archive as a toast (R2k)", async () => {
+    const { backend, client } = await view();
+    backend.handlers.archive_client = () => {
+      throw uiError("The timer is running on a project of this client; stop it first");
+    };
+    await clickButton("Archive", client("Acme").get(".client-row"));
+    await flushPromises();
+    expect(document.body.textContent).toContain("The timer is running on a project of this client; stop it first");
+  });
+
+  it("offers to unarchive when a new client matches an archived one (R2i)", async () => {
+    const { backend } = await view();
+    await clickButton("New client");
+    await dialog().get("input").setValue("Old Corp");
+    await flushPromises();
+    expect(backend.called("check_client_name").at(-1)).toEqual({ name: "Old Corp", abbreviation: "" });
+    expect(dialog().text()).toContain('The archived client "Old Corp" (OC) exists.');
+    await clickButton("Unarchive client", dialog());
+    expect(backend.called("unarchive_client")).toEqual([{ id: 3 }]);
+    expect(backend.called("create_client")).toEqual([]);
+    expect(dialogOpen()).toBe(false);
+  });
+
+  it("checks names only for new clients", async () => {
+    const { backend, client, saveAs } = await view();
+    await clickButton("Edit", client("Beta"));
+    await saveAs("Old Corp");
+    expect(backend.called("check_client_name")).toEqual([]);
+    expect(backend.called("update_client")).toHaveLength(1);
+  });
+
+  it("names the item in each row button's accessible name, after its visible text (WCAG 2.5.3)", async () => {
+    const { backend, client } = await view();
+    const labels = client("Acme")
+      .findAll("button")
+      .map((b) => [b.text(), b.attributes("aria-label")]);
+    expect(labels).toEqual([
+      ["Edit", "Edit client Acme"],
+      ["New project", "New project for Acme"],
+      ["Archive", "Archive client Acme"],
+      ["Edit", "Edit project Intern"],
+      ["New task", "New task for Intern"],
+      ["Archive", "Archive project Intern"],
+      ["Edit", "Edit project Web"],
+      ["New task", "New task for Web"],
+      ["Archive", "Archive project Web"],
+      ["Docs", "Edit task Docs"],
+      ["Review", "Edit task Review"],
+    ]);
+    // A screen reader user can tell the buttons apart.
+    await clickButton("Archive project Web");
+    expect(backend.called("archive_project")).toEqual([{ id: 1 }]);
   });
 });

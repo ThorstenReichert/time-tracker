@@ -7,7 +7,7 @@ use std::path::Path;
 use jiff::civil;
 use tauri::{AppHandle, State};
 use tauri_plugin_autostart::ManagerExt as _;
-use tt_core::{ClientId, Command, Ctx, EntryId, ProjectId, TaskId};
+use tt_core::{ClientId, Command, Ctx, EntryId, ItemRef, ProjectId, TaskId};
 
 use crate::backend::{Backend, ctx};
 use crate::dto::{
@@ -199,7 +199,37 @@ pub async fn check_project_name(
     read(&backend, |app, _| {
         let check =
             app.project_name_check(ClientId::new(client), &name, abbreviation.as_deref())?;
-        Ok(NameCheckDto::new(&check, &app.catalog()?))
+        Ok(NameCheckDto::new(&check, &app.catalog()?, ItemRef::Project))
+    })
+}
+
+/// Archives a client (R2g): its projects are no longer offered or bookable.
+#[tauri::command]
+#[specta::specta]
+pub async fn archive_client(backend: State<'_, Backend>, id: u64) -> Res<()> {
+    let id = ClientId::new(id);
+    execute(&backend, &ctx(), Command::ArchiveClient { id })
+}
+
+/// Makes an archived client active again, its projects as they were (R2g, R2i).
+#[tauri::command]
+#[specta::specta]
+pub async fn unarchive_client(backend: State<'_, Backend>, id: u64) -> Res<()> {
+    let id = ClientId::new(id);
+    execute(&backend, &ctx(), Command::UnarchiveClient { id })
+}
+
+/// The New client dialog's check while typing (R2i).
+#[tauri::command]
+#[specta::specta]
+pub async fn check_client_name(
+    backend: State<'_, Backend>,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<NameCheckDto> {
+    read(&backend, |app, _| {
+        let check = app.client_name_check(&name, abbreviation.as_deref())?;
+        Ok(NameCheckDto::new(&check, &app.catalog()?, ItemRef::Client))
     })
 }
 
@@ -400,12 +430,12 @@ pub async fn get_overview(backend: State<'_, Backend>, day: String) -> Res<Overv
     })
 }
 
-/// The Archive view (R2e). Reads the archive, then the catalog for the names.
+/// The Archive view (R2e, R2j). Reads the archive, then the catalog for the names.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_archive(backend: State<'_, Backend>) -> Res<Vec<ArchiveClientDto>> {
     read(&backend, |app, ctx| {
-        let archive = app.archived_projects(ctx)?;
+        let archive = app.archive_view(ctx)?;
         Ok(ArchiveClientDto::list(&archive, &app.catalog()?))
     })
 }

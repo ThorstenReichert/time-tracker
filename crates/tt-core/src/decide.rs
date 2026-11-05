@@ -23,6 +23,8 @@ pub fn decide(state: &State, ctx: &Ctx, cmd: &Command) -> Result<Vec<Event>, Dom
             abbreviation,
             rule,
         } => catalog::update_client(catalog, *id, (name, abbreviation.as_deref()), *rule),
+        Command::ArchiveClient { id } => catalog::archive_client(state, ctx, *id),
+        Command::UnarchiveClient { id } => catalog::unarchive_client(catalog, *id),
         Command::CreateProject {
             client,
             name,

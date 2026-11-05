@@ -4,8 +4,8 @@
 use jiff::civil;
 use tt_core::testing::{at, berlin, ctx_berlin, run, when};
 use tt_core::{
-    Client, ClientId, Combo, Command, Ctx, DomainError, Entry, EntryId, Event, Instant, ItemRef,
-    Name, Note, Project, ProjectId, RoundingRule, State, TaskChoice, TaskId,
+    ClientId, Combo, Command, Ctx, DomainError, Entry, EntryId, Event, Instant, ItemRef, Note,
+    ProjectId, RoundingRule, State, TaskChoice, TaskId,
 };
 
 const WEB: ProjectId = ProjectId::new(1);
@@ -796,41 +796,64 @@ fn moving_an_entry_onto_an_archived_project_is_rejected() {
 }
 
 #[test]
-fn an_archived_client_makes_its_projects_inactive() {
-    // Client archiving has no command yet, but the combo check already covers it (R2a).
-    let state = tt_core::testing::given(&[
-        Event::ClientCreated {
-            client: Client {
+fn an_archived_client_makes_its_projects_unbookable() {
+    // R2g, R2h (changes/2026-11-05-archive-clients): the client comes first in the error.
+    let c = ctx("2026-10-17T12:00");
+    let state = run(
+        catalog(),
+        &c,
+        [
+            Command::AddEntry {
+                project: WEB,
+                task: TaskChoice::Existing(REVIEW),
+                start: dt("2026-10-17T09:00"),
+                end: dt("2026-10-17T10:00"),
+                note: None,
+            },
+            add(API, "2026-10-17T10:00", "2026-10-17T11:00"),
+            Command::ArchiveProject { id: WEB },
+            Command::ArchiveClient {
                 id: ClientId::new(1),
-                name: Name::parse("Acme").unwrap(),
-                abbreviation: None,
-                rule: RoundingRule::default(),
-                archived_at: Some(t("2026-10-16T12:00")),
-                created_at: t("2026-10-01T12:00"),
             },
-        },
-        Event::ProjectCreated {
-            project: Project {
-                id: WEB,
-                client: ClientId::new(1),
-                name: Name::parse("Web").unwrap(),
-                abbreviation: None,
-                archived_at: None,
-                created_at: t("2026-10-01T12:00"),
-            },
-        },
-    ]);
-    assert_eq!(
-        when(
-            &state,
-            &ctx("2026-10-17T09:00"),
-            start(WEB, TaskChoice::NoTask)
-        )
-        .unwrap_err(),
-        DomainError::Archived {
-            item: ItemRef::Client(ClientId::new(1))
-        }
+        ],
     );
+    let acme_archived = DomainError::Archived {
+        item: ItemRef::Client(ClientId::new(1)),
+    };
+    assert_eq!(
+        when(&state, &c, start(WEB, TaskChoice::NoTask)).unwrap_err(),
+        acme_archived
+    );
+    assert_eq!(
+        when(&state, &c, add(WEB, "2026-10-17T07:00", "2026-10-17T08:00")).unwrap_err(),
+        acme_archived
+    );
+    // Moving the API entry onto Web is a new booking.
+    let onto = edit_to(
+        2,
+        WEB,
+        TaskChoice::NoTask,
+        "2026-10-17T10:00",
+        "2026-10-17T11:00",
+    );
+    assert_eq!(when(&state, &c, onto).unwrap_err(), acme_archived);
+    // The Web entry keeps its combo with new times, or moves away to an active project.
+    let fixed = edit_to(
+        1,
+        WEB,
+        TaskChoice::Existing(REVIEW),
+        "2026-10-17T08:45",
+        "2026-10-17T09:50",
+    );
+    assert!(when(&state, &c, fixed).is_ok());
+    let moved = edit_to(
+        1,
+        API,
+        TaskChoice::NoTask,
+        "2026-10-17T09:00",
+        "2026-10-17T10:00",
+    );
+    assert!(when(&state, &c, moved).is_ok());
 }
 
 #[test]

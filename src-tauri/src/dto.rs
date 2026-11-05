@@ -125,23 +125,28 @@ pub enum NameCheckKind {
     Taken,
 }
 
-/// A client of the Archive view with its archived projects, in the order of R2e.
+/// A client of the Archive view, in the order of R2e. `archived`: the client itself is
+/// archived, and `projects` holds all its projects; otherwise only its archived ones (R2j).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ArchiveClientDto {
     pub id: u64,
     pub name: String,
     pub abbreviation: Option<String>,
+    pub archived: bool,
     pub projects: Vec<ArchivedProjectDto>,
 }
 
-/// An archived project with its active period; `period` is `null` if it has no entries (R2e).
+/// A project of the Archive view with its active period; `period` is `null` if it has no
+/// entries (R2e). `archived`: the project itself is archived; `false` only under an archived
+/// client (R2j).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ArchivedProjectDto {
     pub id: u64,
     pub name: String,
     pub abbreviation: Option<String>,
+    pub archived: bool,
     pub period: Option<ActivePeriodDto>,
 }
 
@@ -164,6 +169,7 @@ impl ArchiveClientDto {
                     id: client.id.get(),
                     name: client.name.to_string(),
                     abbreviation: client.abbreviation.as_ref().map(ToString::to_string),
+                    archived: a.archived,
                     projects: a
                         .projects
                         .iter()
@@ -173,6 +179,7 @@ impl ArchiveClientDto {
                                 id: p.id.get(),
                                 name: p.name.to_string(),
                                 abbreviation: p.abbreviation.as_ref().map(ToString::to_string),
+                                archived: ap.archived,
                                 period: ap.period.map(|d| ActivePeriodDto {
                                     first: d.first.to_string(),
                                     last: d.last.to_string(),
@@ -186,40 +193,44 @@ impl ArchiveClientDto {
     }
 }
 
-/// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
+/// A project or client named by a name check, e.g. `archived project "Web" (W)` (R2d, R2k).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub struct CheckedProjectDto {
+pub struct CheckedItemDto {
     pub id: u64,
     pub label: String,
 }
 
-/// The New project dialog's check (R2c). `projects` is the archived project to unarchive
-/// (`unarchive`), the clashing projects (`taken`), or empty (`free`).
+/// The New project (R2c) or New client (R2i) dialog's check. `items` is the archived item to
+/// unarchive (`unarchive`), the clashing items (`taken`), or empty (`free`).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NameCheckDto {
     pub kind: NameCheckKind,
-    pub projects: Vec<CheckedProjectDto>,
+    pub items: Vec<CheckedItemDto>,
 }
 
 impl NameCheckDto {
-    pub fn new(check: &NameCheck, catalog: &Catalog) -> Self {
+    /// `item` says which kind of item an ID is, for its label.
+    pub fn new<Id: Copy>(
+        check: &NameCheck<Id>,
+        catalog: &Catalog,
+        item: impl Fn(Id) -> ItemRef,
+    ) -> Self {
         let (kind, ids) = match check {
             NameCheck::Free => (NameCheckKind::Free, &[][..]),
-            NameCheck::Unarchive { project } => {
-                (NameCheckKind::Unarchive, std::slice::from_ref(project))
-            }
+            NameCheck::Unarchive { item } => (NameCheckKind::Unarchive, std::slice::from_ref(item)),
             NameCheck::Taken { by } => (NameCheckKind::Taken, by.as_slice()),
         };
         Self {
             kind,
-            projects: ids
+            items: ids
                 .iter()
                 .filter_map(|id| {
-                    let label = crate::errors::item_label(catalog, ItemRef::Project(*id))?;
-                    Some(CheckedProjectDto {
-                        id: id.get(),
+                    let item = item(*id);
+                    let label = crate::errors::item_label(catalog, item)?;
+                    Some(CheckedItemDto {
+                        id: item.id(),
                         label,
                     })
                 })

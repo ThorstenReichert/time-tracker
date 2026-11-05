@@ -777,7 +777,7 @@ fn name_check_offers_to_unarchive_on_a_direct_hit() {
         read::project_name_check(s.catalog(), ACME, name, abbreviation)
     };
     let old_web = NameCheck::Unarchive {
-        project: ProjectId::new(2),
+        item: ProjectId::new(2),
     };
     // Name to name, ignoring case and surrounding whitespace.
     assert_eq!(check("old web", None), old_web);
@@ -791,7 +791,7 @@ fn name_check_offers_to_unarchive_on_a_direct_hit() {
     assert_eq!(
         read::project_name_check(s.catalog(), BETA, "portal", None),
         NameCheck::Unarchive {
-            project: ProjectId::new(4)
+            item: ProjectId::new(4)
         }
     );
 }
@@ -816,6 +816,55 @@ fn name_check_blocks_active_cross_and_multiple_hits() {
     // Two archived projects, or an archived and an active one.
     assert_eq!(check("Old web", Some("LG")), taken(&[2, 3]));
     assert_eq!(check("Old web", Some("W")), taken(&[1, 2]));
+}
+
+/// R2i: Acme (AC) active, Old Corp (OC) and Legacy (LG) archived.
+fn client_check_catalog() -> State {
+    let client = |name: &str, abbreviation: &str| Command::CreateClient {
+        name: name.into(),
+        abbreviation: Some(abbreviation.into()),
+        rule: RoundingRule::default(),
+    };
+    run(
+        State::default(),
+        &ctx("2026-10-17T09:00"),
+        [
+            client("Acme", "AC"),
+            client("Old Corp", "OC"),
+            client("Legacy", "LG"),
+            Command::ArchiveClient {
+                id: ClientId::new(2),
+            },
+            Command::ArchiveClient {
+                id: ClientId::new(3),
+            },
+        ],
+    )
+}
+
+#[test]
+fn client_name_check_follows_the_project_rule() {
+    let s = client_check_catalog();
+    let check = |name: &str, abbreviation: Option<&str>| {
+        read::client_name_check(s.catalog(), name, abbreviation)
+    };
+    let taken = |ids: &[u64]| NameCheck::Taken {
+        by: ids.iter().map(|id| ClientId::new(*id)).collect(),
+    };
+    let old_corp = NameCheck::Unarchive {
+        item: ClientId::new(2),
+    };
+    // Free.
+    assert_eq!(check("Northwind", Some("NWI")), NameCheck::Free);
+    assert_eq!(check("", None), NameCheck::Free);
+    // One archived client, name to name or abbreviation to abbreviation.
+    assert_eq!(check(" old corp ", None), old_corp);
+    assert_eq!(check("Oldco", Some("oc")), old_corp);
+    assert_eq!(check("Old Corp", Some("OC")), old_corp);
+    // An active client, a cross match with an archived one, two hits.
+    assert_eq!(check("acme", None), taken(&[1]));
+    assert_eq!(check("oc", None), taken(&[2]));
+    assert_eq!(check("Old Corp", Some("LG")), taken(&[2, 3]));
 }
 
 #[test]
@@ -1046,7 +1095,7 @@ fn period(first: &str, last: &str) -> Option<read::ActivePeriod> {
 #[test]
 fn archive_view_groups_and_orders_archived_projects() {
     let s = archive_view_state();
-    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
     let rows = |c: &read::ArchivedClient| -> Vec<(u64, Option<read::ActivePeriod>)> {
         c.projects
             .iter()
@@ -1075,9 +1124,69 @@ fn archive_view_groups_and_orders_archived_projects() {
 }
 
 #[test]
+fn archive_view_lists_archived_clients_with_all_their_projects() {
+    // R2j: acme and Gamma are archived, Empty (4) has no projects, Zeta stays active.
+    let s = run(
+        archive_view_state(),
+        &ctx("2026-10-20T18:00"),
+        [
+            Command::CreateClient {
+                name: "Empty".into(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+            },
+            Command::ArchiveClient {
+                id: ClientId::new(2),
+            },
+            Command::ArchiveClient {
+                id: ClientId::new(3),
+            },
+            Command::ArchiveClient {
+                id: ClientId::new(4),
+            },
+        ],
+    );
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
+    let summary: Vec<_> = view
+        .iter()
+        .map(|c| (c.client.get(), c.archived, c.projects.len()))
+        .collect();
+    assert_eq!(
+        summary,
+        [(2, true, 8), (4, true, 0), (3, true, 1), (1, false, 1)]
+    );
+    let rows = |c: &read::ArchivedClient| -> Vec<(u64, bool)> {
+        c.projects
+            .iter()
+            .map(|p| (p.project.get(), p.archived))
+            .collect()
+    };
+    // acme brings its active project 7 too, in the R2e order (first day 2026-08-01).
+    assert_eq!(
+        rows(&view[0]),
+        [
+            (6, true),
+            (5, true),
+            (7, false),
+            (10, true),
+            (4, true),
+            (2, true),
+            (3, true),
+            (1, true),
+        ]
+    );
+    assert_eq!(
+        view[0].projects[2].period,
+        period("2026-08-01", "2026-08-01")
+    );
+    assert_eq!(rows(&view[2]), [(9, false)]);
+    assert_eq!(rows(&view[3]), [(8, true)]);
+}
+
+#[test]
 fn archive_view_is_empty_without_archived_projects() {
     let s = catalog();
-    assert!(read::archived_projects(s.catalog(), s.entries(), &berlin()).is_empty());
+    assert!(read::archive_view(s.catalog(), s.entries(), &berlin()).is_empty());
 }
 
 #[test]
@@ -1093,7 +1202,7 @@ fn archive_view_days_are_local_start_dates() {
             Command::ArchiveProject { id: WEB },
         ],
     );
-    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
     assert_eq!(view.len(), 1);
     assert_eq!(view[0].client, ACME);
     assert_eq!(

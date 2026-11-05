@@ -74,7 +74,8 @@ fn all_settings_round_trip() {
 
 #[test]
 fn archive_and_unarchive_round_trip() {
-    // R2a (changes/2026-11-05-archive-projects); the property test above covers it at random.
+    // R2a (changes/2026-11-05-archive-projects) and R2g (changes/2026-11-05-archive-clients);
+    // the property test above covers them at random.
     use tt_core::testing::ctx_berlin;
     use tt_core::{ClientId, Command, ProjectId, RoundingRule};
     let dir = TempDir::new().unwrap();
@@ -82,6 +83,7 @@ fn archive_and_unarchive_round_trip() {
     store.migrate().unwrap();
     let ctx = ctx_berlin("2026-10-17T09:00");
     let web = ProjectId::new(1);
+    let acme = ClientId::new(1);
     let mut state = State::default();
     for cmd in [
         Command::CreateClient {
@@ -95,6 +97,7 @@ fn archive_and_unarchive_round_trip() {
             abbreviation: None,
         },
         Command::ArchiveProject { id: web },
+        Command::ArchiveClient { id: acme },
     ] {
         let events = decide(&state, &ctx, &cmd).unwrap();
         store.apply(&events).unwrap();
@@ -106,11 +109,21 @@ fn archive_and_unarchive_round_trip() {
         loaded.catalog().project(web).unwrap().archived_at,
         Some(ctx.now)
     );
+    assert_eq!(
+        loaded.catalog().client(acme).unwrap().archived_at,
+        Some(ctx.now)
+    );
 
-    let events = decide(&state, &ctx, &Command::UnarchiveProject { id: web }).unwrap();
-    store.apply(&events).unwrap();
-    let state = evolve_all(state, &events);
+    for cmd in [
+        Command::UnarchiveClient { id: acme },
+        Command::UnarchiveProject { id: web },
+    ] {
+        let events = decide(&state, &ctx, &cmd).unwrap();
+        store.apply(&events).unwrap();
+        state = evolve_all(state, &events);
+    }
     let loaded = store.load().unwrap();
     assert_eq!(loaded, state);
+    assert_eq!(loaded.catalog().client(acme).unwrap().archived_at, None);
     assert_eq!(loaded.catalog().project(web).unwrap().archived_at, None);
 }

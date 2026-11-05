@@ -109,6 +109,9 @@ fn domain_message(error: &DomainError, app: &App, ctx: &Ctx) -> String {
     if let DomainError::ProjectRunning { .. } = error {
         return "The timer is running on this project; stop it first".to_owned();
     }
+    if let DomainError::ClientRunning { .. } = error {
+        return "The timer is running on a project of this client; stop it first".to_owned();
+    }
     capitalise(&error.to_string())
 }
 
@@ -315,5 +318,57 @@ mod tests {
             message(rename),
             "The name is already used by archived project \"Web\" (W)"
         );
+    }
+
+    #[test]
+    fn archive_errors_name_the_archived_client() {
+        // R2k (changes/2026-11-05-archive-clients).
+        let dir = tempfile::TempDir::new().unwrap();
+        let ctx = ctx_berlin("2026-10-17T18:00");
+        let app = App::open(AppConfig::new(dir.path().join("t.db")), &ctx).unwrap();
+        let acme = ClientId::new(1);
+        let web = ProjectId::new(1);
+        let start = |project| Command::Start {
+            project,
+            task: TaskChoice::NoTask,
+        };
+        for cmd in [
+            Command::CreateClient {
+                name: "Acme".into(),
+                abbreviation: Some("AC".into()),
+                rule: RoundingRule::default(),
+            },
+            Command::CreateProject {
+                client: acme,
+                name: "Web".into(),
+                abbreviation: None,
+            },
+            start(web),
+        ] {
+            app.execute(&ctx, cmd).unwrap();
+        }
+        let message =
+            |cmd| UiError::from_app(app.execute(&ctx, cmd).unwrap_err(), &app, &ctx).message;
+        assert_eq!(
+            message(Command::ArchiveClient { id: acme }),
+            "The timer is running on a project of this client; stop it first"
+        );
+        app.execute(&ctx, Command::Stop { at: None }).unwrap();
+        app.execute(&ctx, Command::ArchiveClient { id: acme })
+            .unwrap();
+        assert_eq!(message(start(web)), "Client \"Acme\" is archived");
+        assert_eq!(
+            message(Command::CreateClient {
+                name: "acme".into(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+            }),
+            "The name is already used by archived client \"Acme\" (AC)"
+        );
+        // The New client check names it as a client (R2i, R2k).
+        let check = app.client_name_check("acme", None).unwrap();
+        let dto = crate::dto::NameCheckDto::new(&check, &app.catalog().unwrap(), ItemRef::Client);
+        let items: Vec<_> = dto.items.iter().map(|i| (i.id, i.label.as_str())).collect();
+        assert_eq!(items, [(1, "archived client \"Acme\" (AC)")]);
     }
 }
