@@ -55,7 +55,7 @@ cargo tauri build                                             # build the NSIS i
 The dev build runs next to an installed copy, with its own identity and the hotkey
 `Ctrl+Alt+Shift+Space`.
 
-Every pull request against `main` runs the same `scripts/check.ps1` on GitHub Actions
+Every push to `main` runs the same `scripts/check.ps1` on GitHub Actions
 (`.github/workflows/check.yml`, on a Windows runner).
 
 ## How it's built
