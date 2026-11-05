@@ -1,4 +1,4 @@
-# Purity guard for the functional core (CLAUDE.md "tt-core: deterministic functional core").
+# Purity guard for the functional core (AGENTS.md "tt-core: deterministic functional core").
 # Clock, OS time zone, tzdb lookups, env vars, files and hash-ordered collections are not
 # allowed here. The only exception is `src/testing.rs` (feature `test-support`).
 disallowed-methods = [

@@ -1,5 +1,5 @@
 //! GUI driver: translates UI calls, the tray and the global hotkey into tt-app calls.
-//! No business rules live here (CLAUDE.md "Drivers").
+//! No business rules live here (AGENTS.md "Drivers").
 
 mod backend;
 mod bindings;

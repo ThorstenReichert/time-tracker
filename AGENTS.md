@@ -1,19 +1,7 @@
-# Agent Instructions
+# Project Instructions for AI Agents
 
-This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
-
-> **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/embeddeddolt/`, gitignored). It has no Dolt remote and isn't exported to git, so
-> beads data exists only on this machine and isn't synced anywhere (not even to GitHub).
-
-## Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-```
+This file provides instructions and context for AI coding agents working on this project. It is
+the single source: `CLAUDE.md` only imports it (`@AGENTS.md`), so edit this file, not that one.
 
 ## Non-Interactive Shell Commands
 

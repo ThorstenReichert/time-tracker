@@ -64,7 +64,7 @@ Rust (Tauri 2), Vue 3 with TypeScript and PrimeVue, SQLite. The domain logic is 
 deterministic core (a Decider: `decide` / `evolve`) in `crates/tt-core`. The UI, the hotkey
 and the tests drive it through the same single write path. `crates/tt-cli` is a headless
 driver for scenario tests. The design and the decisions behind it are in [spec.md](spec.md).
-[CLAUDE.md](CLAUDE.md) gives an overview of the code.
+[AGENTS.md](AGENTS.md) gives an overview of the code.
 
 Most of the code was written with an AI coding agent (Claude Code), following the process in
 `.claude/skills/` (intent → spec → plan → build → review).

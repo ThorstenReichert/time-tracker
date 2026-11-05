@@ -4,7 +4,7 @@ Owner: Thorsten Reichert (tech lead). Applies to every change merged into `maste
 reviewer runs in a fresh context: never the session that wrote the code. Findings never
 approve or block on their own; the owner gives the explicit "approved to merge".
 
-Read `spec.md`, `plan.md` (including its Deviations section) and `CLAUDE.md` before the diff.
+Read `spec.md`, `plan.md` (including its Deviations section) and `AGENTS.md` before the diff.
 Every finding is tagged with its pass and its severity, and names the file and line.
 
 ## Passes
@@ -17,7 +17,7 @@ Every finding is tagged with its pass and its severity, and names the file and l
    tt-core. No SQL built from strings. No secrets or personal data in logs or errors. New
    dependencies are justified and pinned as `plan.md` says.
 3. **Compliance:** the diff matches `spec.md` (R numbers), `plan.md` (files, order, proof)
-   and the architecture in `CLAUDE.md`:
+   and the architecture in `AGENTS.md`:
    - tt-core stays pure. No clock, time zone, randomness, env vars, file/network IO,
      threads or global mutable state. `BTreeMap`/`BTreeSet`, not hash maps. `#[allow]` on
      the purity lints only in `testing.rs`.
@@ -50,6 +50,6 @@ End every review with a tally that a script can read, e.g. `important=2 nit=3`.
   (including the tt-core purity lints), and the `vue-tsc` type check.
 
 ## Also flag
-- Changes that leave `CLAUDE.md`, `AGENTS.md` (their architecture sections must stay
-  identical), `spec.md` or `plan.md` stale.
-- A mistake already flagged in an earlier review (two-strike rule: it goes into `CLAUDE.md`).
+- Changes that leave `AGENTS.md`, `spec.md` or `plan.md` stale. `CLAUDE.md` only imports
+  `AGENTS.md` (`@AGENTS.md`); flag any content added to it.
+- A mistake already flagged in an earlier review (two-strike rule: it goes into `AGENTS.md`).
