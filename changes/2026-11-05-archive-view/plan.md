@@ -61,8 +61,10 @@ only named queries. The owner decided to approve intent, spec and plan in one go
   in `tests/write_path.rs`, so the view is also checked after a reload.
 - Step 5: `get_archive` reads the archive, then the catalog for the names, under two locks,
   like `check_project_name`. An item missing from the catalog is left out.
-- Step 6: `formatPeriod` lives in `lib/day.ts` next to `formatDay`, because it formats
-  `YYYY-MM-DD` days. It uses a short date ("2 Mar 2026"), and its tests are in `day.test.ts`.
+- Step 6: no `formatPeriod`. The view lays out all clients as one CSS grid (subgrids per
+  client and project), so the first days start at one edge and the dashes share a centre
+  (owner, after a look at the first version). Each day is formatted by `formatShortDay`
+  ("2 Mar 2026") in `lib/day.ts`, tested in `day.test.ts`.
 - Stage 5 review fixes (2026-11-05):
   - The order test couldn't tell "first day newest first" from "last day newest first". A
     project with a newer first day and an older last day (Late short) now pins that the first

@@ -9,7 +9,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { commands, type ArchiveClientDto, type ArchivedProjectDto } from "../bindings";
 import { call, errorMessage } from "../lib/api";
 import { useAttempt } from "../lib/attempt";
-import { formatPeriod } from "../lib/day";
+import { formatShortDay } from "../lib/day";
 
 const attempt = useAttempt();
 const confirm = useConfirm();
@@ -30,11 +30,6 @@ void load();
 const unlisten = listen("data-changed", () => void load());
 onUnmounted(() => void unlisten.then((stop) => stop()));
 
-/** The active period, or "No entries" for a project without any. */
-function period(project: ArchivedProjectDto): string {
-  return project.period === null ? "No entries" : formatPeriod(project.period.first, project.period.last);
-}
-
 /** Unarchives after a confirmation; a rejection is a toast (R2f). */
 function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
   confirm.require({
@@ -53,25 +48,40 @@ function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
     <p v-if="loadError !== null" class="error">{{ loadError }}</p>
     <p v-if="clients !== null && clients.length === 0" class="muted">No archived projects.</p>
 
-    <section v-for="client in clients ?? []" :key="client.id" class="client">
-      <div class="row">
-        <strong class="client-name">{{ client.name }}</strong>
-        <span v-if="client.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
-          client.abbreviation
-        }}</span>
-      </div>
-      <div v-for="project in client.projects" :key="project.id" class="project indent">
-        <div class="row">
-          <span class="project-name">{{ project.name }}</span>
-          <span v-if="project.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
-            project.abbreviation
+    <!-- One grid for all clients (subgrids below), so the periods line up in columns: the
+         first days start at one edge and the dashes share a centre. -->
+    <div v-if="clients !== null && clients.length > 0" class="archive">
+      <section v-for="client in clients" :key="client.id" class="client">
+        <div class="row client-row">
+          <strong class="client-name">{{ client.name }}</strong>
+          <span v-if="client.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
+            client.abbreviation
           }}</span>
-          <span class="period muted">{{ period(project) }}</span>
-          <span class="spacer"></span>
-          <Button label="Unarchive" text size="small" @click="unarchive(client, project)" />
         </div>
-      </div>
-    </section>
+        <div v-for="project in client.projects" :key="project.id" class="project">
+          <div class="row">
+            <span class="project-name">{{ project.name }}</span>
+            <span v-if="project.abbreviation !== null" class="abbreviation" title="Abbreviation">{{
+              project.abbreviation
+            }}</span>
+          </div>
+          <span class="period muted">
+            <template v-if="project.period === null">
+              <span class="none">No entries</span>
+            </template>
+            <template v-else>
+              <span class="first">{{ formatShortDay(project.period.first) }}</span>
+              <!-- A single day shows once. -->
+              <template v-if="project.period.last !== project.period.first">
+                <span class="dash">–</span>
+                <span class="last">{{ formatShortDay(project.period.last) }}</span>
+              </template>
+            </template>
+          </span>
+          <Button class="action" label="Unarchive" text size="small" @click="unarchive(client, project)" />
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -79,19 +89,61 @@ function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
 .error {
   color: var(--error-text);
 }
+.archive {
+  display: grid;
+  grid-template-columns:
+    [name] minmax(0, 1fr) [first] max-content [dash] 1.5rem [last] max-content
+    [action] max-content [end];
+  column-gap: 0.75rem;
+  row-gap: 0.75rem;
+}
+.client,
+.project,
+.period {
+  display: grid;
+  grid-template-columns: subgrid;
+}
 .client {
+  grid-column: name / end;
+  row-gap: 0;
   border: 1px solid var(--p-content-border-color);
   border-radius: var(--p-content-border-radius, 6px);
   padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
+}
+.client-row {
+  grid-column: name / end;
+}
+.project {
+  grid-column: name / end;
+  align-items: center;
+  margin-left: 1.25rem;
+  border-top: 1px solid var(--p-content-border-color);
+  padding: 0.25rem 0;
+}
+.period {
+  grid-column: first / action;
+}
+.first {
+  grid-column: first;
+}
+.none {
+  grid-column: first / action;
+}
+.dash {
+  grid-column: dash;
+  text-align: center;
+}
+.last {
+  grid-column: last;
+}
+.action {
+  grid-column: action;
 }
 .row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-.spacer {
-  flex: 1;
+  min-width: 0;
 }
 .client-name {
   font-size: 1.1rem;
@@ -102,12 +154,5 @@ function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
   border: 1px solid var(--p-content-border-color);
   border-radius: 4px;
   color: var(--p-text-muted-color);
-}
-.indent {
-  margin-left: 1.25rem;
-}
-.project {
-  border-top: 1px solid var(--p-content-border-color);
-  padding: 0.25rem 0;
 }
 </style>
