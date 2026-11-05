@@ -1,12 +1,14 @@
 # Release notes
 
-## 0.6.0 (unreleased)
+## 0.6.0 (2026-11-05, untagged)
 
 Longer abbreviations (R24 revised) and the Today view listing newest first (R10 revised), both
 small revisions of the spec in place (owner, 2026-11-05), without a change folder.
 
-- **Source:** branch `feat/abbreviation-limit-50`, not merged yet. The R10 fix is the merge
-  commit `d552f31` of branch `fix/today-newest-first`, after `v0.5.0`.
+- **Source:** merge commit `eef78a7` of branch `feat/abbreviation-limit-50` on `master`, not
+  tagged yet. Approved to merge by Thorsten Reichert (owner), 2026-11-05, without stage 5
+  reviewer subagents (one-constant change). The R10 fix is the merge commit `d552f31` of
+  branch `fix/today-newest-first`, after `v0.5.0`.
 - **Database:** no migration. 0.6.0 reads a 0.5.0 database file. **Not reversible once used:**
   as soon as an abbreviation longer than 20 characters is saved, 0.5.0 and earlier refuse to
   open the database (they reject it as corrupt on load, because they still check the old
