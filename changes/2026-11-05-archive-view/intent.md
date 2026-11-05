@@ -16,7 +16,8 @@ into the New project dialog.
   (more recent at the top), then by its end (more recent at the top), then by name.
 - An archived project with no time bookings has no active period. It shows "No entries" and
   stands at the top of its client.
-- Each archived project can be unarchived from the view, after a confirmation.
+- Each archived project can be unarchived from the view with one click, without a
+  confirmation (owner, after trying it: a confirmation is too much friction).
 
 ## Constraints
 - The architecture rules of the main spec still apply: the rules (which projects, the period,

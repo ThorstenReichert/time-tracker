@@ -13,7 +13,7 @@ The Archive view, from [changes/2026-11-05-archive-view](changes/2026-11-05-arch
   its last (by start date, like the other views). Projects with no entries come first and show
   "No entries". The others are ordered newest period first, by its first day, then its last
   day, then the name.
-- **Unarchive** on each archived project, with a confirmation (R2f).
+- **Unarchive** on each archived project, with one click (R2f).
 - tt-cli: `archive` prints the same list as JSON.
 
 ### Rollback

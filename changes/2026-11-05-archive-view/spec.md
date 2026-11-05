@@ -24,9 +24,10 @@ Archiving clients and tasks and deleting unused items stay deferred.
     3. then by the last day, newest first;
     4. then by name (case-insensitive), then by ID.
   - With no archived projects, the view says "No archived projects."
-- **R2f Unarchive from the view.** Each archived project has an **Unarchive** button. After a
-  confirmation it runs `UnarchiveProject` (R2a). The project leaves the view and shows in
-  Clients & projects again. A failure is shown as a toast.
+- **R2f Unarchive from the view.** Each archived project has an **Unarchive** button. It runs
+  `UnarchiveProject` (R2a) at once, without a confirmation: archiving it again is as easy.
+  The project leaves the view and shows in Clients & projects again. A failure is shown as a
+  toast.
 
 ## 2. Design
 
@@ -57,7 +58,7 @@ Archiving clients and tasks and deleting unused items stay deferred.
 | Entries only through indexable named queries (OQ-9) | `Entries::start_span` |
 | Grouped by client, active period, order | R2e |
 | No entries at the top | R2e order, step 1 |
-| Unarchive with a confirmation | R2f |
+| Unarchive from the view, one click | R2f |
 
 ## 4. Open questions
 None.

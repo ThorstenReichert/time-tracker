@@ -1,18 +1,16 @@
 <script setup lang="ts">
 // The Archive view (R2e, R2f): archived projects grouped by client, each with its active
 // period, in the order the backend gives (tt-core read::archived_projects). Each project can
-// be unarchived after a confirmation.
+// be unarchived with one click (no confirmation: archiving it again is as easy).
 import { onUnmounted, ref } from "vue";
 import { listen } from "@tauri-apps/api/event";
 import Button from "primevue/button";
-import { useConfirm } from "primevue/useconfirm";
 import { commands, type ArchiveClientDto, type ArchivedProjectDto } from "../bindings";
 import { call, errorMessage } from "../lib/api";
 import { useAttempt } from "../lib/attempt";
 import { formatShortDay } from "../lib/day";
 
 const attempt = useAttempt();
-const confirm = useConfirm();
 
 const clients = ref<ArchiveClientDto[] | null>(null);
 const loadError = ref<string | null>(null);
@@ -30,15 +28,9 @@ void load();
 const unlisten = listen("data-changed", () => void load());
 onUnmounted(() => void unlisten.then((stop) => stop()));
 
-/** Unarchives after a confirmation; a rejection is a toast (R2f). */
-function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
-  confirm.require({
-    header: "Unarchive the project?",
-    message: `${client.name} / ${project.name} can be booked again and is offered again.`,
-    rejectProps: { label: "Cancel", severity: "secondary", text: true },
-    acceptProps: { label: "Unarchive" },
-    accept: () => void attempt(() => call(commands.unarchiveProject(project.id))),
-  });
+/** Unarchives at once, without a confirmation; a rejection is a toast (R2f). */
+function unarchive(project: ArchivedProjectDto) {
+  void attempt(() => call(commands.unarchiveProject(project.id)));
 }
 </script>
 
@@ -78,7 +70,7 @@ function unarchive(client: ArchiveClientDto, project: ArchivedProjectDto) {
               </template>
             </template>
           </span>
-          <Button class="action" label="Unarchive" text size="small" @click="unarchive(client, project)" />
+          <Button class="action" label="Unarchive" text size="small" @click="unarchive(project)" />
         </div>
       </section>
     </div>

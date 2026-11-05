@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DOMWrapper, flushPromises } from "@vue/test-utils";
+import { flushPromises } from "@vue/test-utils";
 import { emit } from "@tauri-apps/api/event";
 import type { ArchiveClientDto } from "../bindings";
 import { fakeBackend, uiError } from "../test/backend";
@@ -58,16 +58,11 @@ describe("ArchiveView", () => {
     expect(wrapper.text()).toContain("No archived projects.");
   });
 
-  it("unarchives a project after a confirmation (R2f)", async () => {
+  it("unarchives a project with one click, without a confirmation (R2f)", async () => {
     const { backend, projects } = await view();
-    const portal = projects()[1]!;
-    await clickButton("Unarchive", portal);
-    expect(confirmation()?.textContent).toContain("Acme / Portal can be booked again");
-    await clickButton("Cancel", new DOMWrapper(confirmation()!));
-    expect(backend.called("unarchive_project")).toEqual([]);
-
-    await clickButton("Unarchive", portal);
-    await clickButton("Unarchive", new DOMWrapper(confirmation()!));
+    await clickButton("Unarchive", projects()[1]!);
+    await flushPromises();
+    expect(confirmation()).toBeNull();
     expect(backend.called("unarchive_project")).toEqual([{ id: 4 }]);
   });
 
@@ -77,7 +72,6 @@ describe("ArchiveView", () => {
       throw uiError("Something went wrong");
     };
     await clickButton("Unarchive", projects()[0]!);
-    await clickButton("Unarchive", new DOMWrapper(confirmation()!));
     await flushPromises();
     expect(document.body.textContent).toContain("Something went wrong");
   });

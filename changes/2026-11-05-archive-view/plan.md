@@ -15,7 +15,7 @@ only named queries. The owner decided to approve intent, spec and plan in one go
 |---|---|---|
 | Placement | Own Archive view | A section in Clients & projects (keeps that view about active work) |
 | No entries | At the top, "No entries" | At the bottom (an unused project is the likeliest to be acted on) |
-| Action | Unarchive with a confirmation | No confirmation; a read-only list |
+| Action | Unarchive with one click (owner, after trying the first version) | A confirmation (too much friction); a read-only list |
 | Day of an entry | Its start date (R18 step 1) | The end date (would differ from every other view) |
 | Period source | Named query `start_span` over a new in-memory index | Scanning all entries (breaks OQ-9) |
 
@@ -43,7 +43,7 @@ only named queries. The owner decided to approve intent, spec and plan in one go
    registered in `bindings.rs`; regenerate `ui/src/bindings.ts`.
 6. **UI (R2e, R2f).**
    - `views/ArchiveView.vue`: loads `getArchive`, reloads on `data-changed`; client sections,
-     project rows with the period or "No entries"; Unarchive with a confirmation, a failure as a
+     project rows with the period or "No entries"; Unarchive with one click, a failure as a
      toast; the empty state.
    - `lib/format.ts`: `formatPeriod(first, last)`.
    - `router.ts` route `/archive`; `App.vue` nav entry; the `ClientsView.vue` comment.
@@ -61,6 +61,8 @@ only named queries. The owner decided to approve intent, spec and plan in one go
   in `tests/write_path.rs`, so the view is also checked after a reload.
 - Step 5: `get_archive` reads the archive, then the catalog for the names, under two locks,
   like `check_project_name`. An item missing from the catalog is left out.
+- Step 6: Unarchive runs at once. The first version asked for a confirmation, which the owner
+  found too much friction; intent, spec (R2f) and the decisions above were changed with it.
 - Step 6: no `formatPeriod`. The view lays out all clients as one CSS grid (subgrids per
   client and project), so the first days start at one edge and the dashes share a centre
   (owner, after a look at the first version). Each day is formatted by `formatShortDay`
