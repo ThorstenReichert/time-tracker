@@ -62,12 +62,10 @@ function unarchive(project: ArchivedProjectDto) {
               <span class="none">No entries</span>
             </template>
             <template v-else>
+              <!-- Always a full range, also for a single day (owner). -->
               <span class="first">{{ formatShortDay(project.period.first) }}</span>
-              <!-- A single day shows once. -->
-              <template v-if="project.period.last !== project.period.first">
-                <span class="dash">–</span>
-                <span class="last">{{ formatShortDay(project.period.last) }}</span>
-              </template>
+              <span class="dash">–</span>
+              <span class="last">{{ formatShortDay(project.period.last) }}</span>
             </template>
           </span>
           <Button class="action" label="Unarchive" text size="small" @click="unarchive(project)" />

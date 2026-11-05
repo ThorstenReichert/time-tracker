@@ -5,6 +5,7 @@ import type { ArchiveClientDto } from "../bindings";
 import { fakeBackend, uiError } from "../test/backend";
 import { mountInApp, withOverlays } from "../test/mount";
 import { clickButton } from "../test/page";
+import { formatShortDay } from "../lib/day";
 import ArchiveView from "./ArchiveView.vue";
 
 /** The backend's answer, already in the R2e order (tt-core sorts it). */
@@ -49,8 +50,9 @@ describe("ArchiveView", () => {
     const period = (i: number) => projects()[i]!.get(".period").text();
     expect(period(0)).toBe("No entries");
     expect(period(1)).toMatch(/2026.*–.*2026/);
-    // A single day shows once.
-    expect(period(2)).not.toContain("–");
+    // A single day is a full range too.
+    const day = formatShortDay("2026-03-02");
+    expect(period(2).split("–").map((s) => s.trim())).toEqual([day, day]);
   });
 
   it("says so when nothing is archived", async () => {

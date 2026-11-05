@@ -70,7 +70,8 @@ only named queries. The owner decided to approve intent, spec and plan in one go
 - Step 6: no `formatPeriod`. The view lays out all clients as one CSS grid (subgrids per
   client and project), so the first days start at one edge and the dashes share a centre
   (owner, after a look at the first version). Each day is formatted by `formatShortDay`
-  ("2 Mar 2026") in `lib/day.ts`, tested in `day.test.ts`.
+  ("2 Mar 2026") in `lib/day.ts`, tested in `day.test.ts`. A single day is a full range too
+  ("5 Nov 2026 – 5 Nov 2026", owner), so every period reads the same.
 - Stage 5 review fixes (2026-11-05):
   - The order test couldn't tell "first day newest first" from "last day newest first". A
     project with a newer first day and an older last day (Late short) now pins that the first
