@@ -1095,7 +1095,7 @@ fn period(first: &str, last: &str) -> Option<read::ActivePeriod> {
 #[test]
 fn archive_view_groups_and_orders_archived_projects() {
     let s = archive_view_state();
-    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
     let rows = |c: &read::ArchivedClient| -> Vec<(u64, Option<read::ActivePeriod>)> {
         c.projects
             .iter()
@@ -1146,7 +1146,7 @@ fn archive_view_lists_archived_clients_with_all_their_projects() {
             },
         ],
     );
-    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
     let summary: Vec<_> = view
         .iter()
         .map(|c| (c.client.get(), c.archived, c.projects.len()))
@@ -1186,7 +1186,7 @@ fn archive_view_lists_archived_clients_with_all_their_projects() {
 #[test]
 fn archive_view_is_empty_without_archived_projects() {
     let s = catalog();
-    assert!(read::archived_projects(s.catalog(), s.entries(), &berlin()).is_empty());
+    assert!(read::archive_view(s.catalog(), s.entries(), &berlin()).is_empty());
 }
 
 #[test]
@@ -1202,7 +1202,7 @@ fn archive_view_days_are_local_start_dates() {
             Command::ArchiveProject { id: WEB },
         ],
     );
-    let view = read::archived_projects(s.catalog(), s.entries(), &berlin());
+    let view = read::archive_view(s.catalog(), s.entries(), &berlin());
     assert_eq!(view.len(), 1);
     assert_eq!(view[0].client, ACME);
     assert_eq!(

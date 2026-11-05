@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The Archive view (R2e, R2f, R2j): archived clients and archived projects grouped by
 // client, each project with its active period, in the order the backend gives (tt-core
-// read::archived_projects). An archived client lists all its projects and is unarchived as a
+// read::archive_view). An archived client lists all its projects and is unarchived as a
 // whole; its projects archived on their own are marked and stay archived. Otherwise each
 // project is unarchived with one click (no confirmation: archiving it again is as easy).
 import { onUnmounted, ref } from "vue";

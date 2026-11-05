@@ -41,11 +41,7 @@ pub struct ActivePeriod {
 /// one its archived projects. Within a client: projects without entries first, then the first day
 /// newest first, then the last day newest first, then the name, then the ID. Names compare
 /// case-insensitively. Reaches the entries only through `Entries::start_span` (OQ-9).
-pub fn archived_projects(
-    catalog: &Catalog,
-    entries: &Entries,
-    tz: &TimeZone,
-) -> Vec<ArchivedClient> {
+pub fn archive_view(catalog: &Catalog, entries: &Entries, tz: &TimeZone) -> Vec<ArchivedClient> {
     let mut clients: Vec<_> = catalog
         .clients()
         .filter_map(|client| {

@@ -230,7 +230,7 @@ fn an_archived_project_survives_a_reload_and_is_not_bookable() {
         tt_core::read::NameCheck::Unarchive { item: WEB }
     );
     // The Archive view lists Web with its active period (R2e).
-    let archive = app.archived_projects(&ctx("2026-10-17T10:10")).unwrap();
+    let archive = app.archive_view(&ctx("2026-10-17T10:10")).unwrap();
     let day = "2026-10-17".parse().unwrap();
     assert_eq!(
         archive,
@@ -293,7 +293,7 @@ fn an_archived_client_survives_a_reload_and_is_not_bookable() {
         tt_core::read::NameCheck::Unarchive { item: acme }
     );
     // The Archive view lists Acme with Web, which isn't archived itself (R2j).
-    let archive = app.archived_projects(&ctx("2026-10-17T10:10")).unwrap();
+    let archive = app.archive_view(&ctx("2026-10-17T10:10")).unwrap();
     assert_eq!(archive.len(), 1);
     assert!(archive[0].archived);
     assert_eq!(archive[0].projects.len(), 1);
@@ -305,7 +305,7 @@ fn an_archived_client_survives_a_reload_and_is_not_bookable() {
     )
     .unwrap();
     assert!(
-        app.archived_projects(&ctx("2026-10-17T10:15"))
+        app.archive_view(&ctx("2026-10-17T10:15"))
             .unwrap()
             .is_empty()
     );

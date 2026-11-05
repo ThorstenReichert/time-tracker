@@ -68,7 +68,8 @@ clients.
 - **Read model** `NameCheck<Id>` becomes generic: `Free`, `Unarchive { item: Id }`,
   `Taken { by: Vec<Id> }`. `project_name_check` keeps its rule. `client_name_check(catalog,
   name, abbreviation)` is new. Both share one private helper over the candidate siblings.
-- **Read model** `read::archived_projects`: `ArchivedClient` and `ArchivedProject` each get
+- **Read model** `read::archived_projects`, renamed `read::archive_view` because it lists
+  clients too (owner, 2026-11-05). `ArchivedClient` and `ArchivedProject` each get
   `archived: bool` (the item's own flag). It still reaches entries only through
   `Entries::start_span` (OQ-9).
 - **src-tauri:** `archive_client`, `unarchive_client` and `check_client_name`. `NameCheckDto`

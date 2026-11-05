@@ -11,7 +11,7 @@ mod overview;
 mod quick_switch;
 mod task_match;
 
-pub use archive::{ActivePeriod, ArchivedClient, ArchivedProject, archived_projects};
+pub use archive::{ActivePeriod, ArchivedClient, ArchivedProject, archive_view};
 pub use combo::{ComboRow, combo_row, recent_combos, recents};
 pub use day::{day_bounds, local_date};
 pub use day_entries::{EntryRow, day_entries, entry_row};

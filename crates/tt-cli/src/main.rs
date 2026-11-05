@@ -468,7 +468,7 @@ fn run(cli: Cli) -> Result<Value, Failure> {
         }
         Cmd::Recents => return Ok(to_json(&app.recents()?)),
         Cmd::QuickSwitch { query } => return Ok(to_json(&app.quick_switch(&query)?)),
-        Cmd::Archive => return Ok(to_json(&app.archived_projects(&ctx)?)),
+        Cmd::Archive => return Ok(to_json(&app.archive_view(&ctx)?)),
         Cmd::State => return Ok(to_json(&app.snapshot()?)),
     };
     let events = app.execute(&ctx, command)?;

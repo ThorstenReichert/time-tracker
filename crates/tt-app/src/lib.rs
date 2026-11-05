@@ -219,8 +219,8 @@ impl App {
 
     /// The Archive view: archived clients and archived projects by client, with the projects'
     /// active periods (R2e, R2j).
-    pub fn archived_projects(&self, ctx: &Ctx) -> Result<Vec<ArchivedClient>, AppError> {
-        self.read(|state| read::archived_projects(state.catalog(), state.entries(), &ctx.tz))
+    pub fn archive_view(&self, ctx: &Ctx) -> Result<Vec<ArchivedClient>, AppError> {
+        self.read(|state| read::archive_view(state.catalog(), state.entries(), &ctx.tz))
     }
 
     pub fn task_matches(&self, project: ProjectId, text: &str) -> Result<TaskMatches, AppError> {

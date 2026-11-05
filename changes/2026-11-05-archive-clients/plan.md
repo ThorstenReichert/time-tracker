@@ -112,7 +112,10 @@ The owner approved intent, spec and plan in one go.
     in Name"). Examples: "Archive client Acme", "New task for Web", "Edit task Review",
     "Unarchive project Legacy". The visible text is unchanged. Tests in `ClientsView.test.ts`
     and `ArchiveView.test.ts` pin the labels.
-  - Not changed: `read::archived_projects` keeps its name although it now lists clients too.
+  - Owner decision after the review: `read::archived_projects` and `App::archived_projects` are
+    renamed `archive_view`, after the view they feed. They list clients too now, and a plain
+    `archive` would read like a verb. The Tauri command `get_archive`, the TS bindings and
+    tt-cli `archive` keep their names.
 
 ## Coverage
 | Requirement | Steps |

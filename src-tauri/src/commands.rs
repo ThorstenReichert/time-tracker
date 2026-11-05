@@ -435,7 +435,7 @@ pub async fn get_overview(backend: State<'_, Backend>, day: String) -> Res<Overv
 #[specta::specta]
 pub async fn get_archive(backend: State<'_, Backend>) -> Res<Vec<ArchiveClientDto>> {
     read(&backend, |app, ctx| {
-        let archive = app.archived_projects(ctx)?;
+        let archive = app.archive_view(ctx)?;
         Ok(ArchiveClientDto::list(&archive, &app.catalog()?))
     })
 }
