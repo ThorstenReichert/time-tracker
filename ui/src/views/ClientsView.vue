@@ -20,7 +20,11 @@ const confirm = useConfirm();
 
 /** The tree without archived projects (the store keeps them for the other views). */
 const clients = computed(() =>
-  tree.value.map((client) => ({ ...client, projects: client.projects.filter((p) => !p.archived) })),
+  tree.value.map((client) => ({
+    ...client,
+    projects: client.projects.filter((p) => !p.archived),
+    hasArchived: client.projects.some((p) => p.archived),
+  })),
 );
 
 // One client dialog and one name dialog, configured by whatever opened them.
@@ -141,7 +145,9 @@ const withAbbreviation = (item: Naming) =>
         <Button label="Edit" text size="small" @click="editClient(client)" />
         <Button label="New project" text size="small" @click="newProject(client)" />
       </div>
-      <p v-if="client.projects.length === 0" class="muted indent">No projects yet.</p>
+      <p v-if="client.projects.length === 0" class="muted indent">
+        {{ client.hasArchived ? "No active projects." : "No projects yet." }}
+      </p>
       <div v-for="project in client.projects" :key="project.id" class="project indent">
         <div class="row">
           <span class="project-name">{{ project.name }}</span>

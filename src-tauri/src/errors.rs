@@ -4,7 +4,7 @@
 use serde::Serialize;
 use specta::Type;
 use tt_app::{App, AppError};
-use tt_core::{Ctx, DomainError, ItemRef, to_local};
+use tt_core::{Catalog, Ctx, DomainError, ItemRef, to_local};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "lowercase")]
@@ -102,7 +102,7 @@ fn domain_message(error: &DomainError, app: &App, ctx: &Ctx) -> String {
     }
     // R2d: the archived item is named without its abbreviation or the word "archived".
     if let DomainError::Archived { item } = error
-        && let Some(item) = item_parts(app, *item)
+        && let Some(item) = app.catalog().ok().and_then(|c| item_parts(&c, *item))
     {
         return format!("{} \"{}\" is archived", capitalise(item.kind), item.name);
     }
@@ -119,8 +119,7 @@ struct ItemParts {
     archived: bool,
 }
 
-fn item_parts(app: &App, item: ItemRef) -> Option<ItemParts> {
-    let catalog = app.catalog().ok()?;
+fn item_parts(catalog: &Catalog, item: ItemRef) -> Option<ItemParts> {
     let (kind, name, abbreviation, archived_at) = match item {
         ItemRef::Client(id) => {
             let c = catalog.client(id)?;
@@ -143,15 +142,20 @@ fn item_parts(app: &App, item: ItemRef) -> Option<ItemParts> {
     })
 }
 
-/// `client "Acme"`, or `client "Acme" (AC)` with its abbreviation (R24), with "archived "
-/// in front for an archived item (R2d), or `None` if the item is gone.
 fn item_name(app: &App, item: ItemRef) -> Option<String> {
+    item_label(&app.catalog().ok()?, item)
+}
+
+/// `client "Acme"`, or `client "Acme" (AC)` with its abbreviation (R24), with "archived "
+/// in front for an archived item (R2d), or `None` if the item is gone. The New project
+/// dialog's name check shows the same labels.
+pub fn item_label(catalog: &Catalog, item: ItemRef) -> Option<String> {
     let ItemParts {
         kind,
         name,
         abbreviation,
         archived,
-    } = item_parts(app, item)?;
+    } = item_parts(catalog, item)?;
     let archived = if archived { "archived " } else { "" };
     Some(match abbreviation {
         Some(a) => format!("{archived}{kind} \"{name}\" ({a})"),

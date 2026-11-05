@@ -76,7 +76,8 @@ describe("EntryDialog", () => {
   it("edits an entry on an archived project that the picker no longer offers (R2b, AC-8)", async () => {
     const save = vi.fn<Save>(async () => {});
     await open(save, finishedEntry(8, acmeWebReview, "2026-10-16T09:00:00", "2026-10-16T10:00:00"));
-    // The archived combo isn't a suggestion any more, but the entry still shows it.
+    // The archived combo isn't a suggestion any more (the tt-core quick-switch tests pin
+    // that), but the entry still shows it and saves with it.
     fakeBackend({ quick_switch: () => [betaOps], task_matches: () => ({ tasks: [], offerCreate: null }) });
     expect(comboInputs().map((i) => (i.element as HTMLInputElement).value)).toEqual(["Acme / Web", "Review"]);
     await field("End time").setValue("10:30");

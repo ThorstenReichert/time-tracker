@@ -3,12 +3,14 @@
 // The core validates both; a rejection is shown here and the dialog stays open.
 // With `check` (New project, R2c) the typed text is checked while typing: a match with one
 // archived project turns the button into "Unarchive project"; a clash blocks the button.
+// An answer only counts for exactly the text it was asked for. While the answer to the
+// current text is pending, the button saves, and the core still checks the name.
 import { computed, ref, useId, watch } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Message from "primevue/message";
-import type { NameCheckDto, ProjectDto } from "../bindings";
+import type { NameCheckDto } from "../bindings";
 import { errorMessage } from "../lib/api";
 
 export interface Naming {
@@ -34,18 +36,20 @@ const name = ref("");
 const abbreviation = ref("");
 const error = ref<string | null>(null);
 const busy = ref(false);
-const checked = ref<NameCheckDto | null>(null);
+/** The newest check answer and the text it was for. */
+const answer = ref<{ name: string; abbreviation: string; result: NameCheckDto } | null>(null);
 let latestCheck = 0;
 
 watch(visible, (open) => {
+  // Opening or closing drops every answer still on its way (the dialog is reused).
+  latestCheck++;
+  answer.value = null;
   if (!open) return;
   name.value = props.initial?.name ?? "";
   abbreviation.value = props.initial?.abbreviation ?? "";
   error.value = null;
-  checked.value = null;
 });
 
-// Only the answer to the newest text counts; the core still checks on save.
 watch([name, abbreviation], async ([typedName, typedAbbreviation]) => {
   const check = props.check;
   if (check === undefined || !visible.value) return;
@@ -56,19 +60,20 @@ watch([name, abbreviation], async ([typedName, typedAbbreviation]) => {
   } catch {
     result = null; // the save shows the real error
   }
-  if (request === latestCheck) checked.value = result;
+  if (request !== latestCheck) return;
+  answer.value = result === null ? null : { name: typedName, abbreviation: typedAbbreviation, result };
 });
 
-/** `project "Web" (W)`, or `archived project "Web" (W)` (R2d). */
-function describe(project: ProjectDto) {
-  const abbreviation = project.abbreviation === null ? "" : ` (${project.abbreviation})`;
-  return `${project.archived ? "archived " : ""}project "${project.name}"${abbreviation}`;
-}
-
+/** The check of exactly the text in the fields, or null while it is pending. */
+const current = computed(() => {
+  const a = answer.value;
+  if (props.check === undefined || a === null) return null;
+  return a.name === name.value && a.abbreviation === abbreviation.value ? a.result : null;
+});
 const toUnarchive = computed(() =>
-  checked.value?.kind === "unarchive" && props.unarchive !== undefined ? (checked.value.projects[0] ?? null) : null,
+  current.value?.kind === "unarchive" && props.unarchive !== undefined ? (current.value.projects[0] ?? null) : null,
 );
-const taken = computed(() => (checked.value?.kind === "taken" ? checked.value.projects : []));
+const taken = computed(() => (current.value?.kind === "taken" ? current.value.projects : []));
 
 async function submit() {
   if (taken.value.length > 0) return;
@@ -93,11 +98,11 @@ async function submit() {
       <InputText :id="ids.name" v-model="name" autofocus fluid />
       <label :for="ids.abbreviation">Abbreviation (optional)</label>
       <InputText :id="ids.abbreviation" v-model="abbreviation" fluid />
-      <Message v-if="toUnarchive" severity="info" class="name-check">
-        {{ `The ${describe(toUnarchive)} exists. Unarchive it to use it again, or choose another name.` }}
+      <Message v-if="toUnarchive" severity="info">
+        {{ `The ${toUnarchive.label} exists. Unarchive it to use it again, or choose another name.` }}
       </Message>
-      <Message v-else-if="taken.length > 0" severity="error" class="name-check">
-        Already used by {{ taken.map(describe).join(", ") }}
+      <Message v-else-if="taken.length > 0" severity="error">
+        Already used by {{ taken.map((p) => p.label).join(", ") }}
       </Message>
       <Message v-if="error" severity="error">{{ error }}</Message>
       <div class="dialog-actions">

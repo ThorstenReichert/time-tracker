@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
-import type { NameCheckDto, ProjectDto } from "../bindings";
+import type { CheckedProjectDto, NameCheckDto } from "../bindings";
 import { CommandError } from "../lib/api";
 import { uiError } from "../test/backend";
 import { mountInApp } from "../test/mount";
@@ -64,8 +64,8 @@ describe("NameDialog", () => {
   });
 
   describe("name check for a new project (R2c)", () => {
-    const oldWeb: ProjectDto = { id: 2, client: 1, name: "Old web", abbreviation: "OW", archived: true };
-    const web: ProjectDto = { id: 1, client: 1, name: "Web", abbreviation: null, archived: false };
+    const oldWeb: CheckedProjectDto = { id: 2, label: 'archived project "Old web" (OW)' };
+    const web: CheckedProjectDto = { id: 1, label: 'project "Web"' };
 
     /** A check that answers by the typed name: "old web" → unarchive, "web" → taken. */
     const check = vi.fn<Check>(async (name) => {
@@ -149,6 +149,57 @@ describe("NameDialog", () => {
       await flushPromises();
       expect(dialog().text()).not.toContain("archived");
       expect(submitButton().text()).toBe("Save");
+    });
+
+    it("saves, not unarchives, when the answer for the new text is still pending", async () => {
+      // Typed "Old web" (answered: unarchive), then "Old web 2", whose answer never comes.
+      const pending = vi.fn<Check>((name) =>
+        name === "Old web" ? Promise.resolve({ kind: "unarchive", projects: [oldWeb] }) : new Promise(() => {}),
+      );
+      const save = vi.fn<Save>(async () => {});
+      const unarchive = vi.fn<Unarchive>(async () => {});
+      const wrapper = mountInApp(NameDialog, {
+        props: { visible: false, header: "New project", label: "Name", save, check: pending, unarchive },
+      });
+      await wrapper.setProps({ visible: true });
+      await flushPromises();
+      const input = dialog().get("input");
+      await input.setValue("Old web");
+      await flushPromises();
+      expect(submitButton().text()).toBe("Unarchive project");
+      await input.setValue("Old web 2");
+      expect(submitButton().text()).toBe("Save");
+      await submitButton().trigger("submit");
+      await flushPromises();
+      expect(unarchive).not.toHaveBeenCalled();
+      expect(save).toHaveBeenCalledWith("Old web 2", "");
+    });
+
+    it("drops an answer that arrives after the dialog is reused for an edit", async () => {
+      let answer!: (r: NameCheckDto) => void;
+      const slow = vi.fn<Check>(() => new Promise((resolve) => (answer = resolve)));
+      const save = vi.fn<Save>(async () => {});
+      const wrapper = mountInApp(NameDialog, {
+        props: { visible: false, header: "New project", label: "Name", save, check: slow, unarchive: async () => {} },
+      });
+      await wrapper.setProps({ visible: true });
+      await flushPromises();
+      await dialog().get("input").setValue("web");
+      // Closed, then reopened as an edit dialog without a check, before the answer comes.
+      await wrapper.setProps({ visible: false });
+      await wrapper.setProps({
+        visible: true,
+        header: "Edit project Web",
+        check: undefined,
+        initial: { name: "web", abbreviation: null },
+      });
+      await flushPromises();
+      answer({ kind: "taken", projects: [web] });
+      await flushPromises();
+      expect(dialog().text()).not.toContain("Already used");
+      expect(submitButton().attributes("disabled")).toBeUndefined();
+      await clickButton("Save", dialog());
+      expect(save).toHaveBeenCalledWith("web", "");
     });
   });
 });

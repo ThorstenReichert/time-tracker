@@ -8,8 +8,8 @@ use tt_core::read::{
     ClientBlock, ComboRow, EntryRow, Figure, NameCheck, Overview, ProjectRow, TaskMatches,
 };
 use tt_core::{
-    Catalog, Client, DecimalSeparator, Project, RoundingDirection, RoundingLevel, RoundingRule,
-    RoundingUnit, Settings, Task, TaskChoice, TaskId,
+    Catalog, Client, DecimalSeparator, ItemRef, Project, RoundingDirection, RoundingLevel,
+    RoundingRule, RoundingUnit, Settings, Task, TaskChoice, TaskId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -124,13 +124,21 @@ pub enum NameCheckKind {
     Taken,
 }
 
+/// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckedProjectDto {
+    pub id: u64,
+    pub label: String,
+}
+
 /// The New project dialog's check (R2c). `projects` is the archived project to unarchive
 /// (`unarchive`), the clashing projects (`taken`), or empty (`free`).
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct NameCheckDto {
     pub kind: NameCheckKind,
-    pub projects: Vec<ProjectDto>,
+    pub projects: Vec<CheckedProjectDto>,
 }
 
 impl NameCheckDto {
@@ -146,8 +154,13 @@ impl NameCheckDto {
             kind,
             projects: ids
                 .iter()
-                .filter_map(|id| catalog.project(*id))
-                .map(Into::into)
+                .filter_map(|id| {
+                    let label = crate::errors::item_label(catalog, ItemRef::Project(*id))?;
+                    Some(CheckedProjectDto {
+                        id: id.get(),
+                        label,
+                    })
+                })
                 .collect(),
         }
     }

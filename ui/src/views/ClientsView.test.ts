@@ -23,7 +23,7 @@ async function view() {
     unarchive_project: () => null,
     check_project_name: ({ name }: { name: string }) =>
       name.trim().toLowerCase() === "legacy"
-        ? { kind: "unarchive", projects: [legacy] }
+        ? { kind: "unarchive", projects: [{ id: 5, label: 'archived project "Legacy" (LG)' }] }
         : { kind: "free", projects: [] },
   });
   const wrapper = mountInApp(withOverlays(ClientsView));
@@ -122,6 +122,13 @@ describe("ClientsView", () => {
     useCatalogStore().catalog = { ...catalog, projects: [...catalog.projects, legacy] };
     await flushPromises();
     expect(client("Acme").findAll(".project-name").map((p) => p.text())).toEqual(["Intern", "Web"]);
+    // A client with only archived projects says so.
+    useCatalogStore().catalog = {
+      ...catalog,
+      projects: catalog.projects.map((p) => (p.client === 2 ? { ...p, archived: true } : p)),
+    };
+    await flushPromises();
+    expect(client("Beta").text()).toContain("No active projects.");
   });
 
   it("archives a project after a confirmation (R2a)", async () => {

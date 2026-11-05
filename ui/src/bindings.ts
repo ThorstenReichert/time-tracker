@@ -81,6 +81,12 @@ export type CatalogDto = {
 	roundingUnits: number[],
 };
 
+/**  A project named by a name check, e.g. `archived project "Web" (W)` (R2d). */
+export type CheckedProjectDto = {
+	id: number,
+	label: string,
+};
+
 export type ClientBlockDto = {
 	client: number,
 	name: string,
@@ -160,7 +166,7 @@ export type Level = "project" | "client";
  */
 export type NameCheckDto = {
 	kind: NameCheckKind,
-	projects: ProjectDto[],
+	projects: CheckedProjectDto[],
 };
 
 export type NameCheckKind = "free" | "unarchive" | "taken";

@@ -264,8 +264,8 @@ impl Catalog {
     }
 
     /// The archived item that makes this combo inactive, looked up from the top: the client,
-    /// then the project, then the task (R2b). `None` if the combo is active or unknown. Agrees
-    /// with `is_project_active` and `is_task_active`.
+    /// then the project, then the task (R2b). `None` if the combo is active, and also for an
+    /// unknown project or task: callers check that they exist first.
     pub fn archived_in(&self, project: ProjectId, task: Option<TaskId>) -> Option<ItemRef> {
         let p = self.project(project)?;
         if self

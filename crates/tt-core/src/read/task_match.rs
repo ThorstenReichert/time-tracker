@@ -22,7 +22,7 @@ pub struct TaskMatches {
     pub tasks: Vec<TaskRow>,
     /// The name to offer as `Create "<name>"`: set when the text is a valid name and no task
     /// of the project has it as its name or abbreviation, ignoring case (R24). Archived
-    /// tasks count too (OQ-7); offering to unarchive one comes with archiving (R2, slice 2).
+    /// tasks count too (OQ-7). Never set for an inactive project (R2a, R2b).
     pub offer_create: Option<Name>,
 }
 
@@ -66,8 +66,10 @@ pub fn task_matches(catalog: &Catalog, project: ProjectId, text: &str) -> TaskMa
             .then(a.3.id.cmp(&b.3.id))
     });
 
+    // An inactive project gets no new tasks (R2b), so nothing is offered for it (R2a).
     let offer_create = Name::parse(text)
         .ok()
+        .filter(|_| catalog.is_project_active(project))
         .filter(|name| catalog.task_called(project, name.key()).is_none());
     TaskMatches {
         tasks: tasks.into_iter().map(|(_, _, _, row)| row).collect(),

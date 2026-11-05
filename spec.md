@@ -79,6 +79,7 @@ open questions `OQ-<n>`, areas of concern `AC-<n>`, so the plan and the reviews 
 - **R7 Favorites and recents.** You can pin combos as favorites (ordered). Recents are the
   last N distinct combos used (default N = 8). Both are one click in the main window and
   listed first in the popup.
+  *Recents count active combos only: amended by [changes/2026-11-05-archive-projects/spec.md](changes/2026-11-05-archive-projects/spec.md).*
 - **R8 Tray.** The tray icon shows whether a timer is running or idle. Its tooltip shows the
   current combo and the elapsed time. The tray menu offers Stop, the recents/favorites,
   Open window and Quit. Closing the main window hides it to the tray. The app quits only

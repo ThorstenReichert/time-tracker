@@ -875,3 +875,22 @@ fn archived_combos_do_not_use_up_the_recents() {
     assert_eq!(blank, ["Beta / API", "Beta / Ops"]);
     assert!(read::quick_switch(s.catalog(), &recents, "web").is_empty());
 }
+
+#[test]
+fn the_task_input_offers_nothing_for_an_archived_project() {
+    // R2a, R2b: Create "<text>" would be rejected, so it isn't offered (stage 5 review).
+    let s = run(
+        catalog(),
+        &ctx("2026-10-17T09:00"),
+        [Command::ArchiveProject { id: WEB }],
+    );
+    let matches = read::task_matches(s.catalog(), WEB, "Docs");
+    assert!(matches.tasks.is_empty());
+    assert_eq!(matches.offer_create, None);
+    // An active project still gets the offer.
+    assert!(
+        read::task_matches(s.catalog(), API, "Docs")
+            .offer_create
+            .is_some()
+    );
+}

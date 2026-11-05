@@ -122,6 +122,28 @@ into step 2. The owner decided to approve intent, spec and plan in one go.
   `Archived` rejections pre-empted the typed-time checks, and the generator stopped reaching
   `NonexistentLocalTime`.
 
+- Step 4: `tests/reload_equality.rs` is unchanged. It runs the tt-core generator, which
+  now produces archive and unarchive (step 1), so those sequences are covered there.
+
+- Stage 5 review fixes (2026-11-05):
+  - The task input offered `Create "<text>"` for an archived project, which `decide` then
+    rejected. `task_matches` no longer offers it for an inactive project, and a read-model
+    test pins that.
+  - The New project dialog could act on a stale answer. Typing on and pressing Enter before
+    the new answer arrived unarchived the project the old text matched. A dialog reused for
+    an edit could take a late "taken" answer. An answer now counts only for exactly the text
+    it was asked for; while it is pending, the button saves (the core still checks).
+    Opening or closing the dialog drops answers in flight. Both cases have tests.
+  - `NameCheckDto` carries each project's label from src-tauri (`errors::item_label`), so the
+    R2d wording lives in one place.
+  - A client whose projects are all archived shows "No active projects." in the Clients view.
+  - AC-8: the entry dialog test shows and saves the entry's archived combo. The picker's
+    suggestions come from the backend, so the fact that it doesn't offer the archived combo is
+    proven by the tt-core quick-switch and recents tests, not by the UI test.
+  - Not changed: `check_project_name` reads the check and then the catalog under two locks.
+    A write in between can only make the hint disagree for one keystroke, and the save is
+    validated anyway.
+
 ## Coverage
 | Requirement | Steps |
 |---|---|
