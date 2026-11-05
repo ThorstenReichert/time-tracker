@@ -34,6 +34,15 @@ pub enum Command {
         name: String,
         abbreviation: Option<String>,
     },
+    /// Archives a project: it is no longer offered or bookable, its entries stay (R2a). The
+    /// running entry's project can't be archived. Already archived: nothing happens.
+    ArchiveProject {
+        id: ProjectId,
+    },
+    /// Makes an archived project active again, as it was (R2a, R2c). Active: nothing happens.
+    UnarchiveProject {
+        id: ProjectId,
+    },
     CreateTask {
         project: ProjectId,
         name: String,

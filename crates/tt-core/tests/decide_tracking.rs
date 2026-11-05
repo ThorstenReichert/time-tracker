@@ -4,8 +4,8 @@
 use jiff::civil;
 use tt_core::testing::{at, berlin, ctx_berlin, run, when};
 use tt_core::{
-    ClientId, Combo, Command, Ctx, DomainError, Entry, EntryId, Event, Instant, Note, ProjectId,
-    RoundingRule, State, TaskChoice, TaskId,
+    Client, ClientId, Combo, Command, Ctx, DomainError, Entry, EntryId, Event, Instant, ItemRef,
+    Name, Note, Project, ProjectId, RoundingRule, State, TaskChoice, TaskId,
 };
 
 const WEB: ProjectId = ProjectId::new(1);
@@ -638,4 +638,220 @@ fn state_with_entries_round_trips_through_serde() {
         Some(EntryId::new(2))
     );
     back.check_invariants().unwrap();
+}
+
+// R2b: no booking onto an inactive project (changes/2026-11-05-archive-projects).
+
+fn archive(state: State, project: ProjectId, local: &str) -> State {
+    run(
+        state,
+        &ctx(local),
+        [Command::ArchiveProject { id: project }],
+    )
+}
+
+const WEB_ARCHIVED: DomainError = DomainError::Archived {
+    item: ItemRef::Project(WEB),
+};
+
+#[test]
+fn starting_or_switching_onto_an_archived_project_is_rejected() {
+    let state = archive(catalog(), WEB, "2026-10-17T08:30");
+    let c = ctx("2026-10-17T09:00");
+    for task in [
+        TaskChoice::NoTask,
+        TaskChoice::Existing(REVIEW),
+        TaskChoice::New("Docs".into()),
+    ] {
+        assert_eq!(
+            when(&state, &c, start(WEB, task)).unwrap_err(),
+            WEB_ARCHIVED
+        );
+    }
+    // A switch away from a running active project, too.
+    let running_api = run(state, &c, [start(API, TaskChoice::NoTask)]);
+    assert_eq!(
+        when(
+            &running_api,
+            &ctx("2026-10-17T09:30"),
+            start(WEB, TaskChoice::NoTask)
+        )
+        .unwrap_err(),
+        WEB_ARCHIVED
+    );
+}
+
+#[test]
+fn adding_an_entry_on_an_archived_project_is_rejected() {
+    let state = archive(catalog(), WEB, "2026-10-17T08:30");
+    assert_eq!(
+        when(
+            &state,
+            &ctx("2026-10-17T12:00"),
+            add(WEB, "2026-10-17T09:00", "2026-10-17T10:00")
+        )
+        .unwrap_err(),
+        WEB_ARCHIVED
+    );
+}
+
+fn edit_to(id: u64, project: ProjectId, task: TaskChoice, start: &str, end: &str) -> Command {
+    Command::EditEntry {
+        id: EntryId::new(id),
+        project,
+        task,
+        start: dt(start),
+        end: Some(dt(end)),
+        note: Some("fixed".into()),
+    }
+}
+
+/// Entry 1 on Web/Review, entry 2 on API, then Web is archived.
+fn entries_then_web_archived(c: &Ctx) -> State {
+    run(
+        catalog(),
+        c,
+        [
+            Command::AddEntry {
+                project: WEB,
+                task: TaskChoice::Existing(REVIEW),
+                start: dt("2026-10-17T09:00"),
+                end: dt("2026-10-17T10:00"),
+                note: None,
+            },
+            add(API, "2026-10-17T10:00", "2026-10-17T11:00"),
+            Command::ArchiveProject { id: WEB },
+        ],
+    )
+}
+
+#[test]
+fn entries_on_an_archived_project_can_be_fixed_moved_away_or_deleted() {
+    let c = ctx("2026-10-17T12:00");
+    let state = entries_then_web_archived(&c);
+    // The same combo with new times and a note.
+    let fixed = edit_to(
+        1,
+        WEB,
+        TaskChoice::Existing(REVIEW),
+        "2026-10-17T08:45",
+        "2026-10-17T09:50",
+    );
+    assert!(matches!(
+        when(&state, &c, fixed).unwrap().0.as_slice(),
+        [Event::EntryUpdated { .. }]
+    ));
+    // Moved away to an active project.
+    let moved = edit_to(
+        1,
+        API,
+        TaskChoice::NoTask,
+        "2026-10-17T09:00",
+        "2026-10-17T10:00",
+    );
+    assert!(when(&state, &c, moved).is_ok());
+    // Deleted.
+    assert!(
+        when(
+            &state,
+            &c,
+            Command::DeleteEntry {
+                id: EntryId::new(1)
+            }
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn moving_an_entry_onto_an_archived_project_is_rejected() {
+    let c = ctx("2026-10-17T12:00");
+    let state = entries_then_web_archived(&c);
+    // From API onto archived Web.
+    let onto = edit_to(
+        2,
+        WEB,
+        TaskChoice::NoTask,
+        "2026-10-17T10:00",
+        "2026-10-17T11:00",
+    );
+    assert_eq!(when(&state, &c, onto).unwrap_err(), WEB_ARCHIVED);
+    // Another combo within archived Web (dropping the task, or a new task) is a new booking.
+    let no_task = edit_to(
+        1,
+        WEB,
+        TaskChoice::NoTask,
+        "2026-10-17T09:00",
+        "2026-10-17T10:00",
+    );
+    assert_eq!(when(&state, &c, no_task).unwrap_err(), WEB_ARCHIVED);
+    let new_task = edit_to(
+        1,
+        WEB,
+        TaskChoice::New("Docs".into()),
+        "2026-10-17T09:00",
+        "2026-10-17T10:00",
+    );
+    assert_eq!(when(&state, &c, new_task).unwrap_err(), WEB_ARCHIVED);
+}
+
+#[test]
+fn an_archived_client_makes_its_projects_inactive() {
+    // Client archiving has no command yet, but the combo check already covers it (R2a).
+    let state = tt_core::testing::given(&[
+        Event::ClientCreated {
+            client: Client {
+                id: ClientId::new(1),
+                name: Name::parse("Acme").unwrap(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+                archived_at: Some(t("2026-10-16T12:00")),
+                created_at: t("2026-10-01T12:00"),
+            },
+        },
+        Event::ProjectCreated {
+            project: Project {
+                id: WEB,
+                client: ClientId::new(1),
+                name: Name::parse("Web").unwrap(),
+                abbreviation: None,
+                archived_at: None,
+                created_at: t("2026-10-01T12:00"),
+            },
+        },
+    ]);
+    assert_eq!(
+        when(
+            &state,
+            &ctx("2026-10-17T09:00"),
+            start(WEB, TaskChoice::NoTask)
+        )
+        .unwrap_err(),
+        DomainError::Archived {
+            item: ItemRef::Client(ClientId::new(1))
+        }
+    );
+}
+
+#[test]
+fn a_running_entry_on_an_archived_project_breaks_the_invariants() {
+    // decide never produces it (archiving the running project is rejected); a hand-edited
+    // database would load read-only (AC-9).
+    let mut catalog = web_running().catalog().clone();
+    let mut web = catalog.project(WEB).unwrap().clone();
+    web.archived_at = Some(t("2026-10-17T09:30"));
+    catalog = tt_core::Catalog::from_parts(
+        catalog.clients().cloned(),
+        catalog
+            .projects()
+            .map(|p| if p.id == WEB { web.clone() } else { p.clone() }),
+        catalog.tasks().cloned(),
+        catalog.settings().clone(),
+        catalog.counters(),
+    );
+    let entries =
+        tt_core::Entries::from_parts([running_entry(1, WEB, None, t("2026-10-17T09:00"))]);
+    let state = State::from_parts(catalog, entries);
+    let violation = state.check_invariants().unwrap_err();
+    assert!(violation.0.contains("archived project 1"), "{violation}");
 }

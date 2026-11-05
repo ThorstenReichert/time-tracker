@@ -33,6 +33,8 @@ pub fn decide(state: &State, ctx: &Ctx, cmd: &Command) -> Result<Vec<Event>, Dom
             name,
             abbreviation,
         } => catalog::update_project(catalog, *id, (name, abbreviation.as_deref())),
+        Command::ArchiveProject { id } => catalog::archive_project(state, ctx, *id),
+        Command::UnarchiveProject { id } => catalog::unarchive_project(catalog, *id),
         Command::CreateTask {
             project,
             name,

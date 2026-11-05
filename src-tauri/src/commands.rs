@@ -11,8 +11,8 @@ use tt_core::{ClientId, Command, Ctx, EntryId, ProjectId, TaskId};
 
 use crate::backend::{Backend, ctx};
 use crate::dto::{
-    AutostartDto, CatalogDto, ComboDto, EntryDto, OverviewDto, RuleDto, SettingsDefaultsDto,
-    SettingsDto, StatusDto, TaskChoiceDto, TaskMatchesDto,
+    AutostartDto, CatalogDto, ComboDto, EntryDto, NameCheckDto, OverviewDto, RuleDto,
+    SettingsDefaultsDto, SettingsDto, StatusDto, TaskChoiceDto, TaskMatchesDto,
 };
 use crate::errors::UiError;
 use crate::hotkey::{self, HotkeyStatus};
@@ -169,6 +169,38 @@ pub async fn update_project(
             abbreviation,
         },
     )
+}
+
+/// Archives a project (R2a): no new entries, not offered any more.
+#[tauri::command]
+#[specta::specta]
+pub async fn archive_project(backend: State<'_, Backend>, id: u64) -> Res<()> {
+    let id = ProjectId::new(id);
+    execute(&backend, &ctx(), Command::ArchiveProject { id })
+}
+
+/// Makes an archived project active again, as it was (R2a, R2c).
+#[tauri::command]
+#[specta::specta]
+pub async fn unarchive_project(backend: State<'_, Backend>, id: u64) -> Res<()> {
+    let id = ProjectId::new(id);
+    execute(&backend, &ctx(), Command::UnarchiveProject { id })
+}
+
+/// The New project dialog's check while typing (R2c).
+#[tauri::command]
+#[specta::specta]
+pub async fn check_project_name(
+    backend: State<'_, Backend>,
+    client: u64,
+    name: String,
+    abbreviation: Option<String>,
+) -> Res<NameCheckDto> {
+    read(&backend, |app, _| {
+        let check =
+            app.project_name_check(ClientId::new(client), &name, abbreviation.as_deref())?;
+        Ok(NameCheckDto::new(&check, &app.catalog()?))
+    })
 }
 
 #[tauri::command]

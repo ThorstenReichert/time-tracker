@@ -130,6 +130,10 @@ enum ProjectCmd {
         #[command(flatten)]
         naming: NamingArgs,
     },
+    /// Archive a project: no new entries, not offered any more (R2a).
+    Archive { id: u64 },
+    /// Make an archived project active again (R2a).
+    Unarchive { id: u64 },
 }
 
 #[derive(Subcommand)]
@@ -350,6 +354,12 @@ fn run(cli: Cli) -> Result<Value, Failure> {
                 abbreviation,
             }
         }
+        Cmd::Project(ProjectCmd::Archive { id }) => Command::ArchiveProject {
+            id: ProjectId::new(id),
+        },
+        Cmd::Project(ProjectCmd::Unarchive { id }) => Command::UnarchiveProject {
+            id: ProjectId::new(id),
+        },
         Cmd::Task(TaskCmd::Add {
             project,
             name,

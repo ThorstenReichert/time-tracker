@@ -181,3 +181,52 @@ fn reads_go_through_the_read_models() {
     assert_eq!(app.quick_switch("acweb").unwrap()[0].label, "Acme / Web");
     assert!(app.task_matches(WEB, "x").unwrap().offer_create.is_some());
 }
+
+#[test]
+fn an_archived_project_survives_a_reload_and_is_not_bookable() {
+    // R2a-R2c (changes/2026-11-05-archive-projects).
+    let scratch = Scratch::new();
+    let app = scratch.open("2026-10-17T08:00");
+    setup_catalog(&app);
+    app.execute(&ctx("2026-10-17T09:00"), start(WEB)).unwrap();
+    app.execute(&ctx("2026-10-17T10:00"), start(API)).unwrap();
+    // Web isn't running any more, so it can be archived; API is.
+    assert!(matches!(
+        app.execute(
+            &ctx("2026-10-17T10:05"),
+            Command::ArchiveProject { id: API }
+        ),
+        Err(AppError::Domain(DomainError::ProjectRunning { .. }))
+    ));
+    app.execute(
+        &ctx("2026-10-17T10:05"),
+        Command::ArchiveProject { id: WEB },
+    )
+    .unwrap();
+    drop(app);
+
+    let app = scratch.open("2026-10-17T10:10");
+    assert_eq!(app.snapshot().unwrap(), loaded(&scratch));
+    assert!(matches!(
+        app.execute(&ctx("2026-10-17T10:10"), start(WEB)),
+        Err(AppError::Domain(DomainError::Archived { .. }))
+    ));
+    let labels = |rows: Vec<tt_core::read::ComboRow>| -> Vec<String> {
+        rows.into_iter().map(|r| r.label).collect()
+    };
+    assert_eq!(labels(app.recents().unwrap()), ["Beta / API"]);
+    assert!(app.quick_switch("web").unwrap().is_empty());
+    // Entries on Web still show.
+    let day = "2026-10-17".parse().unwrap();
+    assert_eq!(
+        app.day_entries(&ctx("2026-10-17T10:10"), day)
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        app.project_name_check(tt_core::ClientId::new(1), "web", None)
+            .unwrap(),
+        tt_core::read::NameCheck::Unarchive { project: WEB }
+    );
+}

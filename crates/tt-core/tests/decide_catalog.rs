@@ -662,3 +662,134 @@ fn archived_siblings_count_for_names_and_abbreviations() {
         DomainError::DuplicateAbbreviation { existing: archived }
     );
 }
+
+// R2a: archive and unarchive a project (changes/2026-11-05-archive-projects).
+
+const WEB: ProjectId = ProjectId::new(1);
+
+#[test]
+fn archive_and_unarchive_a_project() {
+    let (events, state) = when(
+        &acme_and_beta(),
+        &ctx(),
+        Command::ArchiveProject { id: WEB },
+    )
+    .unwrap();
+    assert_eq!(
+        events,
+        [Event::ProjectArchived {
+            id: WEB,
+            at: ctx().now
+        }]
+    );
+    assert_eq!(
+        state.catalog().project(WEB).unwrap().archived_at,
+        Some(ctx().now)
+    );
+    assert!(!state.catalog().is_project_active(WEB));
+    assert!(!state.catalog().is_task_active(TaskId::new(1)));
+
+    // Archiving again changes nothing.
+    assert_eq!(
+        when(&state, &ctx(), Command::ArchiveProject { id: WEB })
+            .unwrap()
+            .0,
+        []
+    );
+
+    let (events, state) = when(&state, &ctx(), Command::UnarchiveProject { id: WEB }).unwrap();
+    assert_eq!(events, [Event::ProjectUnarchived { id: WEB }]);
+    assert!(state.catalog().is_project_active(WEB));
+    assert!(state.catalog().is_task_active(TaskId::new(1)));
+
+    // Unarchiving an active project changes nothing.
+    assert_eq!(
+        when(&state, &ctx(), Command::UnarchiveProject { id: WEB })
+            .unwrap()
+            .0,
+        []
+    );
+}
+
+#[test]
+fn archive_and_unarchive_an_unknown_project_are_rejected() {
+    let missing = ProjectId::new(99);
+    for cmd in [
+        Command::ArchiveProject { id: missing },
+        Command::UnarchiveProject { id: missing },
+    ] {
+        assert_eq!(
+            when(&acme_and_beta(), &ctx(), cmd).unwrap_err(),
+            DomainError::UnknownProject(missing)
+        );
+    }
+}
+
+#[test]
+fn the_running_project_can_not_be_archived() {
+    let running = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::Start {
+            project: WEB,
+            task: tt_core::TaskChoice::NoTask,
+        }],
+    );
+    assert_eq!(
+        when(&running, &ctx(), Command::ArchiveProject { id: WEB }).unwrap_err(),
+        DomainError::ProjectRunning { project: WEB }
+    );
+    // Another project can be archived while the timer runs.
+    assert!(
+        when(
+            &running,
+            &ctx(),
+            Command::ArchiveProject {
+                id: ProjectId::new(2)
+            }
+        )
+        .is_ok()
+    );
+}
+
+#[test]
+fn an_archived_project_gets_no_new_tasks_but_can_be_renamed() {
+    let state = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::ArchiveProject { id: WEB }],
+    );
+    assert_eq!(
+        when(&state, &ctx(), create_task(1, "Docs")).unwrap_err(),
+        DomainError::Archived {
+            item: ItemRef::Project(WEB)
+        }
+    );
+    let rename = Command::UpdateProject {
+        id: WEB,
+        name: "Old web".into(),
+        abbreviation: None,
+    };
+    assert!(when(&state, &ctx(), rename).is_ok());
+}
+
+#[test]
+fn an_archived_project_keeps_its_name_and_unarchives_as_it_was() {
+    // OQ-7: the name stays taken while archived, so unarchiving can't clash.
+    let state = run(
+        acme_and_beta(),
+        &ctx(),
+        [Command::ArchiveProject { id: WEB }],
+    );
+    assert_eq!(
+        when(&state, &ctx(), create_project(1, "web")).unwrap_err(),
+        DomainError::DuplicateName {
+            existing: ItemRef::Project(WEB)
+        }
+    );
+    let (_, after) = when(&state, &ctx(), Command::UnarchiveProject { id: WEB }).unwrap();
+    assert_eq!(
+        after.catalog().project(WEB),
+        acme_and_beta().catalog().project(WEB)
+    );
+}

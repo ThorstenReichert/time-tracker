@@ -4,7 +4,7 @@
 use serde::Serialize;
 use specta::Type;
 use tt_app::{App, AppError};
-use tt_core::{Ctx, DomainError, ItemRef, to_local};
+use tt_core::{Catalog, Ctx, DomainError, ItemRef, to_local};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "lowercase")]
@@ -100,30 +100,66 @@ fn domain_message(error: &DomainError, app: &App, ctx: &Ctx) -> String {
     {
         return format!("The abbreviation is already used by {item}");
     }
+    // R2d: the archived item is named without its abbreviation or the word "archived".
+    if let DomainError::Archived { item } = error
+        && let Some(item) = app.catalog().ok().and_then(|c| item_parts(&c, *item))
+    {
+        return format!("{} \"{}\" is archived", capitalise(item.kind), item.name);
+    }
+    if let DomainError::ProjectRunning { .. } = error {
+        return "The timer is running on this project; stop it first".to_owned();
+    }
     capitalise(&error.to_string())
 }
 
-/// `client "Acme"`, or `client "Acme" (AC)` with its abbreviation (R24), or `None` if the
-/// item is gone.
-fn item_name(app: &App, item: ItemRef) -> Option<String> {
-    let catalog = app.catalog().ok()?;
-    let (kind, name, abbreviation) = match item {
+struct ItemParts {
+    kind: &'static str,
+    name: String,
+    abbreviation: Option<String>,
+    archived: bool,
+}
+
+fn item_parts(catalog: &Catalog, item: ItemRef) -> Option<ItemParts> {
+    let (kind, name, abbreviation, archived_at) = match item {
         ItemRef::Client(id) => {
             let c = catalog.client(id)?;
-            ("client", &c.name, &c.abbreviation)
+            ("client", &c.name, &c.abbreviation, c.archived_at)
         }
         ItemRef::Project(id) => {
             let p = catalog.project(id)?;
-            ("project", &p.name, &p.abbreviation)
+            ("project", &p.name, &p.abbreviation, p.archived_at)
         }
         ItemRef::Task(id) => {
             let t = catalog.task(id)?;
-            ("task", &t.name, &t.abbreviation)
+            ("task", &t.name, &t.abbreviation, t.archived_at)
         }
     };
+    Some(ItemParts {
+        kind,
+        name: name.to_string(),
+        abbreviation: abbreviation.as_ref().map(ToString::to_string),
+        archived: archived_at.is_some(),
+    })
+}
+
+fn item_name(app: &App, item: ItemRef) -> Option<String> {
+    item_label(&app.catalog().ok()?, item)
+}
+
+/// `client "Acme"`, or `client "Acme" (AC)` with its abbreviation (R24), with "archived "
+/// in front for an archived item (R2d), or `None` if the item is gone. The New project
+/// dialog's name check shows the same labels.
+pub fn item_label(catalog: &Catalog, item: ItemRef) -> Option<String> {
+    let ItemParts {
+        kind,
+        name,
+        abbreviation,
+        archived,
+    } = item_parts(catalog, item)?;
+    let archived = if archived { "archived " } else { "" };
     Some(match abbreviation {
-        Some(a) => format!("{kind} \"{name}\" ({a})"),
-        None => format!("{kind} \"{name}\""),
+        Some(a) => format!("{archived}{kind} \"{name}\" ({a})"),
+        None => format!("{archived}{kind} \"{name}\""),
     })
 }
 
@@ -221,6 +257,63 @@ mod tests {
         assert_eq!(
             UiError::from_app(err, &app, &ctx).message,
             "No timer is running"
+        );
+    }
+
+    #[test]
+    fn archive_errors_name_the_archived_project() {
+        // R2d (changes/2026-11-05-archive-projects).
+        let dir = tempfile::TempDir::new().unwrap();
+        let ctx = ctx_berlin("2026-10-17T18:00");
+        let app = App::open(AppConfig::new(dir.path().join("t.db")), &ctx).unwrap();
+        let web = ProjectId::new(1);
+        let start = |project| Command::Start {
+            project,
+            task: TaskChoice::NoTask,
+        };
+        for cmd in [
+            Command::CreateClient {
+                name: "Acme".into(),
+                abbreviation: None,
+                rule: RoundingRule::default(),
+            },
+            Command::CreateProject {
+                client: ClientId::new(1),
+                name: "Web".into(),
+                abbreviation: Some("W".into()),
+            },
+            start(web),
+        ] {
+            app.execute(&ctx, cmd).unwrap();
+        }
+        let message =
+            |cmd| UiError::from_app(app.execute(&ctx, cmd).unwrap_err(), &app, &ctx).message;
+        assert_eq!(
+            message(Command::ArchiveProject { id: web }),
+            "The timer is running on this project; stop it first"
+        );
+        app.execute(&ctx, Command::Stop { at: None }).unwrap();
+        app.execute(&ctx, Command::ArchiveProject { id: web })
+            .unwrap();
+        assert_eq!(message(start(web)), "Project \"Web\" is archived");
+        // The Edit dialog's rename clash says the project is archived (no unarchive there).
+        app.execute(
+            &ctx,
+            Command::CreateProject {
+                client: ClientId::new(1),
+                name: "Mobile".into(),
+                abbreviation: None,
+            },
+        )
+        .unwrap();
+        let rename = Command::UpdateProject {
+            id: ProjectId::new(2),
+            name: "web".into(),
+            abbreviation: None,
+        };
+        assert_eq!(
+            message(rename),
+            "The name is already used by archived project \"Web\" (W)"
         );
     }
 }

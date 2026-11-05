@@ -15,12 +15,15 @@ use crate::{Catalog, Combo};
 /// At most this many matches are returned.
 pub const QUICK_SWITCH_LIMIT: usize = 50;
 
+/// How many recent active combos rank the matches (`recents` of [`quick_switch`]).
+pub const QUICK_SWITCH_RECENCY: usize = 100;
+
 /// The popup's and the pickers' list for `query`. A blank query gives the recents, then the
 /// other active combos by label; otherwise every active combo (each task, plus the project
 /// without a task) whose names and abbreviations match all words of the query, best first.
 /// A combo with more query words that are exactly one of its abbreviations ranks first
-/// (R24). `recents` is newest first and may be longer than `recents_n`: all of it ranks
-/// typed matches, and its first `recents_n` active combos are the recents of a blank query.
+/// (R24). `recents` is [`super::recent_combos`] for [`QUICK_SWITCH_RECENCY`], newest first:
+/// all of it ranks typed matches, and its first `recents_n` are the recents of a blank query.
 pub fn quick_switch(catalog: &Catalog, recents: &[Combo], query: &str) -> Vec<ComboRow> {
     if query.trim().is_empty() {
         return blank(catalog, recents);
@@ -74,7 +77,8 @@ pub(crate) fn exact_abbreviations(words: &BTreeSet<String>, keys: &[&str]) -> us
 /// so a new catalog is listed before anything is tracked.
 fn blank(catalog: &Catalog, recents: &[Combo]) -> Vec<ComboRow> {
     let n = (catalog.settings().recents_n as usize).min(QUICK_SWITCH_LIMIT);
-    let mut rows = super::recents(catalog, recents, n);
+    let mut rows = super::combo::rows(catalog, recents);
+    rows.truncate(n);
     let listed: BTreeSet<Combo> = rows.iter().map(|r| r.combo).collect();
     let mut rest: Vec<(String, ComboRow)> = candidates(catalog)
         .filter(|row| !listed.contains(&row.combo))

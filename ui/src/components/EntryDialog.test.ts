@@ -73,6 +73,24 @@ describe("EntryDialog", () => {
     });
   });
 
+  it("edits an entry on an archived project that the picker no longer offers (R2b, AC-8)", async () => {
+    const save = vi.fn<Save>(async () => {});
+    await open(save, finishedEntry(8, acmeWebReview, "2026-10-16T09:00:00", "2026-10-16T10:00:00"));
+    // The archived combo isn't a suggestion any more (the tt-core quick-switch tests pin
+    // that), but the entry still shows it and saves with it.
+    fakeBackend({ quick_switch: () => [betaOps], task_matches: () => ({ tasks: [], offerCreate: null }) });
+    expect(comboInputs().map((i) => (i.element as HTMLInputElement).value)).toEqual(["Acme / Web", "Review"]);
+    await field("End time").setValue("10:30");
+    await clickButton("Save", dialog());
+    expect(save).toHaveBeenCalledWith({
+      project: 1,
+      task: { kind: "existing", value: 1 },
+      start: "2026-10-16T09:00:00",
+      end: "2026-10-16T10:30:00",
+      note: "",
+    });
+  });
+
   it("keeps the running entry running with an empty end, and stops it with one (R11)", async () => {
     const save = vi.fn<Save>(async () => {});
     const wrapper = await open(save, runningEntry(betaOps, 600));

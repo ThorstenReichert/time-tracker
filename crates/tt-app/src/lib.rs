@@ -11,15 +11,14 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use jiff::civil;
-use tt_core::read::{self, ComboRow, EntryRow, Overview, TaskMatches};
-use tt_core::{Catalog, Command, Ctx, EntryId, Event, ProjectId, State, decide, evolve_all};
+use tt_core::read::{self, ComboRow, EntryRow, NameCheck, Overview, TaskMatches};
+use tt_core::{
+    Catalog, ClientId, Command, Ctx, EntryId, Event, ProjectId, State, decide, evolve_all,
+};
 use tt_store::{MIGRATIONS, Migration, Store};
 
 pub use error::AppError;
 pub use paths::{app_data_dir, default_backup_dir, live_db_path};
-
-/// How many recent combos rank the quick-switch matches.
-const QUICK_SWITCH_RECENCY: usize = 100;
 
 /// Where and how to open the database.
 #[derive(Debug, Clone)]
@@ -187,17 +186,26 @@ impl App {
     pub fn recents(&self) -> Result<Vec<ComboRow>, AppError> {
         self.read(|state| {
             let n = state.catalog().settings().recents_n as usize;
-            // Ask for more than n: archived combos are filtered out afterwards.
-            let combos = state.entries().recent_combos(n * 4);
-            read::recents(state.catalog(), &combos, n)
+            read::recents(state.catalog(), state.entries(), n)
         })
     }
 
     pub fn quick_switch(&self, query: &str) -> Result<Vec<ComboRow>, AppError> {
         self.read(|state| {
-            let recents = state.entries().recent_combos(QUICK_SWITCH_RECENCY);
+            let recents =
+                read::recent_combos(state.catalog(), state.entries(), read::QUICK_SWITCH_RECENCY);
             read::quick_switch(state.catalog(), &recents, query)
         })
+    }
+
+    /// The New project dialog's check while typing (R2c).
+    pub fn project_name_check(
+        &self,
+        client: ClientId,
+        name: &str,
+        abbreviation: Option<&str>,
+    ) -> Result<NameCheck, AppError> {
+        self.read(|state| read::project_name_check(state.catalog(), client, name, abbreviation))
     }
 
     pub fn task_matches(&self, project: ProjectId, text: &str) -> Result<TaskMatches, AppError> {

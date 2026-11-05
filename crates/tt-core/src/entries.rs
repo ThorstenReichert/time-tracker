@@ -123,12 +123,18 @@ impl Entries {
 
     /// The last `n` distinct combos, newest start first (R7 recents).
     pub fn recent_combos(&self, n: usize) -> Vec<Combo> {
+        self.recent_combos_where(n, |_| true)
+    }
+
+    /// The last `n` distinct combos that `keep` accepts, newest start first. A named query:
+    /// SQL could answer it from the start index with a join on `archived_at` (R7, OQ-9).
+    pub fn recent_combos_where(&self, n: usize, mut keep: impl FnMut(Combo) -> bool) -> Vec<Combo> {
         let mut seen = BTreeSet::new();
         self.by_start
             .iter()
             .rev()
             .map(|(_, id)| self.by_id[id].combo())
-            .filter(|combo| seen.insert(*combo))
+            .filter(|combo| seen.insert(*combo) && keep(*combo))
             .take(n)
             .collect()
     }

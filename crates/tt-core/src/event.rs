@@ -28,6 +28,15 @@ pub enum Event {
         name: Name,
         abbreviation: Option<Abbreviation>,
     },
+    /// The project got `archived_at = at` (R2a).
+    ProjectArchived {
+        id: ProjectId,
+        at: Instant,
+    },
+    /// The project's `archived_at` was cleared (R2a).
+    ProjectUnarchived {
+        id: ProjectId,
+    },
     TaskCreated {
         task: Task,
     },

@@ -11,12 +11,19 @@ pub enum DomainError {
     #[error("invalid abbreviation: {0}")]
     InvalidAbbreviation(NameProblem),
     /// Names and abbreviations share one namespace per parent, ignoring case; archived items
-    /// count too (R1, R24, OQ-7). The new name clashes with `existing`.
+    /// count too (R1, R24, OQ-7, R2c). The new name clashes with `existing`.
     #[error("the name is already used by {existing}")]
     DuplicateName { existing: ItemRef },
     /// The new abbreviation clashes with the name or abbreviation of `existing` (R24).
     #[error("the abbreviation is already used by {existing}")]
     DuplicateAbbreviation { existing: ItemRef },
+    /// A new entry, a changed combo or a new task would land on an inactive item (R2b). `item`
+    /// is the archived one: the client, else the project, else the task.
+    #[error("{item} is archived")]
+    Archived { item: ItemRef },
+    /// The running entry is on this project; stop the timer before archiving it (R2a).
+    #[error("the timer is running on project {project}; stop it first")]
+    ProjectRunning { project: ProjectId },
     #[error("unknown client {0}")]
     UnknownClient(ClientId),
     #[error("unknown project {0}")]

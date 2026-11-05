@@ -93,6 +93,13 @@ pub enum Op {
         name: u8,
         abbreviation: Option<u8>,
     },
+    /// Archive (R2a); sometimes the running project, to exercise the rejection.
+    ArchiveProject {
+        project: u8,
+    },
+    UnarchiveProject {
+        project: u8,
+    },
     CreateTask {
         project: u8,
         name: u8,
@@ -194,6 +201,8 @@ fn arb_op() -> impl Strategy<Value = Op> {
             .prop_map(|(project, name, abbreviation)| Op::CreateTask { project, name, abbreviation }),
         1 => (any::<u8>(), any::<u8>(), abbreviation())
             .prop_map(|(task, name, abbreviation)| Op::UpdateTask { task, name, abbreviation }),
+        1 => any::<u8>().prop_map(|project| Op::ArchiveProject { project }),
+        2 => any::<u8>().prop_map(|project| Op::UnarchiveProject { project }),
         8 => (any::<u8>(), arb_task_pick()).prop_map(|(project, task)| Op::Start { project, task }),
         4 => proptest::option::of(minutes_back.clone())
             .prop_map(|minutes_back| Op::Stop { minutes_back }),
@@ -334,6 +343,12 @@ pub fn materialize(op: &Op, state: &State, ctx: &Ctx) -> Command {
             id: project_of(*project),
             name: name(*n),
             abbreviation: abbreviation_of(*a),
+        },
+        Op::ArchiveProject { project } => Command::ArchiveProject {
+            id: project_of(*project),
+        },
+        Op::UnarchiveProject { project } => Command::UnarchiveProject {
+            id: project_of(*project),
         },
         Op::CreateTask {
             project,

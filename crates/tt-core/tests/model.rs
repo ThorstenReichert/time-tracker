@@ -124,6 +124,10 @@ fn generator_reaches_the_interesting_cases() {
         "err StartInFuture",
         "err EndNotAfterStart",
         "err TaskNotInProject",
+        "ok ArchiveProject",
+        "ok UnarchiveProject",
+        "err Archived",
+        "err ProjectRunning",
     ] {
         assert!(
             seen.contains_key(expected),
@@ -138,6 +142,8 @@ fn command_name(cmd: &Command) -> &'static str {
         Command::UpdateClient { .. } => "UpdateClient",
         Command::CreateProject { .. } => "CreateProject",
         Command::UpdateProject { .. } => "UpdateProject",
+        Command::ArchiveProject { .. } => "ArchiveProject",
+        Command::UnarchiveProject { .. } => "UnarchiveProject",
         Command::CreateTask { .. } => "CreateTask",
         Command::UpdateTask { .. } => "UpdateTask",
         Command::UpdateSettings { .. } => "UpdateSettings",

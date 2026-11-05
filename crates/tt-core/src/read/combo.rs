@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Abbreviation, Catalog, ClientId, Combo, Name};
+use crate::{Abbreviation, Catalog, ClientId, Combo, Entries, Name};
 
 /// A combo with its names, for lists and matching. `label` is "Client / Project / Task"
 /// (or "Client / Project" without a task). `short_label` has the same shape with each
@@ -88,13 +88,22 @@ pub(crate) fn is_active(catalog: &Catalog, combo: Combo) -> bool {
     catalog.is_project_active(combo.project) && combo.task.is_none_or(|t| catalog.is_task_active(t))
 }
 
-/// The recents (R7): the newest distinct combos, active ones only, at most `n`. `combos` is
-/// `Entries::recent_combos`, newest first; ask it for more than `n` if some may be inactive.
-pub fn recents(catalog: &Catalog, combos: &[Combo], n: usize) -> Vec<ComboRow> {
+/// The newest `n` distinct active combos, newest first: the read set of the recents (R7)
+/// and of the quick-switch ranking. Archived combos don't use up any of the `n`.
+pub fn recent_combos(catalog: &Catalog, entries: &Entries, n: usize) -> Vec<Combo> {
+    entries.recent_combos_where(n, |c| is_active(catalog, c))
+}
+
+/// The recents (R7): the newest `n` distinct active combos with their names.
+pub fn recents(catalog: &Catalog, entries: &Entries, n: usize) -> Vec<ComboRow> {
+    rows(catalog, &recent_combos(catalog, entries, n))
+}
+
+/// The rows of `combos` that are active, in order.
+pub(crate) fn rows(catalog: &Catalog, combos: &[Combo]) -> Vec<ComboRow> {
     combos
         .iter()
         .filter(|c| is_active(catalog, **c))
         .filter_map(|c| combo_row(catalog, *c))
-        .take(n)
         .collect()
 }

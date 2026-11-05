@@ -15,7 +15,7 @@ pub(super) fn start(
     project: ProjectId,
     task: &TaskChoice,
 ) -> Result<Vec<Event>, DomainError> {
-    let resolved = resolve_combo(&state.catalog, ctx, project, task)?;
+    let resolved = resolve_combo(&state.catalog, ctx, project, task, None)?;
     let now = ctx.now;
     let mut events = Vec::new();
 
@@ -83,7 +83,7 @@ pub(super) fn add_entry(
     (start, end): (civil::DateTime, civil::DateTime),
     note: Option<&str>,
 ) -> Result<Vec<Event>, DomainError> {
-    let resolved = resolve_combo(&state.catalog, ctx, project, task)?;
+    let resolved = resolve_combo(&state.catalog, ctx, project, task, None)?;
     let (start, end) = (to_instant(&ctx.tz, start)?, to_instant(&ctx.tz, end)?);
     validate_interval(ctx.now, start, Some(end))?;
     let note = parse_note(note)?;
@@ -126,7 +126,13 @@ pub(super) fn edit_entry(
         .entries
         .get(edit.id)
         .ok_or(DomainError::UnknownEntry(edit.id))?;
-    let resolved = resolve_combo(&state.catalog, ctx, edit.project, edit.task)?;
+    let resolved = resolve_combo(
+        &state.catalog,
+        ctx,
+        edit.project,
+        edit.task,
+        Some(current.combo()),
+    )?;
     let start = to_instant(&ctx.tz, edit.start)?;
     let end = edit.end.map(|e| to_instant(&ctx.tz, e)).transpose()?;
     // Only the running entry may stay open; giving it an end stops it (R11).
@@ -175,11 +181,14 @@ struct Resolved {
     new_task: Option<crate::Task>,
 }
 
+/// Checks the combo of a new or edited entry. It must be active (R2b), unless it is the
+/// edited entry's `current` combo: an entry may stay on an archived project.
 fn resolve_combo(
     catalog: &Catalog,
     ctx: &Ctx,
     project: ProjectId,
     task: &TaskChoice,
+    current: Option<Combo>,
 ) -> Result<Resolved, DomainError> {
     catalog
         .project(project)
@@ -198,13 +207,16 @@ fn resolve_combo(
             (Some(task.id), Some(task))
         }
     };
-    Ok(Resolved {
-        combo: Combo {
-            project,
-            task: task_id,
-        },
-        new_task,
-    })
+    let combo = Combo {
+        project,
+        task: task_id,
+    };
+    if current != Some(combo)
+        && let Some(item) = catalog.archived_in(project, task_id)
+    {
+        return Err(DomainError::Archived { item });
+    }
+    Ok(Resolved { combo, new_task })
 }
 
 /// Ends the running entry at `now`. An entry started in this very second is discarded

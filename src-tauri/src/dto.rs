@@ -4,10 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use tt_core::read::{ClientBlock, ComboRow, EntryRow, Figure, Overview, ProjectRow, TaskMatches};
+use tt_core::read::{
+    ClientBlock, ComboRow, EntryRow, Figure, NameCheck, Overview, ProjectRow, TaskMatches,
+};
 use tt_core::{
-    Catalog, Client, DecimalSeparator, Project, RoundingDirection, RoundingLevel, RoundingRule,
-    RoundingUnit, Settings, Task, TaskChoice, TaskId,
+    Catalog, Client, DecimalSeparator, ItemRef, Project, RoundingDirection, RoundingLevel,
+    RoundingRule, RoundingUnit, Settings, Task, TaskChoice, TaskId,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -110,6 +112,56 @@ impl From<&Project> for ProjectDto {
             name: p.name.to_string(),
             abbreviation: p.abbreviation.as_ref().map(ToString::to_string),
             archived: p.archived_at.is_some(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum NameCheckKind {
+    Free,
+    Unarchive,
+    Taken,
+}
+
+/// A project named by a name check, e.g. `archived project "Web" (W)` (R2d).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckedProjectDto {
+    pub id: u64,
+    pub label: String,
+}
+
+/// The New project dialog's check (R2c). `projects` is the archived project to unarchive
+/// (`unarchive`), the clashing projects (`taken`), or empty (`free`).
+#[derive(Debug, Clone, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NameCheckDto {
+    pub kind: NameCheckKind,
+    pub projects: Vec<CheckedProjectDto>,
+}
+
+impl NameCheckDto {
+    pub fn new(check: &NameCheck, catalog: &Catalog) -> Self {
+        let (kind, ids) = match check {
+            NameCheck::Free => (NameCheckKind::Free, &[][..]),
+            NameCheck::Unarchive { project } => {
+                (NameCheckKind::Unarchive, std::slice::from_ref(project))
+            }
+            NameCheck::Taken { by } => (NameCheckKind::Taken, by.as_slice()),
+        };
+        Self {
+            kind,
+            projects: ids
+                .iter()
+                .filter_map(|id| {
+                    let label = crate::errors::item_label(catalog, ItemRef::Project(*id))?;
+                    Some(CheckedProjectDto {
+                        id: id.get(),
+                        label,
+                    })
+                })
+                .collect(),
         }
     }
 }
